@@ -117,3 +117,88 @@ The MVP focuses on real-time shift logging, cross-role visibility, and shift han
 - **Add entry** — Click **Add entry** (requires login). Set timestamp (defaults to now), role, category, description; optionally satellite, severity, shift, tags. **Save entry** or **Save and add another**.
 - **Shifts** — Click **Shifts** to list shifts. **Add shift** to create a shift (start time, end time, handoff notes). Open a shift to view handoff notes and entries in that shift; **Update handoff notes** to edit. When adding a log entry, you can assign it to a shift.
 - **Seed data** — Run `python manage.py seed_scribe` to create default roles and event categories. Add Scribe tags in Django Admin (**/admin/scribe/scribetag/**) if needed.
+
+---
+
+# Fleet Anomaly Tracker
+
+## What it is
+
+**Fleet Anomaly Tracker** is a lightweight web application for capturing, tracking, and managing anomalies across a fleet of satellites. It provides a centralized place for operators and engineers to record operational issues, unexpected behaviors, and system faults using structured forms.
+
+The tool standardizes anomaly reporting by capturing key metadata (satellite, subsystem, anomaly type, severity, detection time, operational impact) and allows flexible notes. Each record is part of a centralized anomaly registry so mission teams can view active issues, monitor fleet health, and track investigation progress.
+
+## Core MVP features
+
+- **Structured anomaly reporting** — Report form with satellite (required), subsystem, anomaly type, severity, detection time, operational impact, and description.
+- **Satellite and subsystem tagging** — Filter and display by satellite and subsystem (configurable in Admin).
+- **Severity and impact classification** — Severity: Low, Medium, High, Critical; operational impact: None, Minor, Moderate, Major, Mission-Critical.
+- **Centralized anomaly registry** — Fleet-wide list with filters (satellite, subsystem, severity, status) and search on description.
+- **Status tracking** — New, Investigating, Mitigated, Resolved; update status from anomaly detail.
+- **Notes and updates** — Attach operational notes to an anomaly; notes listed on detail page with timestamp and author.
+
+## How to use Fleet Anomaly Tracker
+
+- **Registry** — Open **Fleet Anomaly Tracker** in the nav. View all anomalies; use the filter form (satellite, subsystem, severity, status) and search box (description); click **Filter** or **Clear filters**. Click an anomaly row to open detail.
+- **Report anomaly** — Click **Report anomaly** (requires login). Fill satellite (required), optionally subsystem, anomaly type, severity, detection time (defaults to now), operational impact, description. **Save** or **Save and add another**.
+- **Anomaly detail** — View full metadata and description; see notes and updates; when logged in, add a note and/or change status and click **Save**.
+- **Seed data** — Run `python manage.py seed_anomalies` to create default subsystems and anomaly types. Run `python manage.py seed_anomalies --anomalies` to also add sample anomalies (and notes) across SAT-021, SAT-034, SAT-012 so you can try the registry and detail views. Manage in Django Admin (**/admin/anomalies/**) if needed.
+
+---
+
+# Alerts & Limits Handbook
+
+## What it is
+
+**Alerts & Limits Handbook** is a centralized web application that documents and organizes operational alerts, monitoring rules, and telemetry limits used across the fleet. It provides a single source of truth for alert conditions, telemetry thresholds, and recommended operator response when limits are exceeded.
+
+Each alert entry captures the monitored parameter, subsystem, alert conditions, warning and critical thresholds, and recommended actions. The handbook helps mission operations teams quickly understand what an alert means, why it triggers, and how to respond.
+
+## Core features
+
+- **Structured alert and limit definitions** — Parameter, subsystem (Power, ADCS, Thermal, Communications, Payload, etc.), description (meaning and operational impact), alert conditions, warning/critical thresholds (text, e.g. "> 45 C"), recommended response, optional link to a procedure.
+- **Search and filtering** — Filter by subsystem or severity; search by parameter or description. Filters persist in session.
+- **Version tracking** — Each alert has a version number and last-updated timestamp; version increments when the definition is edited.
+- **Create, edit, delete** — Logged-in users can add, edit, and delete alert definitions; list and detail are viewable by all.
+
+## How to use the Handbook
+
+- **List** — Open **Alerts & Limits Handbook** in the nav. View all alerts; use the filter form (subsystem, severity) and search box (parameter or description); click **Filter** or **Clear filters**.
+- **Detail** — Click an alert parameter or **View** to see the full definition, thresholds, recommended response, and linked procedure (if any).
+- **Add alert** — Click **Add alert** (requires login). Fill parameter, subsystem, description; optionally alert conditions, warning/critical thresholds, recommended response, linked procedure, severity. Save.
+- **Edit / Delete** — From the list or detail, use **Edit** or **Delete** (login required). Edits increment the alert version.
+- **Seed data** — Run `python manage.py seed_handbook` to create default subsystems (Power, ADCS, Thermal, Communications, Payload, Other). Run `python manage.py seed_handbook --alerts` to add sample alert definitions. Manage subsystems and alerts in Django Admin (**/admin/handbook/**) if needed.
+
+---
+
+# FDIR Handbook
+
+## What it is
+
+**FDIR Handbook** is a centralized web application that documents and organizes all Fault Detection, Isolation, and Recovery (FDIR) logic for a fleet of satellites. The system provides a single source of truth describing how faults are detected onboard, what automatic responses are executed by the spacecraft, and what operational procedures operators should follow if additional intervention is required.
+
+Each FDIR entry captures structured information including the fault name, subsystem, triggering conditions, detection thresholds, and associated responses. The handbook clearly distinguishes between onboard automated responses executed by flight software and ground operational procedures that operators should reference during recovery or investigation.
+
+## Core MVP features
+
+- **Structured FDIR definitions** — Fault name, optional fault code, subsystem (ADCS, Power, Thermal, Communications, Payload, Other), severity (Info, Warning, Critical), optional fault type, triggering conditions, detection thresholds, onboard automated response (text), and optional version string.
+- **Documentation of onboard automated responses** — Each entry has a dedicated field for what the spacecraft does automatically when the fault is detected.
+- **References to operator recovery procedures** — M2M link to Procedure; one FDIR entry can reference multiple procedures; procedures can be linked from the create/edit form and shown on the detail page with links to procedure review.
+- **Subsystem tagging** — Filter and display by subsystem; subsystems are seedable and manageable in Admin.
+- **Search and filtering** — Filter by subsystem, severity, and fault type; full-text search on fault name, triggering conditions, detection thresholds, onboard response, and fault code. Filters can be cleared; optional session persistence.
+- **Cross-links** — From FDIR detail, linked procedures are listed with links to procedure review. List and detail are viewable by all; create and edit require login.
+- **Version tracking** — Optional version field and last-updated timestamp on each entry.
+
+## Key design principles
+
+- **Single source of truth** for FDIR logic; procedure definitions remain in YAML; FDIR stores only references.
+- **Clear separation** between onboard automated response (text on FDIR) and operator procedures (links to Procedure).
+- **Fleet-wide** — FDIR entries are not tied to a specific satellite in the MVP.
+
+## How to use FDIR Handbook
+
+- **List** — Open **FDIR Handbook** in the nav. View all FDIR entries; use the filter form (subsystem, severity, fault type) and search box (fault name, conditions, response); click **Filter** or **Clear filters**.
+- **Detail** — Click a fault name or **View** to see the full definition, triggering conditions, thresholds, onboard automated response, and linked operator procedures (with links to procedure review).
+- **Add entry** — Click **Add FDIR entry** (requires login). Fill fault name and subsystem; optionally fault code, severity, fault type, triggering conditions, detection thresholds, onboard automated response, operator procedures (multi-select), and version. Save.
+- **Edit** — From the list or detail, use **Edit** (login required). Save updates last-updated timestamp.
+- **Seed data** — Run `python manage.py seed_fdir` to create default subsystems (ADCS, Power, Thermal, Communications, Payload, Other). Run `python manage.py seed_fdir --entries` to add sample FDIR entries. Manage subsystems and FDIR entries in Django Admin (**/admin/fdir/**) if needed.
