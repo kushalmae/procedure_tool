@@ -1,0 +1,16 @@
+name: Bus Checkout
+version: "1.0"
+
+steps:
+  - id: power
+    description: Verify spacecraft bus voltage
+    input: voltage
+
+  - id: telemetry
+    description: Confirm telemetry stream active
+
+  - id: thermal
+    description: Verify thermal temps nominal
+
+  - id: signoff
+    description: Operator signoff

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ procedure.name }} — {{ satellite }}{% endblock %}
+{% block content %}
+<h2>{{ procedure.name }} — {{ satellite }}</h2>
+<p>Step {{ step_index|add:1 }} of {{ total_steps }}</p>
+<h3>{{ step.description }}</h3>
+<form method="post">{% csrf_token %}
+    <p>Status: <select name="status"><option value="PASS">PASS</option><option value="FAIL">FAIL</option></select></p>
+    {% if step.input %}
+    <p>Input ({{ step.input }}): <input name="value" type="text"></p>
+    {% endif %}
+    <p>Notes: <textarea name="notes" rows="3"></textarea></p>
+    <p><button type="submit">Submit Step</button></p>
+</form>
+{% endblock %}

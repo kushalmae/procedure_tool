@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Start Procedure</h2>
+{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
+<form method="post">{% csrf_token %}
+    <p>Satellite: <input name="satellite" placeholder="e.g. SAT-021" value="{{ request.POST.satellite }}" required></p>
+    <p>Procedure: <select name="procedure" required>{% for p in procedures %}<option value="{{ p.id }}">{{ p.name }} ({{ p.version }})</option>{% endfor %}</select></p>
+    <p>Operator: <input name="operator" placeholder="Your name" value="{{ request.POST.operator }}"></p>
+    <p><button type="submit">Start</button></p>
+</form>
+<p>If no procedures appear, add them in <a href="/admin/">Django Admin</a> and add at least one Satellite.</p>
+{% endblock %}

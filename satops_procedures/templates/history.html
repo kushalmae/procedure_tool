@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<h2>History</h2>
+<table>
+    <thead>
+        <tr><th>Date</th><th>Satellite</th><th>Procedure</th><th>Operator</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+        {% for run in runs %}
+        <tr>
+            <td>{{ run.start_time|date:"Y-m-d H:i" }}</td>
+            <td>{{ run.satellite.name }}</td>
+            <td>{{ run.procedure.name }}</td>
+            <td>{{ run.operator_name|default:"—" }}</td>
+            <td>{{ run.status }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">No runs yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
