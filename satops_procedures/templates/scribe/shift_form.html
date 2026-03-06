@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Mission Scribe — Add shift{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / <a href="{% url 'scribe_shift_list' %}">Shifts</a> / Add shift
+</nav>
+<h2>Add shift</h2>
+<div class="card">
+    <form method="post">{% csrf_token %}
+        <label for="start_time">Start time</label>
+        <input type="datetime-local" id="start_time" name="start_time" value="{{ start_time_default }}" required>
+        <label for="end_time">End time</label>
+        <input type="datetime-local" id="end_time" name="end_time" value="{{ end_time_default }}" required>
+        <label for="handoff_notes">Handoff notes</label>
+        <textarea id="handoff_notes" name="handoff_notes" rows="4" placeholder="Summary for next shift...">{{ handoff_notes }}</textarea>
+        <p>
+            <button type="submit" class="btn btn-primary">Create shift</button>
+            <a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Cancel</a>
+        </p>
+    </form>
+</div>
+{% endblock %}

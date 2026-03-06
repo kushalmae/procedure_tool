@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Delete: {{ alert.parameter }}{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / <a href="{% url 'handbook_alert_detail' alert.id %}">{{ alert.parameter }}</a> / Delete
+</nav>
+<h2>Delete alert</h2>
+<div class="card">
+    <p>Are you sure you want to delete <strong>{{ alert.parameter }}</strong> ({{ alert.subsystem.name }})?</p>
+    <p>This cannot be undone.</p>
+    <form method="post">{% csrf_token %}
+        <p>
+            <button type="submit" class="btn btn-primary" style="background: var(--fail);">Yes, delete alert</button>
+            <a href="{% url 'handbook_alert_detail' alert.id %}" class="btn btn-secondary">Cancel</a>
+        </p>
+    </form>
+</div>
+{% endblock %}

@@ -27,6 +27,9 @@ def _search_runs(queryset, q, tag_id):
 
 
 def dashboard(request):
+    from django.utils import timezone
+    from datetime import timedelta
+
     runs = ProcedureRun.objects.select_related('satellite', 'procedure').prefetch_related('procedure__tags').order_by('-start_time')
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
@@ -39,11 +42,31 @@ def dashboard(request):
         tag_id = None
     runs = _search_runs(runs, q, tag_id)[:50]
     tags = Tag.objects.all()
+
+    # Summary stats for dashboard
+    running_count = ProcedureRun.objects.filter(status='RUNNING').count()
+    procedures_count = Procedure.objects.count()
+    satellites_count = Satellite.objects.count()
+    week_ago = timezone.now() - timedelta(days=7)
+    runs_last_7_days = ProcedureRun.objects.filter(start_time__gte=week_ago).count()
+    scribe_entries_24h = 0
+    try:
+        MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
+        day_ago = timezone.now() - timedelta(days=1)
+        scribe_entries_24h = MissionLogEntry.objects.filter(timestamp__gte=day_ago).count()
+    except Exception:
+        pass
+
     return render(request, 'dashboard.html', {
         'runs': runs,
         'search_query': q,
         'tag_id': tag_id,
         'tags': tags,
+        'running_count': running_count,
+        'procedures_count': procedures_count,
+        'satellites_count': satellites_count,
+        'runs_last_7_days': runs_last_7_days,
+        'scribe_entries_24h': scribe_entries_24h,
     })
 
 
@@ -344,11 +367,13 @@ def run_procedure(request, run_id):
     step_index, step_list, total_steps, num_done = _run_step_context(run, proc, step_index, executed_list)
 
     if request.method == 'POST':
+        keep_view_all = request.POST.get('view_all') == '1'
         if request.POST.get('save_run_notes') is not None:
             run.run_notes = request.POST.get('run_notes', '').strip()
             run.save()
             messages.success(request, 'Run notes saved.')
-            return redirect(reverse('run', kwargs={'run_id': run_id}) + f'?step={step_index}')
+            q = '?view=all' if keep_view_all else f'?step={step_index}'
+            return redirect(reverse('run', kwargs={'run_id': run_id}) + q)
         step = get_next_step(proc, step_index)
         if step is None:
             return redirect('dashboard')
@@ -370,7 +395,8 @@ def run_procedure(request, run_id):
             run.status = status
             run.save()
             return redirect('dashboard')
-        return redirect(reverse('run', kwargs={'run_id': run_id}) + f'?step={step_index + 1}')
+        q = '?view=all' if keep_view_all else f'?step={step_index + 1}'
+        return redirect(reverse('run', kwargs={'run_id': run_id}) + q)
 
     if num_done >= total_steps and total_steps > 0:
         from django.utils import timezone
@@ -389,6 +415,20 @@ def run_procedure(request, run_id):
 
     has_prev = step_index > 0
     has_next = step_index < total_steps - 1
+
+    view_all = request.GET.get('view') == 'all'
+    steps_with_execution = []
+    if view_all:
+        steps = proc.get('steps', [])
+        for i, s in enumerate(steps):
+            ex = executed_list[i] if i < len(executed_list) else None
+            steps_with_execution.append({
+                'step': s,
+                'execution': ex,
+                'index': i,
+                'is_current': i == num_done,
+            })
+
     return render(request, 'run.html', {
         'procedure': proc,
         'run': run,
@@ -402,6 +442,8 @@ def run_procedure(request, run_id):
         'num_done': num_done,
         'has_prev': has_prev,
         'has_next': has_next,
+        'view_all': view_all,
+        'steps_with_execution': steps_with_execution,
     })
 
 

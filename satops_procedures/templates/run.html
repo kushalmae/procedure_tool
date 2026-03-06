@@ -5,7 +5,14 @@
   <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; {{ procedure.name }} &rarr; Run (step {{ step_index|add:1 }} of {{ total_steps }})
 </nav>
 <h2>{{ procedure.name }} — {{ satellite }}</h2>
-<p class="no-print"><a href="{% url 'run_summary' run.id %}">View all steps / Print</a></p>
+<p class="no-print">
+  {% if view_all %}
+  <a href="{% url 'run' run.id %}?step={{ num_done }}">See one step at a time</a>
+  {% else %}
+  <a href="{% url 'run' run.id %}?view=all">See all steps at once</a>
+  {% endif %}
+  | <a href="{% url 'run_summary' run.id %}">View all steps / Print</a>
+</p>
 
 <div class="run-notes-card card no-print">
     <h3 style="margin-top: 0;">Run notes</h3>
@@ -18,6 +25,40 @@
     </form>
 </div>
 
+{% if view_all %}
+<div class="run-all-steps card no-print">
+    <div class="progress-bar" role="progressbar" aria-valuenow="{{ num_done }}" aria-valuemin="0" aria-valuemax="{{ total_steps }}" aria-label="Procedure progress">
+        <div style="width: {% widthratio num_done total_steps 100 %}%; height: 100%; background: var(--accent); border-radius: 2px;"></div>
+    </div>
+    <p><strong>{{ num_done }} of {{ total_steps }} steps completed.</strong></p>
+    {% for item in steps_with_execution %}
+    <div class="run-all-step-item {% if item.is_current %}run-all-step-current{% endif %}">
+        <h3>{{ forloop.counter }}. {{ item.step.description }}</h3>
+        {% if item.execution %}
+        <p><strong>Status:</strong> <span class="badge badge-{{ item.execution.status|lower }}">{{ item.execution.status }}</span>
+        {% if item.execution.input_value %} <strong>Input:</strong> {{ item.execution.input_value }}{% endif %}</p>
+        {% if item.execution.notes %}<p><strong>Notes:</strong> {{ item.execution.notes }}</p>{% endif %}
+        <p style="color: var(--text-muted); font-size: 0.9rem;">{{ item.execution.timestamp|date:"Y-m-d H:i:s" }}</p>
+        {% elif item.is_current %}
+        <form method="post" id="run-step-form">{% csrf_token %}
+            <input type="hidden" name="view_all" value="1">
+            <label for="run-status">Status</label>
+            <select name="status" id="run-status" autofocus><option value="PASS">PASS</option><option value="FAIL">FAIL</option></select>
+            {% if item.step.input %}
+            <label for="run-value">Input ({{ item.step.input }})</label>
+            <input name="value" id="run-value" type="text">
+            {% endif %}
+            <label for="run-notes">Notes</label>
+            <textarea name="notes" id="run-notes" rows="3"></textarea>
+            <p><button type="submit" class="btn btn-primary">Submit step</button></p>
+        </form>
+        {% else %}
+        <p style="color: var(--text-muted);">— Not yet done</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
 <div class="run-layout">
     <aside class="step-list no-print" aria-label="Procedure steps">
         <strong>Steps</strong>
@@ -68,4 +109,5 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 {% endblock %}

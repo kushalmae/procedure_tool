@@ -2,6 +2,32 @@
 {% block title %}Fleet Procedures{% endblock %}
 {% block content %}
 <h2>Fleet Procedures</h2>
+
+<div class="dashboard-summary no-print">
+    <div class="summary-cards">
+        <div class="summary-card">
+            <span class="summary-value">{{ running_count }}</span>
+            <span class="summary-label">Running now</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value">{{ procedures_count }}</span>
+            <span class="summary-label">Procedures</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value">{{ satellites_count }}</span>
+            <span class="summary-label">Satellites</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value">{{ runs_last_7_days }}</span>
+            <span class="summary-label">Runs (7 days)</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-value">{{ scribe_entries_24h }}</span>
+            <span class="summary-label">Scribe entries (24h)</span>
+        </div>
+    </div>
+</div>
+
 <div class="search-bar card no-print">
     <form method="get" class="search-form">
         <input type="text" name="q" value="{{ search_query }}" placeholder="Search satellite, procedure, operator..." class="search-input">

@@ -8,10 +8,14 @@ Satellite operations procedure tool: multi-user, fleet tracking, YAML procedures
 cd satops_procedures
 python -m venv .venv
 .venv\Scripts\Activate.ps1   # Windows
-# source .venv/bin/activate  # Linux/macOS
+# source .venv/Scripts/activate # Linux/macOS
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_procedures   # optional: Bus Checkout procedure + sample satellites
+python manage.py seed_scribe       # optional: Mission Scribe roles + event categories
+python manage.py seed_anomalies    # optional: Fleet Anomaly Tracker subsystems + types; use --anomalies for sample data
+python manage.py seed_fdir         # optional: FDIR Handbook subsystems; use --entries for sample FDIR entries
+python manage.py seed_handbook      # optional: Alerts & Limits Handbook subsystems; use --alerts for sample alerts
 python manage.py createsuperuser   # optional: for Django Admin
 ```
 
@@ -21,9 +25,9 @@ python manage.py createsuperuser   # optional: for Django Admin
 python manage.py runserver
 ```
 
-Open http://localhost:8000 — Dashboard, Start Procedure, Run, History.
+Open http://localhost:8000 — Dashboard, Start Procedure, Run, History, Mission Scribe, Fleet Anomaly Tracker, Alerts & Limits Handbook, FDIR Handbook.
 
-- **Admin**: http://localhost:8000/admin/ (Satellites, Procedures, Runs, Step Executions)
+- **Admin**: http://localhost:8000/admin/ (Satellites, Procedures, Runs, Step Executions, Scribe, Anomalies, Handbook, FDIR)
 
 ## Admin and logging in
 
@@ -57,5 +61,9 @@ Enter username, email (optional), and password. Then log in at http://localhost:
 
 - `satops/` — project settings and URLs
 - `procedures/` — app: models, views, `services/` (procedure_loader, runner)
-- `templates/` — dashboard, start, run, history
+- `scribe/` — Mission Scribe app (timeline, shifts, log entries)
+- `anomalies/` — Fleet Anomaly Tracker app (anomaly registry, report form, notes)
+- `handbook/` — Alerts & Limits Handbook app (alert definitions, subsystems)
+- `fdir/` — FDIR Handbook app (fault detection, isolation, recovery reference)
+- `templates/` — dashboard, start, run, history, scribe, anomalies, handbook, fdir
 - `procedures_yaml/` — YAML procedure definitions (e.g. `bus_checkout.yaml`)

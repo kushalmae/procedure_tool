@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Mission Scribe — Timeline{% endblock %}
+{% block main_class %}main-full-width{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / Mission Scribe
+</nav>
+<h2>Mission Scribe — Timeline</h2>
+
+<div class="scribe-layout no-print">
+    <aside class="scribe-form-col">
+        {% if user.is_authenticated %}
+        <div class="card">
+            <h3 style="margin-top: 0;">Add entry</h3>
+            <form method="post" action="{% url 'scribe_timeline' %}">{% csrf_token %}
+                <label for="entry-timestamp">Timestamp</label>
+                <input type="datetime-local" id="entry-timestamp" name="timestamp" value="{{ timestamp_default }}">
+                <label for="entry-role">Role <span style="color: var(--fail);">*</span></label>
+                <select id="entry-role" name="role" required>
+                    <option value="">—</option>
+                    {% for r in roles %}
+                    <option value="{{ r.id }}" {% if default_role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="entry-satellite">Satellite</label>
+                <select id="entry-satellite" name="satellite">
+                    <option value="">—</option>
+                    {% for s in satellites %}
+                    <option value="{{ s.id }}" {% if default_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="entry-category">Category <span style="color: var(--fail);">*</span></label>
+                <select id="entry-category" name="category" required>
+                    <option value="">—</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}" {% if default_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="entry-severity">Severity</label>
+                <select id="entry-severity" name="severity">
+                    {% for val, label in severity_choices %}
+                    <option value="{{ val }}" {% if default_severity == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <label for="entry-description">Description <span style="color: var(--fail);">*</span></label>
+                <textarea id="entry-description" name="description" rows="3" required placeholder="Operational context..."></textarea>
+                <label for="entry-shift">Shift</label>
+                <select id="entry-shift" name="shift">
+                    <option value="">—</option>
+                    {% for sh in shifts %}
+                    <option value="{{ sh.id }}" {% if default_shift_id == sh.id %}selected{% endif %}>{{ sh.start_time|date:"Y-m-d H:i" }} – {{ sh.end_time|date:"H:i" }}</option>
+                    {% endfor %}
+                </select>
+                <label>Tags</label>
+                <div class="tag-checkboxes">
+                    {% for t in scribe_tags %}
+                    <label><input type="checkbox" name="tags" value="{{ t.id }}"> {{ t.name }}</label>
+                    {% empty %}
+                    <span style="color: var(--text-muted-on-light); font-size: 0.85rem;">No tags in <a href="/admin/scribe/scribetag/">Admin</a>.</span>
+                    {% endfor %}
+                </div>
+                <p>
+                    <button type="submit" class="btn btn-primary">Save entry</button>
+                    <button type="submit" name="add_another" value="1" class="btn btn-secondary">Save and add another</button>
+                </p>
+            </form>
+        </div>
+        {% else %}
+        <div class="card">
+            <p><a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a> to add entries.</p>
+        </div>
+        {% endif %}
+    </aside>
+
+    <div class="scribe-timeline-col">
+        <p class="no-print"><a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Shifts</a></p>
+        <div class="search-bar card no-print">
+            <form method="get" class="search-form">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Search description..." class="search-input">
+                <label for="filter-role">Role</label>
+                <select id="filter-role" name="role">
+                    <option value="">All</option>
+                    {% for r in roles %}
+                    <option value="{{ r.id }}" {% if filter_role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="filter-satellite">Satellite</label>
+                <select id="filter-satellite" name="satellite">
+                    <option value="">All</option>
+                    {% for s in satellites %}
+                    <option value="{{ s.id }}" {% if filter_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="filter-category">Category</label>
+                <select id="filter-category" name="category">
+                    <option value="">All</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}" {% if filter_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                <label for="filter-severity">Severity</label>
+                <select id="filter-severity" name="severity">
+                    <option value="">All</option>
+                    {% for val, label in severity_choices %}
+                    <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <label for="filter-shift">Shift</label>
+                <select id="filter-shift" name="shift">
+                    <option value="">All</option>
+                    {% for sh in shifts %}
+                    <option value="{{ sh.id }}" {% if filter_shift_id == sh.id %}selected{% endif %}>{{ sh.start_time|date:"Y-m-d H:i" }} – {{ sh.end_time|date:"H:i" }}</option>
+                    {% endfor %}
+                </select>
+                <label for="filter-tag">Tag</label>
+                <select id="filter-tag" name="tag">
+                    <option value="">All</option>
+                    {% for t in scribe_tags %}
+                    <option value="{{ t.id }}" {% if filter_tag_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary">Filter</button>
+                {% if search_query or filter_role_id or filter_satellite_id or filter_category_id or filter_severity or filter_shift_id or filter_tag_id %}
+                <a href="{% url 'scribe_timeline' %}?clear=1" class="btn btn-secondary">Clear filters</a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="card">
+            <table class="scribe-timeline-table">
+                <colgroup>
+                    <col class="col-time">
+                    <col class="col-role">
+                    <col class="col-satellite">
+                    <col class="col-category">
+                    <col class="col-severity">
+                    <col class="col-tags">
+                    <col class="col-description">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Role</th>
+                        <th>Satellite</th>
+                        <th>Category</th>
+                        <th>Severity</th>
+                        <th>Tags</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in entries %}
+                    <tr>
+                        <td>{{ e.timestamp|date:"Y-m-d H:i" }}</td>
+                        <td>{{ e.role.name }}</td>
+                        <td>{{ e.satellite.name|default:"—" }}</td>
+                        <td>{{ e.category.name }}</td>
+                        <td><span class="badge badge-{{ e.severity|lower }}">{{ e.get_severity_display }}</span></td>
+                        <td>{% for t in e.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% empty %}—{% endfor %}</td>
+                        <td class="scribe-description">{{ e.description }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">No entries. {% if user.is_authenticated %}Add one in the form on the left.{% else %}Log in to add entries.{% endif %} Or clear filters.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

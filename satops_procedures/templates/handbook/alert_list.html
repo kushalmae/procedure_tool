@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Alerts & Limits Handbook{% endblock %}
+{% block main_class %}main-full-width{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / Alerts & Limits Handbook
+</nav>
+<h2>Alerts & Limits Handbook</h2>
+<p class="no-print">
+    {% if user.is_authenticated %}
+    <a href="{% url 'handbook_alert_create' %}" class="btn btn-primary">Add alert</a>
+    {% else %}
+    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a> to add or edit alerts.
+    {% endif %}
+</p>
+<div class="search-bar card no-print">
+    <form method="get" class="search-form">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search parameter or description..." class="search-input">
+        <label for="filter-subsystem">Subsystem</label>
+        <select id="filter-subsystem" name="subsystem">
+            <option value="">All</option>
+            {% for s in subsystems %}
+            <option value="{{ s.id }}" {% if filter_subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <label for="filter-severity">Severity</label>
+        <select id="filter-severity" name="severity">
+            <option value="">All</option>
+            {% for val, label in severity_choices %}
+            <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Filter</button>
+        {% if search_query or filter_subsystem_id or filter_severity %}
+        <a href="{% url 'handbook_alert_list' %}?clear=1" class="btn btn-secondary">Clear filters</a>
+        {% endif %}
+    </form>
+</div>
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>Subsystem</th>
+                <th>Severity</th>
+                <th>Warning</th>
+                <th>Critical</th>
+                <th>Response (high level)</th>
+                <th>Version</th>
+                <th>Updated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in alerts %}
+            <tr>
+                <td><a href="{% url 'handbook_alert_detail' a.id %}">{{ a.parameter }}</a></td>
+                <td>{{ a.subsystem.name }}</td>
+                <td>{{ a.get_severity_display }}</td>
+                <td>{{ a.warning_threshold|default:"—" }}</td>
+                <td>{{ a.critical_threshold|default:"—" }}</td>
+                <td class="response-preview">{% if a.recommended_response %}{{ a.recommended_response|truncatewords:15 }}{% else %}—{% endif %}</td>
+                <td>{{ a.version }}</td>
+                <td>{{ a.updated_at|date:"Y-m-d" }}</td>
+                <td>
+                    <a href="{% url 'handbook_alert_detail' a.id %}" class="btn btn-secondary">View</a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'handbook_alert_edit' a.id %}" class="btn btn-secondary">Edit</a>
+                    <a href="{% url 'handbook_alert_delete' a.id %}" class="btn btn-secondary" style="color: var(--fail);">Delete</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9">No alerts. {% if user.is_authenticated %}<a href="{% url 'handbook_alert_create' %}">Add one</a> or run <code>python manage.py seed_handbook --alerts</code>.{% else %}Run <code>python manage.py seed_handbook --alerts</code> for samples.{% endif %} Or clear filters.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

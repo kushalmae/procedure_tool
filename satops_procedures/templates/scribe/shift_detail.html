@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Mission Scribe — Shift{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / <a href="{% url 'scribe_shift_list' %}">Shifts</a> / Shift {{ shift.id }}
+</nav>
+<h2>Shift {{ shift.start_time|date:"Y-m-d H:i" }} – {{ shift.end_time|date:"Y-m-d H:i" }}</h2>
+<div class="card">
+    <h3 style="margin-top: 0;">Handoff notes</h3>
+    <form method="post">{% csrf_token %}
+        <textarea name="handoff_notes" rows="4" placeholder="Summary for next shift...">{{ shift.handoff_notes }}</textarea>
+        <p><button type="submit" class="btn btn-secondary">Update handoff notes</button></p>
+    </form>
+</div>
+<div class="card">
+    <h3 style="margin-top: 0;">Entries in this shift</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Role</th>
+                <th>Satellite</th>
+                <th>Category</th>
+                <th>Severity</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr>
+                <td>{{ e.timestamp|date:"H:i" }}</td>
+                <td>{{ e.role.name }}</td>
+                <td>{{ e.satellite.name|default:"—" }}</td>
+                <td>{{ e.category.name }}</td>
+                <td>{{ e.get_severity_display }}</td>
+                <td class="scribe-description">{{ e.description }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No entries in this shift.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p><a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Back to shifts</a> <a href="{% url 'scribe_timeline' %}?shift={{ shift.id }}" class="btn btn-secondary">View in timeline</a></p>
+{% endblock %}

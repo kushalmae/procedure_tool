@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Mission Scribe — Shifts{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / Shifts
+</nav>
+<h2>Shifts</h2>
+<p><a href="{% url 'scribe_shift_create' %}" class="btn btn-primary">Add shift</a> <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Back to timeline</a></p>
+<div class="card">
+    <table>
+        <thead>
+            <tr><th>Start</th><th>End</th><th>Handoff notes</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for sh in shifts %}
+            <tr>
+                <td>{{ sh.start_time|date:"Y-m-d H:i" }}</td>
+                <td>{{ sh.end_time|date:"Y-m-d H:i" }}</td>
+                <td>{{ sh.handoff_notes|truncatewords:10|default:"—" }}</td>
+                <td><a href="{% url 'scribe_shift_detail' sh.id %}">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">No shifts. <a href="{% url 'scribe_shift_create' %}">Add a shift</a>.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

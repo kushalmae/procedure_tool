@@ -79,3 +79,41 @@ The tool is **multi-user** and **offline-first**: no cloud dependency, suitable 
 - **Users:** Create a superuser with `createsuperuser`; use the same account to log in at `/login/` and start/run procedures. Add more users in Django Admin if needed.
 
 For detailed usage see the wiki: **User Guide**, **Procedures**, **Admin and Users**. For technical layout see **ARCHITECTURE.md** and the wiki **Architecture** page.
+
+---
+
+# Mission Operations Scribe Tool (Mission Scribe)
+
+## What it is
+
+**Mission Scribe** is a lightweight web application for satellite mission operations teams to record and share structured shift logs across multiple roles (e.g. Mission Director, Flight Dynamics, TNC, Payload, Ground Systems).
+
+The tool lets operators log events during a shift with structured metadata (timestamp, role, satellite, event category, severity, tags) and a freeform description. All logs appear in a unified mission timeline. Users can filter by role, satellite, category, severity, or shift and search the log history. Shifts can have handoff notes for shift handover.
+
+## Product description
+
+Mission Scribe is designed for **mission operations** where multiple roles (Mission Director, FDS, TNC, Payload, Ground Systems) need to log events in one place. Each entry captures key fields plus a freeform note for operational context. The **unified mission timeline** gives program managers and operators a single chronological view of activity across all roles. Filters (role, satellite, category, severity, shift) and search make it easy to understand what happened when. **Shift-based logging** and **shift handoff notes** support shift handoff without adding operational overhead.
+
+The MVP focuses on real-time shift logging, cross-role visibility, and shift handoff summaries.
+
+## Core MVP features
+
+- **Role-based event logging** — Log as Mission Director, Flight Dynamics, TNC, Payload, Ground Systems (and other roles configurable in Admin).
+- **Structured event metadata + flexible note body** — Timestamp, role, satellite, category, severity, tags; freeform description.
+- **Unified chronological mission timeline** — All entries in one list, ordered by time.
+- **Filters** — By role, satellite, category, severity, and shift.
+- **Shift-based logging and shift handoff notes** — Create shifts (start/end time); attach handoff notes; optionally associate log entries with a shift.
+- **Searchable mission log history** — Text search on description; filter and search together.
+
+## Key design principles
+
+- **Structured + flexible** — Required structured fields (role, category, description) plus optional satellite, severity, tags, shift; one freeform body.
+- **Minimal friction** — Default timestamp to now; dropdowns for role/category/satellite; single “Add entry” form; “Save and add another” option.
+- **Single source of truth** — One mission log table; one timeline view with filters and search; shift handoff notes stored on the shift.
+
+## How to use Mission Scribe
+
+- **Timeline** — Open **Mission Scribe** in the nav. View all entries; use the filter form (role, satellite, category, severity, shift, tag) and search box; click **Filter** or **Clear**.
+- **Add entry** — Click **Add entry** (requires login). Set timestamp (defaults to now), role, category, description; optionally satellite, severity, shift, tags. **Save entry** or **Save and add another**.
+- **Shifts** — Click **Shifts** to list shifts. **Add shift** to create a shift (start time, end time, handoff notes). Open a shift to view handoff notes and entries in that shift; **Update handoff notes** to edit. When adding a log entry, you can assign it to a shift.
+- **Seed data** — Run `python manage.py seed_scribe` to create default roles and event categories. Add Scribe tags in Django Admin (**/admin/scribe/scribetag/**) if needed.

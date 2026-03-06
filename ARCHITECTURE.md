@@ -34,6 +34,11 @@ procedure_tool/
                                # procedure_edit, procedure_delete_confirm, login
     procedures_yaml/           # One YAML per procedure (name, version, steps)
     static/css/style.css
+    scribe/                     # Mission Scribe app
+      models.py                 # Role, EventCategory, ScribeTag, Shift, MissionLogEntry
+      views.py, urls.py, admin.py
+      management/commands/seed_scribe.py
+    templates/scribe/           # timeline, entry_form, shift_list, shift_form, shift_detail
   procedure_tool.wiki/         # User guide, admin, architecture (long form)
   ARCHITECTURE.md               # This file
 ```
@@ -68,6 +73,21 @@ Procedure *definition* lives in YAML; runs and step results live in SQLite.
 | `/run/<id>/summary/` | All steps + run notes; print-friendly |
 | `/history/` | Past runs, search, tag filter |
 | `/login/`, `/logout/` | App auth (logout via POST) |
+| `/scribe/` | Mission Scribe timeline (filters, search) |
+| `/scribe/add/` | Add log entry (login required) |
+| `/scribe/shifts/` | List shifts |
+| `/scribe/shifts/add/` | Create shift |
+| `/scribe/shifts/<id>/` | Shift detail (handoff notes, entries in shift) |
+
+---
+
+## Mission Scribe (scribe app)
+
+- **Models:** `Role`, `EventCategory`, `ScribeTag`, `Shift`, `MissionLogEntry`. `MissionLogEntry` has FK to `procedures.Satellite` (shared fleet) and optional FK to `Shift`. Severity: Info, Warning, Critical.
+- **Timeline** — Chronological list of `MissionLogEntry`; filter by role, satellite, category, severity, shift, tag; search on description.
+- **Add entry** — Form: timestamp (default now), role, satellite, category, severity, description, optional shift and tags; `@login_required`; `created_by` = request.user.
+- **Shifts** — Create shift (start_time, end_time, handoff_notes); shift detail shows entries in that shift and allows editing handoff notes.
+- **Seed:** `python manage.py seed_scribe` creates default roles and event categories.
 
 ---
 

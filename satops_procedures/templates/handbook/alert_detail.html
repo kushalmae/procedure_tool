@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ alert.parameter }} — Alerts & Limits Handbook{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / {{ alert.parameter }}
+</nav>
+<h2>{{ alert.parameter }}</h2>
+<div class="card">
+    <dl class="detail-list">
+        <dt>Subsystem</dt>
+        <dd>{{ alert.subsystem.name }}</dd>
+        <dt>Severity</dt>
+        <dd>{{ alert.get_severity_display }}</dd>
+        <dt>Description</dt>
+        <dd>{{ alert.description|linebreaks }}</dd>
+        {% if alert.alert_conditions %}
+        <dt>Alert conditions</dt>
+        <dd>{{ alert.alert_conditions|linebreaks }}</dd>
+        {% endif %}
+        <dt>Warning threshold</dt>
+        <dd>{{ alert.warning_threshold|default:"—" }}</dd>
+        <dt>Critical threshold</dt>
+        <dd>{{ alert.critical_threshold|default:"—" }}</dd>
+        {% if alert.recommended_response %}
+        <dt>Recommended response</dt>
+        <dd>{{ alert.recommended_response|linebreaks }}</dd>
+        {% endif %}
+        {% if alert.procedure %}
+        <dt>Procedure</dt>
+        <dd><a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a></dd>
+        {% endif %}
+        <dt>Version</dt>
+        <dd>{{ alert.version }}</dd>
+        <dt>Last updated</dt>
+        <dd>{{ alert.updated_at|date:"Y-m-d H:i" }}</dd>
+    </dl>
+    <p class="no-print">
+        {% if user.is_authenticated %}
+        <a href="{% url 'handbook_alert_edit' alert.id %}" class="btn btn-primary">Edit</a>
+        <a href="{% url 'handbook_alert_delete' alert.id %}" class="btn btn-secondary" style="color: var(--fail);">Delete</a>
+        {% endif %}
+        <a href="{% url 'handbook_alert_list' %}" class="btn btn-secondary">Back to list</a>
+    </p>
+</div>
+{% endblock %}

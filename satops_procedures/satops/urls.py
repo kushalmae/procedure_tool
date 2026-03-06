@@ -7,4 +7,8 @@ urlpatterns = [
     path('login/', LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('', include('procedures.urls')),
+    path('scribe/', include('scribe.urls')),
+    path('anomalies/', include('anomalies.urls')),
+    path('handbook/', include('handbook.urls')),
+    path('fdir/', include('fdir.urls')),
 ]

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{% if alert %}Edit: {{ alert.parameter }}{% else %}Add alert{% endif %} — Alerts & Limits Handbook{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / {% if alert %}Edit{% else %}Add alert{% endif %}
+</nav>
+<h2>{% if alert %}Edit alert{% else %}Add alert{% endif %}</h2>
+<div class="card">
+    <form method="post">{% csrf_token %}
+        <label for="parameter">Parameter <span style="color: var(--fail);">*</span></label>
+        <input id="parameter" name="parameter" type="text" value="{{ form.parameter }}" required maxlength="120" placeholder="e.g. Battery Temperature">
+        <label for="subsystem">Subsystem <span style="color: var(--fail);">*</span></label>
+        <select id="subsystem" name="subsystem" required>
+            <option value="">—</option>
+            {% for s in subsystems %}
+            <option value="{{ s.id }}" {% if form.subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <label for="description">Description (meaning and operational impact) <span style="color: var(--fail);">*</span></label>
+        <textarea id="description" name="description" rows="4" required>{{ form.description }}</textarea>
+        <label for="alert_conditions">Alert conditions (optional)</label>
+        <textarea id="alert_conditions" name="alert_conditions" rows="2" placeholder="When/how the alert triggers">{{ form.alert_conditions }}</textarea>
+        <label for="warning_threshold">Warning threshold</label>
+        <input id="warning_threshold" name="warning_threshold" type="text" value="{{ form.warning_threshold }}" maxlength="80" placeholder="e.g. > 45 C">
+        <label for="critical_threshold">Critical threshold</label>
+        <input id="critical_threshold" name="critical_threshold" type="text" value="{{ form.critical_threshold }}" maxlength="80" placeholder="e.g. > 55 C">
+        <label for="recommended_response">Recommended response</label>
+        <textarea id="recommended_response" name="recommended_response" rows="3" placeholder="Operator actions or procedure reference">{{ form.recommended_response }}</textarea>
+        <label for="procedure">Linked procedure (optional)</label>
+        <select id="procedure" name="procedure">
+            <option value="">—</option>
+            {% for p in procedures %}
+            <option value="{{ p.id }}" {% if form.procedure_id == p.id %}selected{% endif %}>{{ p.name }} (v{{ p.version }})</option>
+            {% endfor %}
+        </select>
+        <label for="severity">Severity</label>
+        <select id="severity" name="severity">
+            {% for val, label in severity_choices %}
+            <option value="{{ val }}" {% if form.severity == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <p>
+            <button type="submit" class="btn btn-primary">{% if alert %}Save changes{% else %}Create alert{% endif %}</button>
+            {% if alert %}
+            <a href="{% url 'handbook_alert_detail' alert.id %}" class="btn btn-secondary">Cancel</a>
+            {% else %}
+            <a href="{% url 'handbook_alert_list' %}" class="btn btn-secondary">Cancel</a>
+            {% endif %}
+        </p>
+    </form>
+</div>
+{% endblock %}

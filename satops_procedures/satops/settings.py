@@ -17,6 +17,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'procedures',
+    'scribe',
+    'anomalies',
+    'handbook',
+    'fdir',
 ]
 
 MIDDLEWARE = [

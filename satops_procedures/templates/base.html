@@ -9,30 +9,43 @@
 </head>
 <body>
     <a href="#main" class="skip-link">Skip to main content</a>
-    <nav class="no-print" aria-label="Main navigation">
-        <a href="{% url 'dashboard' %}">Dashboard</a>
-        <a href="{% url 'start' %}">Start Procedure</a>
-        <a href="{% url 'procedure_list' %}">Procedures</a>
-        <a href="{% url 'procedure_create' %}">Create Procedure</a>
-        <a href="{% url 'history' %}">History</a>
-        {% if user.is_authenticated %}
-        <span style="margin-left: auto; color: var(--text-muted-on-light);">{{ user.get_username }}</span>
-        <form method="post" action="{% url 'logout' %}" style="display: inline;">{% csrf_token %}
-            <button type="submit" class="nav-link-btn">Log out</button>
-        </form>
-        {% else %}
-        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" style="margin-left: auto;">Log in</a>
-        {% endif %}
+    <nav class="sidebar no-print" aria-label="Main navigation">
+        <div class="sidebar-links">
+            <div class="sidebar-section">
+                <span class="sidebar-section-label">Procedures</span>
+                <a href="{% url 'dashboard' %}">Dashboard</a>
+                <a href="{% url 'start' %}">Start Procedure</a>
+                <a href="{% url 'procedure_list' %}">Procedures</a>
+                <a href="{% url 'procedure_create' %}">Create Procedure</a>
+                <a href="{% url 'history' %}">History</a>
+            </div>
+            <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
+            <a href="{% url 'anomalies_registry' %}">Fleet Anomaly Tracker</a>
+            <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a>
+            <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
+        </div>
+        <div class="sidebar-auth">
+            {% if user.is_authenticated %}
+            <span class="sidebar-username">{{ user.get_username }}</span>
+            <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+                <button type="submit" class="nav-link-btn">Log out</button>
+            </form>
+            {% else %}
+            <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>
+            {% endif %}
+        </div>
     </nav>
-    {% if messages %}
-    <div class="messages no-print" aria-live="polite">
-        {% for message in messages %}
-        <p class="message message-{{ message.tags }}">{{ message }}</p>
-        {% endfor %}
+    <div class="page-content">
+        {% if messages %}
+        <div class="messages no-print" aria-live="polite">
+            {% for message in messages %}
+            <p class="message message-{{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <main id="main" class="{% block main_class %}{% endblock %}">
+            {% block content %}{% endblock %}
+        </main>
     </div>
-    {% endif %}
-    <main id="main">
-        {% block content %}{% endblock %}
-    </main>
 </body>
 </html>

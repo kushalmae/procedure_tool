@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Mission Scribe — Add entry{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / Add entry
+</nav>
+<h2>Add log entry</h2>
+<div class="card">
+    <form method="post">{% csrf_token %}
+        <label for="timestamp">Timestamp</label>
+        <input type="datetime-local" id="timestamp" name="timestamp" value="{{ timestamp_default }}">
+        <label for="role">Role <span style="color: var(--fail);">*</span></label>
+        <select id="role" name="role" required>
+            <option value="">—</option>
+            {% for r in roles %}
+            <option value="{{ r.id }}" {% if default_role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+            {% endfor %}
+        </select>
+        <label for="satellite">Satellite</label>
+        <select id="satellite" name="satellite">
+            <option value="">—</option>
+            {% for s in satellites %}
+            <option value="{{ s.id }}" {% if default_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <label for="category">Category <span style="color: var(--fail);">*</span></label>
+        <select id="category" name="category" required>
+            <option value="">—</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}" {% if default_category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <label for="severity">Severity</label>
+        <select id="severity" name="severity">
+            {% for val, label in severity_choices %}
+            <option value="{{ val }}" {% if default_severity == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <label for="description">Description <span style="color: var(--fail);">*</span></label>
+        <textarea id="description" name="description" rows="4" required placeholder="Operational context..."></textarea>
+        <label for="shift">Shift</label>
+        <select id="shift" name="shift">
+            <option value="">—</option>
+            {% for sh in shifts %}
+            <option value="{{ sh.id }}" {% if default_shift_id == sh.id %}selected{% endif %}>{{ sh.start_time|date:"Y-m-d H:i" }} – {{ sh.end_time|date:"H:i" }}</option>
+            {% endfor %}
+        </select>
+        <label>Tags</label>
+        <div class="tag-checkboxes">
+            {% for t in scribe_tags %}
+            <label><input type="checkbox" name="tags" value="{{ t.id }}"> {{ t.name }}</label>
+            {% empty %}
+            <span style="color: var(--text-muted-on-light);">No tags. Add in <a href="/admin/scribe/scribetag/">Admin</a>.</span>
+            {% endfor %}
+        </div>
+        <p>
+            <button type="submit" class="btn btn-primary">Save entry</button>
+            <button type="submit" name="add_another" value="1" class="btn btn-secondary">Save and add another</button>
+            <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Cancel</a>
+        </p>
+    </form>
+</div>
+{% endblock %}
