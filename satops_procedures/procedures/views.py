@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Count, Max
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from datetime import timedelta
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -39,9 +41,6 @@ def _search_runs(queryset, q, tag_id):
 
 
 def dashboard(request):
-    from django.utils import timezone
-    from datetime import timedelta
-
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     if tag_id:
@@ -70,10 +69,27 @@ def dashboard(request):
     week_ago = timezone.now() - timedelta(days=7)
     runs_last_7_days = ProcedureRun.objects.filter(start_time__gte=week_ago).count()
     scribe_entries_24h = 0
+    recent_scribe_entries = []
     try:
         MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
         day_ago = timezone.now() - timedelta(days=1)
         scribe_entries_24h = MissionLogEntry.objects.filter(timestamp__gte=day_ago).count()
+        recent_scribe_entries = list(
+            MissionLogEntry.objects.select_related('role', 'satellite', 'category')
+            .order_by('-timestamp')[:5]
+        )
+    except Exception:
+        pass
+
+    active_anomalies_count = 0
+    recent_anomalies = []
+    try:
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        active_anomalies_count = Anomaly.objects.exclude(status=Anomaly.STATUS_RESOLVED).count()
+        recent_anomalies = list(
+            Anomaly.objects.select_related('satellite')
+            .order_by('-detection_time')[:5]
+        )
     except Exception:
         pass
 
@@ -89,6 +105,9 @@ def dashboard(request):
         'satellites_count': satellites_count,
         'runs_last_7_days': runs_last_7_days,
         'scribe_entries_24h': scribe_entries_24h,
+        'recent_scribe_entries': recent_scribe_entries,
+        'active_anomalies_count': active_anomalies_count,
+        'recent_anomalies': recent_anomalies,
     })
 
 
@@ -133,12 +152,23 @@ def start(request):
         preselected_procedure_id = int(preselected_procedure_id) if preselected_procedure_id else None
     except ValueError:
         preselected_procedure_id = None
+    preselected_satellite_name = ''
+    satellite_id_param = request.GET.get('satellite', '')
+    if satellite_id_param:
+        try:
+            sid = int(satellite_id_param)
+            sat = Satellite.objects.filter(pk=sid).first()
+            if sat:
+                preselected_satellite_name = sat.name
+        except ValueError:
+            pass
     return render(request, 'start.html', {
         'satellites': satellites,
         'procedures': procedures,
         'tags': tags,
         'filter_tag_id': filter_tag_id,
         'preselected_procedure_id': preselected_procedure_id,
+        'preselected_satellite_name': preselected_satellite_name,
     })
 
 
@@ -202,10 +232,12 @@ def procedure_review(request):
     except FileNotFoundError:
         return redirect('start')
     steps = proc.get('steps', [])
+    preconditions = (proc.get('preconditions') or '').strip()
     return render(request, 'procedure_review.html', {
         'procedure': procedure,
         'proc': proc,
         'steps': steps,
+        'preconditions': preconditions,
     })
 
 
@@ -243,6 +275,7 @@ def procedure_create(request):
                 'error': 'Procedure name is required.',
                 'form_name': request.POST.get('name'),
                 'form_version': request.POST.get('version'),
+                'form_preconditions': request.POST.get('preconditions', '').strip(),
                 'form_steps': steps,
             })
         if not steps:
@@ -250,9 +283,13 @@ def procedure_create(request):
                 'error': 'At least one step (id and description) is required.',
                 'form_name': name,
                 'form_version': version,
+                'form_preconditions': request.POST.get('preconditions', '').strip(),
                 'form_steps': [],
             })
+        preconditions = (request.POST.get('preconditions') or '').strip()
         proc_dict = {'name': name, 'version': version, 'steps': steps}
+        if preconditions:
+            proc_dict['preconditions'] = preconditions
         yaml_stem = _unique_yaml_stem(name)
         try:
             save_procedure(proc_dict, yaml_stem)
@@ -261,6 +298,7 @@ def procedure_create(request):
                 'error': f'Could not save procedure file: {e}',
                 'form_name': name,
                 'form_version': version,
+                'form_preconditions': preconditions,
                 'form_steps': steps,
             })
         procedure = Procedure.objects.create(name=name, version=version, yaml_file=yaml_stem)
@@ -268,6 +306,7 @@ def procedure_create(request):
     return render(request, 'procedure_create.html', {
         'form_name': '',
         'form_version': '1.0',
+        'form_preconditions': '',
         'form_steps': [{'id': '', 'description': '', 'input': ''}],
     })
 
@@ -280,10 +319,12 @@ def procedure_edit(request, procedure_id):
     except (FileNotFoundError, OSError):
         return redirect('procedure_list')
     steps = proc.get('steps', [])
+    form_preconditions = (proc.get('preconditions') or '')
     form_steps = [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in steps]
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         version = request.POST.get('version', '1.0').strip() or '1.0'
+        preconditions = (request.POST.get('preconditions') or '').strip()
         step_ids = request.POST.getlist('step_id')
         step_descriptions = request.POST.getlist('step_description')
         step_inputs = request.POST.getlist('step_input')
@@ -303,6 +344,7 @@ def procedure_edit(request, procedure_id):
                 'error': 'Procedure name is required.',
                 'form_name': request.POST.get('name'),
                 'form_version': request.POST.get('version'),
+                'form_preconditions': preconditions,
                 'form_steps': [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in (new_steps or [{}])] or [{'id': '', 'description': '', 'input': ''}],
             })
         if not new_steps:
@@ -311,9 +353,12 @@ def procedure_edit(request, procedure_id):
                 'error': 'At least one step (id and description) is required.',
                 'form_name': name,
                 'form_version': version,
+                'form_preconditions': preconditions,
                 'form_steps': [{'id': '', 'description': '', 'input': ''}],
             })
         proc_dict = {'name': name, 'version': version, 'steps': new_steps}
+        if preconditions:
+            proc_dict['preconditions'] = preconditions
         try:
             save_procedure(proc_dict, procedure.yaml_file)
         except OSError as e:
@@ -322,6 +367,7 @@ def procedure_edit(request, procedure_id):
                 'error': f'Could not save procedure file: {e}',
                 'form_name': name,
                 'form_version': version,
+                'form_preconditions': preconditions,
                 'form_steps': [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in new_steps] or [{'id': '', 'description': '', 'input': ''}],
             })
         procedure.name = name
@@ -333,6 +379,7 @@ def procedure_edit(request, procedure_id):
         'procedure': procedure,
         'form_name': procedure.name,
         'form_version': procedure.version,
+        'form_preconditions': form_preconditions,
         'form_steps': form_steps or [{'id': '', 'description': '', 'input': ''}],
     })
 
@@ -376,6 +423,8 @@ def procedure_clone(request, procedure_id):
         'version': procedure.version,
         'steps': proc.get('steps', []),
     }
+    if proc.get('preconditions'):
+        proc_dict['preconditions'] = proc['preconditions']
     try:
         save_procedure(proc_dict, new_stem)
     except OSError as e:
@@ -494,6 +543,7 @@ def run_procedure(request, run_id):
                 'is_current': i == num_done,
             })
 
+    preconditions = (proc.get('preconditions') or '').strip()
     return render(request, 'run.html', {
         'procedure': proc,
         'run': run,
@@ -505,6 +555,7 @@ def run_procedure(request, run_id):
         'step_is_readonly': step_is_readonly,
         'execution': execution,
         'num_done': num_done,
+        'preconditions': preconditions,
         'has_prev': has_prev,
         'has_next': has_next,
         'view_all': view_all,
@@ -515,7 +566,7 @@ def run_procedure(request, run_id):
 def run_summary(request, run_id):
     """All steps in one view, print-friendly."""
     run = get_object_or_404(
-        ProcedureRun.objects.select_related('satellite', 'procedure'),
+        ProcedureRun.objects.select_related('satellite', 'procedure').prefetch_related('linked_anomalies'),
         pk=run_id,
     )
     proc = load_procedure(run.procedure.yaml_file)
@@ -525,10 +576,12 @@ def run_summary(request, run_id):
     for i, step in enumerate(steps):
         ex = executed_list[i] if i < len(executed_list) else None
         steps_with_execution.append({'step': step, 'execution': ex})
+    preconditions = (proc.get('preconditions') or '').strip()
     return render(request, 'run_summary.html', {
         'run': run,
         'procedure': proc,
         'steps_with_execution': steps_with_execution,
+        'preconditions': preconditions,
     })
 
 
@@ -560,4 +613,345 @@ def history(request):
         'tags': tags,
         'sort': sort,
         'sort_options': RUN_SORT_OPTIONS,
+    })
+
+
+def fleet(request):
+    """Fleet-centric single pane of glass: per-satellite last run, open anomalies, last scribe."""
+    satellites = list(Satellite.objects.order_by('name'))
+    if not satellites:
+        return render(request, 'fleet.html', {'fleet_rows': [], 'satellites_count': 0})
+
+    # Latest run per satellite (one query, then first per satellite in Python)
+    runs = (
+        ProcedureRun.objects
+        .filter(satellite__in=satellites)
+        .select_related('satellite', 'procedure')
+        .order_by('satellite_id', '-start_time')
+    )
+    last_run_by_sat = {}
+    for r in runs:
+        if r.satellite_id not in last_run_by_sat:
+            last_run_by_sat[r.satellite_id] = r
+
+    # Open anomaly counts per satellite
+    try:
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        open_anomaly_counts = dict(
+            Anomaly.objects
+            .exclude(status=Anomaly.STATUS_RESOLVED)
+            .values('satellite_id')
+            .annotate(cnt=Count('id'))
+            .values_list('satellite_id', 'cnt')
+        )
+    except Exception:
+        open_anomaly_counts = {}
+
+    # Last scribe entry per satellite
+    last_scribe_by_sat = {}
+    try:
+        MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
+        scribe_entries = (
+            MissionLogEntry.objects
+            .filter(satellite_id__in=[s.id for s in satellites])
+            .select_related('satellite', 'role', 'category')
+            .order_by('satellite_id', '-timestamp')
+        )
+        for e in scribe_entries:
+            if e.satellite_id and e.satellite_id not in last_scribe_by_sat:
+                last_scribe_by_sat[e.satellite_id] = e
+    except Exception:
+        pass
+
+    fleet_rows = []
+    for s in satellites:
+        fleet_rows.append({
+            'satellite': s,
+            'last_run': last_run_by_sat.get(s.id),
+            'open_anomalies_count': open_anomaly_counts.get(s.id, 0),
+            'last_scribe_entry': last_scribe_by_sat.get(s.id),
+        })
+
+    return render(request, 'fleet.html', {
+        'fleet_rows': fleet_rows,
+        'satellites_count': len(satellites),
+    })
+
+
+def handover(request):
+    """Handover pack: running procedures, open anomalies, latest shift notes, recent runs. Print-friendly."""
+    now = timezone.now()
+
+    running_runs = (
+        ProcedureRun.objects
+        .filter(status=ProcedureRun.STATUS_RUNNING)
+        .select_related('satellite', 'procedure')
+        .order_by('satellite__name')
+    )
+
+    open_anomalies = []
+    try:
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        open_anomalies = list(
+            Anomaly.objects
+            .exclude(status=Anomaly.STATUS_RESOLVED)
+            .select_related('satellite', 'subsystem', 'anomaly_type')
+            .order_by('-severity', '-detection_time')[:50]
+        )
+    except Exception:
+        pass
+
+    latest_shift = None
+    try:
+        Shift = __import__('scribe.models', fromlist=['Shift']).Shift
+        latest_shift = Shift.objects.order_by('-start_time').first()
+    except Exception:
+        pass
+
+    recent_runs = (
+        ProcedureRun.objects
+        .select_related('satellite', 'procedure')
+        .exclude(status=ProcedureRun.STATUS_RUNNING)
+        .order_by('-start_time')[:15]
+    )
+
+    return render(request, 'handover.html', {
+        'running_runs': running_runs,
+        'open_anomalies': open_anomalies,
+        'latest_shift': latest_shift,
+        'recent_runs': recent_runs,
+        'generated_at': now,
+    })
+
+
+def metrics(request):
+    """Ops metrics / KPIs: procedure performance, anomaly metrics, fleet utilization, operator workload."""
+    now = timezone.now()
+    period_7 = now - timedelta(days=7)
+    period_30 = now - timedelta(days=30)
+
+    # Procedure performance (last 30 days): pass/fail/cancelled per procedure
+    runs_30 = ProcedureRun.objects.filter(
+        start_time__gte=period_30
+    ).exclude(status=ProcedureRun.STATUS_RUNNING)
+    procedure_stats = (
+        runs_30.values('procedure__name', 'procedure_id')
+        .annotate(
+            total=Count('id'),
+            pass_count=Count('id', filter=Q(status=ProcedureRun.STATUS_PASS)),
+            fail_count=Count('id', filter=Q(status=ProcedureRun.STATUS_FAIL)),
+            cancelled_count=Count('id', filter=Q(status=ProcedureRun.STATUS_CANCELLED)),
+        )
+        .order_by('-total')
+    )
+
+    # Anomaly metrics: open by severity
+    open_by_severity = []
+    try:
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        open_by_severity = list(
+            Anomaly.objects
+            .exclude(status=Anomaly.STATUS_RESOLVED)
+            .values('severity')
+            .annotate(cnt=Count('id'))
+            .order_by('-cnt')
+        )
+        resolved_30 = Anomaly.objects.filter(
+            status=Anomaly.STATUS_RESOLVED,
+            updated_at__gte=period_30,
+        ).count()
+    except Exception:
+        resolved_30 = 0
+
+    # Fleet utilization: runs per satellite (last 7 and 30 days)
+    runs_per_satellite_7 = (
+        ProcedureRun.objects
+        .filter(start_time__gte=period_7)
+        .values('satellite__name', 'satellite_id')
+        .annotate(run_count=Count('id'))
+        .order_by('-run_count')
+    )
+    runs_per_satellite_30 = (
+        ProcedureRun.objects
+        .filter(start_time__gte=period_30)
+        .values('satellite__name', 'satellite_id')
+        .annotate(run_count=Count('id'))
+        .order_by('-run_count')
+    )
+
+    # Operator workload: runs per operator (last 30 days)
+    runs_per_operator = (
+        ProcedureRun.objects
+        .filter(start_time__gte=period_30)
+        .values('operator_name')
+        .annotate(run_count=Count('id'))
+        .order_by('-run_count')
+    )
+
+    return render(request, 'metrics.html', {
+        'procedure_stats': procedure_stats,
+        'open_by_severity': open_by_severity,
+        'resolved_30': resolved_30,
+        'runs_per_satellite_7': runs_per_satellite_7,
+        'runs_per_satellite_30': runs_per_satellite_30,
+        'runs_per_operator': runs_per_operator,
+        'period_7': period_7,
+        'period_30': period_30,
+        'now': now,
+    })
+
+
+def timeline(request):
+    """Fused mission timeline: procedure runs, scribe entries, anomalies in one chronological list."""
+    satellite_id = request.GET.get('satellite', '')
+    event_type = request.GET.get('type', '')  # run, scribe, anomaly or empty = all
+    date_from = request.GET.get('from', '').strip()
+    date_to = request.GET.get('to', '').strip()
+    export_csv = request.GET.get('export') == 'csv'
+
+    try:
+        sat_id = int(satellite_id) if satellite_id else None
+    except ValueError:
+        sat_id = None
+
+    events = []
+    # Procedure runs: one event per run at start_time (and optionally end for completed)
+    runs = ProcedureRun.objects.select_related('satellite', 'procedure').order_by('-start_time')
+    if sat_id:
+        runs = runs.filter(satellite_id=sat_id)
+    if date_from:
+        try:
+            from datetime import date as date_type
+            runs = runs.filter(start_time__date__gte=date_type.fromisoformat(date_from[:10]))
+        except (ValueError, TypeError):
+            pass
+    if date_to:
+        try:
+            from datetime import date as date_type
+            runs = runs.filter(start_time__date__lte=date_type.fromisoformat(date_to[:10]))
+        except (ValueError, TypeError):
+            pass
+    if event_type and event_type != 'run':
+        runs = runs.none()
+    for r in runs[:200]:
+        events.append({
+            'timestamp': r.start_time,
+            'type': 'run',
+            'satellite_name': r.satellite.name,
+            'run_id': r.id,
+            'procedure_name': r.procedure.name,
+            'status': r.status,
+            'operator_name': r.operator_name or '—',
+        })
+        if r.end_time and r.status != ProcedureRun.STATUS_RUNNING:
+            events.append({
+                'timestamp': r.end_time,
+                'type': 'run_end',
+                'satellite_name': r.satellite.name,
+                'run_id': r.id,
+                'procedure_name': r.procedure.name,
+                'status': r.status,
+                'operator_name': r.operator_name or '—',
+            })
+
+    try:
+        MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
+        entries = MissionLogEntry.objects.select_related('role', 'satellite', 'category').order_by('-timestamp')
+        if sat_id:
+            entries = entries.filter(satellite_id=sat_id)
+        if date_from:
+            try:
+                from datetime import date as date_type
+                entries = entries.filter(timestamp__date__gte=date_type.fromisoformat(date_from[:10]))
+            except (ValueError, TypeError):
+                pass
+        if date_to:
+            try:
+                from datetime import date as date_type
+                entries = entries.filter(timestamp__date__lte=date_type.fromisoformat(date_to[:10]))
+            except (ValueError, TypeError):
+                pass
+        if event_type and event_type != 'scribe':
+            entries = entries.none()
+        for e in entries[:200]:
+            events.append({
+                'timestamp': e.timestamp,
+                'type': 'scribe',
+                'satellite_name': e.satellite.name if e.satellite else '—',
+                'entry_id': e.id,
+                'role_name': e.role.name,
+                'category_name': e.category.name,
+                'description': e.description,
+                'severity': getattr(e, 'severity', ''),
+            })
+    except Exception:
+        pass
+
+    try:
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        anomalies = Anomaly.objects.select_related('satellite').order_by('-detection_time')
+        if sat_id:
+            anomalies = anomalies.filter(satellite_id=sat_id)
+        if date_from:
+            try:
+                from datetime import date as date_type
+                anomalies = anomalies.filter(detection_time__date__gte=date_type.fromisoformat(date_from[:10]))
+            except (ValueError, TypeError):
+                pass
+        if date_to:
+            try:
+                from datetime import date as date_type
+                anomalies = anomalies.filter(detection_time__date__lte=date_type.fromisoformat(date_to[:10]))
+            except (ValueError, TypeError):
+                pass
+        if event_type and event_type != 'anomaly':
+            anomalies = anomalies.none()
+        for a in anomalies[:200]:
+            events.append({
+                'timestamp': a.detection_time,
+                'type': 'anomaly',
+                'satellite_name': a.satellite.name,
+                'anomaly_id': a.id,
+                'severity': a.severity,
+                'status': a.status,
+                'description': (a.description or '')[:200],
+            })
+    except Exception:
+        pass
+
+    events.sort(key=lambda x: x['timestamp'], reverse=True)
+    events = events[:300]
+
+    if export_csv:
+        from django.http import HttpResponse
+        import csv
+        from io import StringIO
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="mission_timeline.csv"'
+        w = csv.writer(response)
+        w.writerow(['Timestamp', 'Type', 'Satellite', 'Detail'])
+        for ev in events:
+            detail = ''
+            if ev['type'] in ('run', 'run_end'):
+                detail = f"{ev.get('procedure_name', '')} — {ev.get('status', '')} ({ev.get('operator_name', '')})"
+            elif ev['type'] == 'scribe':
+                detail = f"{ev.get('role_name', '')} — {ev.get('category_name', '')}: {(ev.get('description') or '')[:80]}"
+            elif ev['type'] == 'anomaly':
+                detail = f"Severity {ev.get('severity', '')} Status {ev.get('status', '')}: {(ev.get('description') or '')[:80]}"
+            w.writerow([
+                ev['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if hasattr(ev['timestamp'], 'strftime') else str(ev['timestamp']),
+                ev['type'],
+                ev.get('satellite_name', ''),
+                detail,
+            ])
+        return response
+
+    satellites = Satellite.objects.all().order_by('name')
+    return render(request, 'timeline.html', {
+        'events': events,
+        'satellites': satellites,
+        'filter_satellite_id': sat_id,
+        'filter_type': event_type,
+        'filter_from': date_from,
+        'filter_to': date_to,
     })

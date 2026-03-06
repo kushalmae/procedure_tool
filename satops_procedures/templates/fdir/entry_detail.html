@@ -26,7 +26,12 @@
             {% if entry.operator_procedures.all %}
             <ul>
                 {% for proc in entry.operator_procedures.all %}
-                <li><a href="{% url 'procedure_review' %}?procedure={{ proc.id }}">{{ proc.name }} (v{{ proc.version }})</a></li>
+                <li>
+                    <a href="{% url 'procedure_review' %}?procedure={{ proc.id }}">{{ proc.name }} (v{{ proc.version }})</a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'start' %}?procedure={{ proc.id }}" class="btn btn-secondary" style="margin-left: 0.5rem;">Start this procedure</a>
+                    {% endif %}
+                </li>
                 {% endfor %}
             </ul>
             {% else %}

@@ -17,11 +17,29 @@
         <tr><th>Detection time</th><td>{{ anomaly.detection_time|date:"Y-m-d H:i" }}</td></tr>
         <tr><th>Operational impact</th><td>{{ anomaly.get_operational_impact_display }}</td></tr>
         <tr><th>Reported by</th><td>{{ anomaly.reported_by.get_username|default:"—" }}</td></tr>
+        {% if anomaly.procedure_run %}
+        <tr><th>Observed during run</th><td><a href="{% url 'run_summary' anomaly.procedure_run.id %}">{{ anomaly.procedure_run.procedure.name }} — {{ anomaly.procedure_run.satellite.name }} ({{ anomaly.procedure_run.start_time|date:"Y-m-d H:i" }})</a></td></tr>
+        {% endif %}
+        {% if anomaly.resolution_procedure %}
+        <tr><th>Resolution procedure</th><td><a href="{% url 'procedure_review' %}?procedure={{ anomaly.resolution_procedure.id }}">{{ anomaly.resolution_procedure.name }} (v{{ anomaly.resolution_procedure.version }})</a></td></tr>
+        {% endif %}
         <tr><th>Created</th><td>{{ anomaly.created_at|date:"Y-m-d H:i" }}</td></tr>
         <tr><th>Updated</th><td>{{ anomaly.updated_at|date:"Y-m-d H:i" }}</td></tr>
         <tr><th>Description</th><td class="scribe-description" style="min-width: 24em; max-width: 56em;">{{ anomaly.description|default:"—" }}</td></tr>
     </table>
 </div>
+
+{% if suggested_procedures %}
+<div class="card">
+    <h3 style="margin-top: 0;">Suggested procedures</h3>
+    <p class="text-muted" style="font-size: 0.9rem;">From FDIR, Handbook, or past resolutions. Review and optionally record one as resolution procedure below.</p>
+    <ul>
+        {% for proc, source in suggested_procedures %}
+        <li><a href="{% url 'procedure_review' %}?procedure={{ proc.id }}">{{ proc.name }} (v{{ proc.version }})</a> <span class="badge" style="font-size: 0.75rem;">{{ source }}</span></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 
 {% if user.is_authenticated %}
 <div class="card no-print">
@@ -31,6 +49,13 @@
         <select id="status" name="status">
             {% for val, label in status_choices %}
             <option value="{{ val }}" {% if anomaly.status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <label for="resolution_procedure">Resolution procedure (optional)</label>
+        <select id="resolution_procedure" name="resolution_procedure">
+            <option value="">— None —</option>
+            {% for proc in all_procedures %}
+            <option value="{{ proc.id }}" {% if anomaly.resolution_procedure_id == proc.id %}selected{% endif %}>{{ proc.name }} (v{{ proc.version }})</option>
             {% endfor %}
         </select>
         <label for="note_body">Note</label>

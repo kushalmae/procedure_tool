@@ -28,10 +28,26 @@
                 &nbsp;|&nbsp; Status: <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
             </div>
         </div>
+        {% if preconditions %}
+        <div class="card run-preconditions-summary">
+            <h3 style="margin-top: 0;">Preconditions</h3>
+            <p style="white-space: pre-wrap;">{{ preconditions }}</p>
+        </div>
+        {% endif %}
         {% if run.run_notes %}
         <div class="card run-notes-summary">
             <h3 style="margin-top: 0;">Run notes</h3>
             <p style="white-space: pre-wrap;">{{ run.run_notes }}</p>
+        </div>
+        {% endif %}
+        {% if run.linked_anomalies.all %}
+        <div class="card run-linked-anomalies no-print">
+            <h3 style="margin-top: 0;">Anomalies reported during this run</h3>
+            <ul>
+                {% for a in run.linked_anomalies.all %}
+                <li><a href="{% url 'anomalies_detail' a.id %}">Anomaly {{ a.id }}</a> — {{ a.satellite.name }} · {{ a.get_severity_display }} · {{ a.get_status_display }}{% if a.description %} — {{ a.description|truncatewords:12 }}{% endif %}</li>
+                {% endfor %}
+            </ul>
         </div>
         {% endif %}
         <div class="card">

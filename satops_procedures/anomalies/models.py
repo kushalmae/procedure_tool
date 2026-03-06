@@ -104,6 +104,22 @@ class Anomaly(models.Model):
         blank=True,
         related_name='reported_anomalies',
     )
+    procedure_run = models.ForeignKey(
+        'procedures.ProcedureRun',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='linked_anomalies',
+        help_text='If this anomaly was observed during a procedure run, link it here.',
+    )
+    resolution_procedure = models.ForeignKey(
+        'procedures.Procedure',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolution_for_anomalies',
+        help_text='Procedure used or recommended to resolve this anomaly (optional).',
+    )
 
     class Meta:
         ordering = ['-detection_time']

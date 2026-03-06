@@ -16,7 +16,7 @@
 <div class="card">
     <form method="post">{% csrf_token %}
         <label for="satellite">Satellite</label>
-        <input id="satellite" name="satellite" type="text" placeholder="e.g. SAT-021" value="{{ request.POST.satellite }}" required>
+        <input id="satellite" name="satellite" type="text" placeholder="e.g. SAT-021" value="{% firstof request.POST.satellite preselected_satellite_name %}" required>
         <label for="procedure">Procedure</label>
         <div class="procedure-select-row">
             <select id="procedure" name="procedure" required>

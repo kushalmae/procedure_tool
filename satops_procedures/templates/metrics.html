@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Ops Metrics{% endblock %}
+{% block main_class %}main-full-width metrics-page{% endblock %}
+{% block content %}
+<h2>Ops Metrics</h2>
+<p class="tagline no-print">Procedure performance, anomaly metrics, fleet utilization, and operator workload (last 7 and 30 days).</p>
+
+<div class="no-print" style="margin-bottom: 1rem;">
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+    <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a>
+    <a href="{% url 'handover' %}" class="btn btn-secondary">Handover pack</a>
+</div>
+
+<div class="metrics-grid">
+    <section class="card metrics-section">
+        <h3>Procedure performance (last 30 days)</h3>
+        <p class="text-muted">Pass / Fail / Cancelled by procedure.</p>
+        {% if procedure_stats %}
+        <table class="metrics-table">
+            <thead>
+                <tr><th>Procedure</th><th>Total</th><th>Pass</th><th>Fail</th><th>Cancelled</th></tr>
+            </thead>
+            <tbody>
+                {% for s in procedure_stats %}
+                <tr>
+                    <td>{{ s.procedure__name|default:"—" }}</td>
+                    <td>{{ s.total }}</td>
+                    <td>{{ s.pass_count }}</td>
+                    <td>{{ s.fail_count }}</td>
+                    <td>{{ s.cancelled_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No completed runs in the last 30 days.</p>
+        {% endif %}
+    </section>
+
+    <section class="card metrics-section">
+        <h3>Anomaly metrics</h3>
+        <p class="text-muted">Open anomalies by severity; resolved in last 30 days.</p>
+        {% if open_by_severity %}
+        <table class="metrics-table">
+            <thead>
+                <tr><th>Severity</th><th>Open count</th></tr>
+            </thead>
+            <tbody>
+                {% for row in open_by_severity %}
+                <tr>
+                    <td><span class="badge badge-{{ row.severity|lower }}">{{ row.severity }}</span></td>
+                    <td>{{ row.cnt }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No open anomalies.</p>
+        {% endif %}
+        <p><strong>Resolved (last 30 days):</strong> {{ resolved_30 }}</p>
+    </section>
+
+    <section class="card metrics-section">
+        <h3>Fleet utilization — runs per satellite</h3>
+        <p class="text-muted">Last 7 days.</p>
+        {% if runs_per_satellite_7 %}
+        <table class="metrics-table">
+            <thead>
+                <tr><th>Satellite</th><th>Runs</th></tr>
+            </thead>
+            <tbody>
+                {% for row in runs_per_satellite_7 %}
+                <tr>
+                    <td>{{ row.satellite__name|default:"—" }}</td>
+                    <td>{{ row.run_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No runs in the last 7 days.</p>
+        {% endif %}
+        <p class="text-muted" style="margin-top: 1rem;">Last 30 days:</p>
+        {% if runs_per_satellite_30 %}
+        <table class="metrics-table">
+            <thead>
+                <tr><th>Satellite</th><th>Runs</th></tr>
+            </thead>
+            <tbody>
+                {% for row in runs_per_satellite_30 %}
+                <tr>
+                    <td>{{ row.satellite__name|default:"—" }}</td>
+                    <td>{{ row.run_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No runs in the last 30 days.</p>
+        {% endif %}
+    </section>
+
+    <section class="card metrics-section">
+        <h3>Operator workload (last 30 days)</h3>
+        <p class="text-muted">Runs per operator.</p>
+        {% if runs_per_operator %}
+        <table class="metrics-table">
+            <thead>
+                <tr><th>Operator</th><th>Runs</th></tr>
+            </thead>
+            <tbody>
+                {% for row in runs_per_operator %}
+                <tr>
+                    <td>{{ row.operator_name|default:"—" }}</td>
+                    <td>{{ row.run_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No runs in the last 30 days.</p>
+        {% endif %}
+    </section>
+</div>
+
+<p class="no-print text-muted" style="margin-top: 1rem;">Metrics as of {{ now|date:"Y-m-d H:i" }}. Period 7 days from {{ period_7|date:"Y-m-d" }}; 30 days from {{ period_30|date:"Y-m-d" }}.</p>
+{% endblock %}

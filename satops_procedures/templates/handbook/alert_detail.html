@@ -39,7 +39,12 @@
         {% endif %}
         {% if alert.procedure %}
         <dt>Procedure</dt>
-        <dd><a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a></dd>
+        <dd>
+            <a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'start' %}?procedure={{ alert.procedure.id }}" class="btn btn-primary" style="margin-left: 0.5rem;">Start this procedure</a>
+            {% endif %}
+        </dd>
         {% endif %}
         {% if alert.user_notes %}
         <dt>User notes</dt>

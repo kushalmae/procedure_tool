@@ -9,6 +9,8 @@
         <input id="name" name="name" type="text" placeholder="e.g. Bus Checkout" value="{{ form_name }}" required maxlength="100">
         <label for="version">Version</label>
         <input id="version" name="version" type="text" placeholder="e.g. 1.0" value="{{ form_version }}" maxlength="20">
+        <label for="preconditions">Preconditions (optional)</label>
+        <textarea id="preconditions" name="preconditions" rows="3" placeholder="Prerequisites, required state, or notes before starting (e.g. Contact established, telemetry nominal)...">{{ form_preconditions|default:"" }}</textarea>
         <hr style="margin: 1.25rem 0; border: none; border-top: 1px solid var(--border);">
         <label>Steps</label>
         <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">Each step needs an id (e.g. power, telemetry) and a description. Optionally add an input label (e.g. voltage).</p>

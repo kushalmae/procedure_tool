@@ -18,9 +18,16 @@ def load_procedure(name):
 
 
 def save_procedure(proc_dict, yaml_stem):
-    """Write procedure dict to procedures_yaml/{yaml_stem}.yaml."""
+    """Write procedure dict to procedures_yaml/{yaml_stem}.yaml.
+    Supports optional 'preconditions' key (string) for prerequisite notes.
+    """
     path = _yaml_dir() / f"{yaml_stem}.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Ensure order: name, version, preconditions (if any), steps
+    out = {'name': proc_dict.get('name', ''), 'version': proc_dict.get('version', '1.0')}
+    if proc_dict.get('preconditions'):
+        out['preconditions'] = proc_dict['preconditions']
+    out['steps'] = proc_dict.get('steps', [])
     with open(path, 'w', encoding='utf-8') as f:
-        yaml.dump(proc_dict, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        yaml.dump(out, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
     return path

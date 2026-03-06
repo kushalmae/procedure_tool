@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Handover Pack{% endblock %}
+{% block main_class %}main-full-width handover-page{% endblock %}
+{% block content %}
+<div class="no-print handover-actions">
+    <h2>Handover Pack</h2>
+    <p>Running procedures, open anomalies, latest shift handoff notes, and recent runs. Use <strong>Print</strong> for shift handover.</p>
+    <p>
+        <button type="button" onclick="window.print();" class="btn btn-primary" aria-label="Print handover pack">Print handover</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+        <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a>
+        <a href="{% url 'metrics' %}" class="btn btn-secondary">Metrics</a>
+    </p>
+</div>
+
+<div class="handover-generated no-print">Generated {{ generated_at|date:"Y-m-d H:i:s" }}</div>
+
+<div class="handover-sections">
+    <section class="card handover-section">
+        <h3>Running procedures</h3>
+        {% if running_runs %}
+        <table class="handover-table">
+            <thead>
+                <tr><th>Satellite</th><th>Procedure</th><th>Operator</th><th>Started</th><th class="no-print">Action</th></tr>
+            </thead>
+            <tbody>
+                {% for run in running_runs %}
+                <tr>
+                    <td>{{ run.satellite.name }}</td>
+                    <td>{{ run.procedure.name }}</td>
+                    <td>{{ run.operator_name|default:"—" }}</td>
+                    <td>{{ run.start_time|date:"Y-m-d H:i" }}</td>
+                    <td class="no-print"><a href="{% url 'run' run.id %}">Resume</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No procedures currently running.</p>
+        {% endif %}
+    </section>
+
+    <section class="card handover-section">
+        <h3>Open anomalies</h3>
+        {% if open_anomalies %}
+        <table class="handover-table">
+            <thead>
+                <tr><th>Satellite</th><th>Severity</th><th>Status</th><th>Detected</th><th>Description</th><th class="no-print">Link</th></tr>
+            </thead>
+            <tbody>
+                {% for a in open_anomalies %}
+                <tr>
+                    <td>{{ a.satellite.name }}</td>
+                    <td><span class="badge badge-{{ a.severity|lower }}">{{ a.get_severity_display }}</span></td>
+                    <td>{{ a.get_status_display }}</td>
+                    <td>{{ a.detection_time|date:"Y-m-d H:i" }}</td>
+                    <td>{{ a.description|truncatewords:15|default:"—" }}</td>
+                    <td class="no-print"><a href="{% url 'anomalies_detail' a.id %}">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No open anomalies.</p>
+        {% endif %}
+    </section>
+
+    <section class="card handover-section">
+        <h3>Latest shift handoff notes</h3>
+        {% if latest_shift %}
+        <p><strong>{{ latest_shift.start_time|date:"Y-m-d H:i" }} – {{ latest_shift.end_time|date:"Y-m-d H:i" }}</strong></p>
+        {% if latest_shift.handoff_notes %}
+        <div class="handover-notes">{{ latest_shift.handoff_notes|linebreaks }}</div>
+        {% else %}
+        <p class="text-muted">No handoff notes for this shift.</p>
+        {% endif %}
+        <p class="no-print"><a href="{% url 'scribe_shift_list' %}">Shifts</a></p>
+        {% else %}
+        <p class="text-muted">No shifts defined. <a href="{% url 'scribe_shift_list' %}">Create a shift</a> in Mission Scribe.</p>
+        {% endif %}
+    </section>
+
+    <section class="card handover-section">
+        <h3>Recent completed runs</h3>
+        {% if recent_runs %}
+        <table class="handover-table">
+            <thead>
+                <tr><th>Satellite</th><th>Procedure</th><th>Status</th><th>Started</th><th class="no-print">Summary</th></tr>
+            </thead>
+            <tbody>
+                {% for run in recent_runs %}
+                <tr>
+                    <td>{{ run.satellite.name }}</td>
+                    <td>{{ run.procedure.name }}</td>
+                    <td><span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span></td>
+                    <td>{{ run.start_time|date:"Y-m-d H:i" }}</td>
+                    <td class="no-print"><a href="{% url 'run_summary' run.id %}">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="no-print"><a href="{% url 'history' %}">Full history</a></p>
+        {% else %}
+        <p class="text-muted">No recent completed runs.</p>
+        {% endif %}
+    </section>
+</div>
+
+<p class="handover-footer no-print">End of handover pack. Generated {{ generated_at|date:"Y-m-d H:i:s" }}.</p>
+{% endblock %}

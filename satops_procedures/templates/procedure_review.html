@@ -9,6 +9,12 @@
         {% for t in procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}
     </p>
     {% endif %}
+    {% if preconditions %}
+    <div class="preconditions-block" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg); border-radius: var(--radius); border-left: 3px solid var(--accent);">
+        <strong>Preconditions</strong>
+        <p style="margin: 0.5rem 0 0; white-space: pre-wrap;">{{ preconditions }}</p>
+    </div>
+    {% endif %}
     <p style="color: var(--text-muted-on-light); margin-bottom: 1rem;">{{ steps|length }} step{{ steps|length|pluralize }}</p>
     <ol class="review-step-list">
         {% for step in steps %}
