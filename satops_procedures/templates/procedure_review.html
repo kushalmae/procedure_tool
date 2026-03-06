@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Review: {{ procedure.name }}{% endblock %}
+{% block content %}
+<h2>Review procedure</h2>
+<div class="card">
+    <h3 style="margin-top: 0;">{{ procedure.name }} <span style="color: var(--text-muted-on-light); font-weight: normal;">(v{{ procedure.version }})</span></h3>
+    {% if procedure.tags.exists %}
+    <p class="tag-list">
+        {% for t in procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}
+    </p>
+    {% endif %}
+    <p style="color: var(--text-muted-on-light); margin-bottom: 1rem;">{{ steps|length }} step{{ steps|length|pluralize }}</p>
+    <ol class="review-step-list">
+        {% for step in steps %}
+        <li class="review-step">
+            <span class="review-step-desc">{{ step.description }}</span>
+            {% if step.input %}<span class="review-step-input">— input: <em>{{ step.input }}</em></span>{% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    <p style="margin-top: 1.25rem; margin-bottom: 0;">
+        <a href="{% url 'start' %}?procedure={{ procedure.id }}" class="btn btn-primary">Start this procedure</a>
+        <a href="{% url 'start' %}" class="btn btn-secondary">Back to Start</a>
+    </p>
+</div>
+{% endblock %}

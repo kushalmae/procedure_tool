@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<h2>Log in</h2>
+{% if form.non_field_errors %}
+<p class="card" style="color: var(--fail);">{{ form.non_field_errors }}</p>
+{% endif %}
+<div class="card">
+    <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        <label for="id_username">Username</label>
+        <input type="text" name="username" id="id_username" required maxlength="150" autofocus
+               value="{{ form.username.value|default:'' }}" placeholder="Username">
+        {% if form.username.errors %}<p class="form-error">{{ form.username.errors }}</p>{% endif %}
+        <label for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" required placeholder="Password">
+        {% if form.password.errors %}<p class="form-error">{{ form.password.errors }}</p>{% endif %}
+        <p style="margin-top: 1rem;">
+            <button type="submit" class="btn btn-primary">Log in</button>
+        </p>
+    </form>
+</div>
+<p style="color: var(--text-muted); font-size: 0.9rem;">
+    No account? Create one in <a href="/admin/">Django Admin</a> (admin user can add users), or use <code>python manage.py createsuperuser</code>.
+</p>
+{% endblock %}

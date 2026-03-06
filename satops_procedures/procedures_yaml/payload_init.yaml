@@ -1,0 +1,44 @@
+name: Payload Initialization
+version: "2.1"
+
+steps:
+  - id: safing_verify
+    description: Confirm payload in safe mode; verify no active commanding
+
+  - id: power_rail_1
+    description: Enable primary power rail; monitor for inrush
+    input: voltage_reading
+
+  - id: power_rail_2
+    description: Enable secondary power rail; confirm current draw nominal
+    input: current_ma
+
+  - id: thermal_precheck
+    description: Verify payload compartment temps within operating range before power-up
+    input: temp_c
+
+  - id: oscillator_lock
+    description: Enable internal oscillator; confirm lock indicator
+    input: lock_status
+
+  - id: rx_frequency
+    description: Set downlink frequency per pass plan
+    input: frequency_mhz
+
+  - id: tx_power
+    description: Set transmitter power level per link budget
+    input: power_dbm
+
+  - id: data_rate
+    description: Configure telemetry data rate
+    input: rate_kbps
+
+  - id: beacon_verify
+    description: Confirm beacon carrier detected on ground station
+
+  - id: telemetry_verify
+    description: Verify telemetry frame sync and BER acceptable
+    input: ber_estimate
+
+  - id: payload_signoff
+    description: Payload lead signoff — nominal for operations

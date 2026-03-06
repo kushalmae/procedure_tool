@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ procedure.name }} — {{ run.satellite.name }} (summary)</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <nav class="no-print">
+        <a href="{% url 'run' run.id %}">Back to run</a>
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'history' %}">History</a>
+        <button type="button" onclick="window.print();" class="btn btn-primary" style="margin-left: auto;">Print</button>
+    </nav>
+    <main>
+        <div class="run-summary-header">
+            <h2>{{ procedure.name }} — {{ run.satellite.name }}</h2>
+            <div class="run-summary-meta">
+                Operator: {{ run.operator_name|default:"—" }} &nbsp;|&nbsp;
+                Started: {{ run.start_time|date:"Y-m-d H:i:s" }}
+                {% if run.end_time %} &nbsp;|&nbsp; Ended: {{ run.end_time|date:"Y-m-d H:i:s" }}{% endif %}
+                &nbsp;|&nbsp; Status: <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
+            </div>
+        </div>
+        <div class="card">
+            {% for item in steps_with_execution %}
+            <div class="summary-step">
+                <div class="step-desc">{{ forloop.counter }}. {{ item.step.description }}</div>
+                {% if item.execution %}
+                <div class="step-result">
+                    <span class="badge badge-{{ item.execution.status|lower }}">{{ item.execution.status }}</span>
+                    {% if item.execution.input_value %} — {{ item.execution.input_value }}{% endif %}
+                    {% if item.execution.notes %} — {{ item.execution.notes }}{% endif %}
+                    ({{ item.execution.timestamp|date:"H:i:s" }})
+                </div>
+                {% else %}
+                <div class="step-result" style="color: var(--text-muted);">—</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</body>
+</html>

@@ -1,12 +1,46 @@
 {% extends "base.html" %}
+{% block title %}Start Procedure{% endblock %}
 {% block content %}
 <h2>Start Procedure</h2>
-{% if error %}<p style="color:red;">{{ error }}</p>{% endif %}
-<form method="post">{% csrf_token %}
-    <p>Satellite: <input name="satellite" placeholder="e.g. SAT-021" value="{{ request.POST.satellite }}" required></p>
-    <p>Procedure: <select name="procedure" required>{% for p in procedures %}<option value="{{ p.id }}">{{ p.name }} ({{ p.version }})</option>{% endfor %}</select></p>
-    <p>Operator: <input name="operator" placeholder="Your name" value="{{ request.POST.operator }}"></p>
-    <p><button type="submit">Start</button></p>
-</form>
-<p>If no procedures appear, add them in <a href="/admin/">Django Admin</a> and add at least one Satellite.</p>
+<p><a href="{% url 'procedure_create' %}" class="btn btn-secondary">Create new procedure</a></p>
+{% if tags %}
+<p class="tag-filter no-print">
+    <span class="tag-label">Filter by tag:</span>
+    <a href="{% url 'start' %}" class="tag-pill {% if not filter_tag_id %}tag-pill-active{% endif %}">All</a>
+    {% for t in tags %}
+    <a href="{% url 'start' %}?tag={{ t.id }}" class="tag-pill {% if filter_tag_id == t.id %}tag-pill-active{% endif %}">{{ t.name }}</a>
+    {% endfor %}
+</p>
+{% endif %}
+{% if error %}<p class="card" style="color: #f85149;">{{ error }}</p>{% endif %}
+<div class="card">
+    <form method="post">{% csrf_token %}
+        <label for="satellite">Satellite</label>
+        <input id="satellite" name="satellite" type="text" placeholder="e.g. SAT-021" value="{{ request.POST.satellite }}" required>
+        <label for="procedure">Procedure</label>
+        <div class="procedure-select-row">
+            <select id="procedure" name="procedure" required>
+                {% for p in procedures %}
+                <option value="{{ p.id }}" {% if preselected_procedure_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.version }}){% if p.tags.exists %} — {% for t in p.tags.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
+                {% endfor %}
+            </select>
+            <a href="#" id="review-link" class="btn btn-secondary">Review selected procedure</a>
+        </div>
+        <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">You will be recorded as <strong>{{ user.get_username }}</strong>.</p>
+        <p><button type="submit" class="btn btn-primary">Start</button></p>
+    </form>
+</div>
+<p style="color: var(--text-muted); font-size: 0.9rem;">Add or edit tags in <a href="/admin/procedures/procedure/">Django Admin</a>.</p>
+<script>
+(function() {
+    var select = document.getElementById('procedure');
+    var link = document.getElementById('review-link');
+    if (!select || !link) return;
+    function updateReviewLink() {
+        link.href = '{% url "procedure_review" %}?procedure=' + encodeURIComponent(select.value);
+    }
+    select.addEventListener('change', updateReviewLink);
+    updateReviewLink();
+})();
+</script>
 {% endblock %}

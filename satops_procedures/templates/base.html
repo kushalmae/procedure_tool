@@ -1,17 +1,30 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Satops Procedures{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <nav>
-        <a href="{% url 'dashboard' %}">Dashboard</a> |
-        <a href="{% url 'start' %}">Start Procedure</a> |
+    <nav class="no-print">
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'start' %}">Start Procedure</a>
+        <a href="{% url 'procedure_list' %}">Procedures</a>
+        <a href="{% url 'procedure_create' %}">Create Procedure</a>
         <a href="{% url 'history' %}">History</a>
+        {% if user.is_authenticated %}
+        <span style="margin-left: auto; color: var(--text-muted-on-light);">{{ user.get_username }}</span>
+        <form method="post" action="{% url 'logout' %}" style="display: inline;">{% csrf_token %}
+            <button type="submit" class="nav-link-btn">Log out</button>
+        </form>
+        {% else %}
+        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" style="margin-left: auto;">Log in</a>
+        {% endif %}
     </nav>
-    <hr>
-    {% block content %}{% endblock %}
+    <main>
+        {% block content %}{% endblock %}
+    </main>
 </body>
 </html>

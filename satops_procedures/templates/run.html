@@ -2,14 +2,56 @@
 {% block title %}{{ procedure.name }} — {{ satellite }}{% endblock %}
 {% block content %}
 <h2>{{ procedure.name }} — {{ satellite }}</h2>
-<p>Step {{ step_index|add:1 }} of {{ total_steps }}</p>
-<h3>{{ step.description }}</h3>
-<form method="post">{% csrf_token %}
-    <p>Status: <select name="status"><option value="PASS">PASS</option><option value="FAIL">FAIL</option></select></p>
-    {% if step.input %}
-    <p>Input ({{ step.input }}): <input name="value" type="text"></p>
-    {% endif %}
-    <p>Notes: <textarea name="notes" rows="3"></textarea></p>
-    <p><button type="submit">Submit Step</button></p>
-</form>
+<p class="no-print"><a href="{% url 'run_summary' run.id %}">View all steps / Print</a></p>
+
+<div class="run-layout">
+    <aside class="step-list no-print">
+        <strong>Steps</strong>
+        {% for item in step_list %}
+        {% if item.current %}
+        <span class="current">{{ item.index|add:1 }}. {{ item.step.id }}</span>
+        {% else %}
+        <a href="{% url 'run' run.id %}?step={{ item.index }}">{{ item.index|add:1 }}. {{ item.step.id }}{% if item.done %} ✓{% endif %}</a>
+        {% endif %}
+        {% endfor %}
+    </aside>
+    <div class="run-content">
+        <div class="progress-bar no-print">
+            <div style="width: {% widthratio num_done total_steps 100 %}%; height: 100%; background: var(--accent); border-radius: 2px;"></div>
+        </div>
+        <p>Step {{ step_index|add:1 }} of {{ total_steps }}</p>
+
+        {% if step_is_readonly %}
+        <div class="card">
+            <h3>{{ step.description }}</h3>
+            <p><strong>Status:</strong> <span class="badge badge-{{ execution.status|lower }}">{{ execution.status }}</span></p>
+            {% if execution.input_value %}<p><strong>Input:</strong> {{ execution.input_value }}</p>{% endif %}
+            {% if execution.notes %}<p><strong>Notes:</strong> {{ execution.notes }}</p>{% endif %}
+            <p style="color: var(--text-muted); font-size: 0.9rem;">{{ execution.timestamp|date:"Y-m-d H:i:s" }}</p>
+            <p class="no-print">
+                {% if has_prev %}<a href="{% url 'run' run.id %}?step={{ step_index|add:-1 }}" class="btn btn-secondary">Previous</a>{% endif %}
+                {% if has_next %}<a href="{% url 'run' run.id %}?step={{ step_index|add:1 }}" class="btn btn-primary">Next</a>{% endif %}
+            </p>
+        </div>
+        {% else %}
+        <div class="card">
+            <h3>{{ step.description }}</h3>
+            <form method="post">{% csrf_token %}
+                <label>Status</label>
+                <select name="status"><option value="PASS">PASS</option><option value="FAIL">FAIL</option></select>
+                {% if step.input %}
+                <label>Input ({{ step.input }})</label>
+                <input name="value" type="text">
+                {% endif %}
+                <label>Notes</label>
+                <textarea name="notes" rows="3"></textarea>
+                <p class="no-print">
+                    {% if has_prev %}<a href="{% url 'run' run.id %}?step={{ step_index|add:-1 }}" class="btn btn-secondary">Previous</a>{% endif %}
+                    <button type="submit" class="btn btn-primary">Submit step</button>
+                </p>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

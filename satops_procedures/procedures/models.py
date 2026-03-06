@@ -12,10 +12,28 @@ class Satellite(models.Model):
         return self.name
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True, blank=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 class Procedure(models.Model):
     name = models.CharField(max_length=100)
     version = models.CharField(max_length=20)
     yaml_file = models.CharField(max_length=200)
+    tags = models.ManyToManyField('Tag', related_name='procedures', blank=True)
 
     class Meta:
         ordering = ['name']

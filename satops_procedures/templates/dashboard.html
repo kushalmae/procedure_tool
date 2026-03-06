@@ -2,23 +2,46 @@
 {% block title %}Fleet Procedures{% endblock %}
 {% block content %}
 <h2>Fleet Procedures</h2>
-<p><a href="{% url 'start' %}">Start Procedure</a></p>
-<table>
-    <thead>
-        <tr><th>Satellite</th><th>Procedure</th><th>Status</th><th>Started</th><th>Action</th></tr>
-    </thead>
-    <tbody>
-        {% for run in runs %}
-        <tr>
-            <td>{{ run.satellite.name }}</td>
-            <td>{{ run.procedure.name }}</td>
-            <td>{{ run.status }}</td>
-            <td>{{ run.start_time|date:"Y-m-d H:i" }}</td>
-            <td>{% if run.status == 'RUNNING' %}<a href="{% url 'run' run.id %}?step={{ run.step_executions.count }}">Resume</a>{% endif %}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5">No runs yet. <a href="{% url 'start' %}">Start a procedure</a>.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="search-bar card no-print">
+    <form method="get" class="search-form">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search satellite, procedure, operator..." class="search-input">
+        <select name="tag">
+            <option value="">All tags</option>
+            {% for t in tags %}
+            <option value="{{ t.id }}" {% if tag_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if search_query or tag_id %}<a href="{% url 'dashboard' %}" class="btn btn-secondary">Clear</a>{% endif %}
+    </form>
+</div>
+<p><a href="{% url 'start' %}" class="btn btn-primary">Start Procedure</a></p>
+<div class="card">
+    <table>
+        <thead>
+            <tr><th>Satellite</th><th>Procedure</th><th>Status</th><th>Started</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+            {% for run in runs %}
+            <tr>
+                <td>{{ run.satellite.name }}</td>
+                <td>{{ run.procedure.name }}{% if run.procedure.tags.exists %} <span class="tag-list">{% for t in run.procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}</span>{% endif %}</td>
+                <td>
+                    <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
+                </td>
+                <td>{{ run.start_time|date:"Y-m-d H:i" }}</td>
+                <td>
+                    {% if run.status == 'RUNNING' %}
+                    <a href="{% url 'run' run.id %}?step={{ run.step_executions.count }}">Resume</a>
+                    {% else %}
+                    <a href="{% url 'run_summary' run.id %}">View / Print</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No runs found. {% if search_query or tag_id %}<a href="{% url 'dashboard' %}">Clear filters</a>{% else %}<a href="{% url 'start' %}">Start a procedure</a>{% endif %}.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

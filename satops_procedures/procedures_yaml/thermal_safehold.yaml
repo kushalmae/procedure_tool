@@ -1,0 +1,42 @@
+name: Thermal Safehold Procedure
+version: "1.2"
+
+steps:
+  - id: assess
+    description: Assess thermal state from latest TLM; note any out-of-limit channels
+    input: out_of_limit_channels
+
+  - id: sun_angle
+    description: Confirm sun angle and eclipse timeline; document current beta angle
+    input: beta_angle_deg
+
+  - id: heater_config
+    description: Verify survival heater configuration (on/off) per thermal model
+    input: heater_config_notes
+
+  - id: battery_temp
+    description: Battery pack temperature — must remain within survival range
+    input: battery_temp_c
+
+  - id: propellant_temp
+    description: Propellant tank temperature — verify above minimum
+    input: prop_temp_c
+
+  - id: payload_thermal
+    description: Payload compartment temperature — document and compare to limits
+    input: payload_temp_c
+
+  - id: radiator_verify
+    description: Radiator surfaces — verify no obstructions or degraded performance
+    input: radiator_notes
+
+  - id: safehold_timer
+    description: Set or extend thermal safehold timer if needed
+    input: timer_minutes
+
+  - id: ground_contact
+    description: Confirm next ground contact and pass duration
+    input: next_contact_utc
+
+  - id: thermal_signoff
+    description: Thermal lead signoff — safehold maintained or exit authorized

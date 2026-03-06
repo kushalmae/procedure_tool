@@ -1,0 +1,48 @@
+name: Orbit Correction Maneuver
+version: "3.0"
+
+steps:
+  - id: maneuver_plan
+    description: Load and verify maneuver plan (delta-V, direction, epoch)
+    input: maneuver_id
+
+  - id: ephemeris_check
+    description: Confirm onboard ephemeris is current; age acceptable for burn
+    input: ephemeris_age_hours
+
+  - id: attitude_precheck
+    description: Verify attitude control nominal; wheel speeds and pointing within limits
+
+  - id: propulsion_precheck
+    description: Propulsion system precheck — tank pressure, latch valves, thrusters
+    input: tank_pressure_psi
+
+  - id: sun_attitude
+    description: Confirm sun-holding or maneuver attitude; solar array illumination OK
+    input: sun_angle_deg
+
+  - id: cmd_upload
+    description: Upload maneuver command block; verify checksum
+    input: cmd_block_checksum
+
+  - id: arm_hold
+    description: Place propulsion in arm state; hold for required duration
+    input: hold_duration_sec
+
+  - id: execute_burn
+    description: Execute burn; monitor duration and delta-V
+    input: burn_duration_sec
+
+  - id: post_burn_attitude
+    description: Return to nominal attitude; confirm sun acquisition
+    input: attitude_mode
+
+  - id: telemetry_post
+    description: Verify post-burn telemetry; orbit state and propulsion status
+    input: delta_v_achieved
+
+  - id: ephemeris_update
+    description: Flag orbit for ephemeris update on next contact
+
+  - id: maneuver_signoff
+    description: Flight dynamics and ops lead signoff — maneuver complete
