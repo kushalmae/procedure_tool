@@ -46,7 +46,18 @@
             <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <button type="submit" class="btn btn-primary">Filter</button>
+        <label for="sort-anomalies">Sort</label>
+        <select id="sort-anomalies" name="sort">
+            <option value="-detection_time" {% if sort == '-detection_time' %}selected{% endif %}>Newest first</option>
+            <option value="detection_time" {% if sort == 'detection_time' %}selected{% endif %}>Oldest first</option>
+            <option value="satellite__name" {% if sort == 'satellite__name' %}selected{% endif %}>Satellite A–Z</option>
+            <option value="-satellite__name" {% if sort == '-satellite__name' %}selected{% endif %}>Satellite Z–A</option>
+            <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
+            <option value="-severity" {% if sort == '-severity' %}selected{% endif %}>Severity (desc)</option>
+            <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
+            <option value="-status" {% if sort == '-status' %}selected{% endif %}>Status (desc)</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter / Sort</button>
         {% if search_query or filter_satellite_id or filter_subsystem_id or filter_severity or filter_status %}
         <a href="{% url 'anomalies_registry' %}?clear=1" class="btn btn-secondary">Clear filters</a>
         {% endif %}

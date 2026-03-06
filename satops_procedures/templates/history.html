@@ -5,14 +5,26 @@
 <div class="search-bar card no-print">
     <form method="get" class="search-form">
         <input type="text" name="q" value="{{ search_query }}" placeholder="Search satellite, procedure, operator..." class="search-input">
-        <select name="tag">
+        <label for="filter-tag-hist">Tag</label>
+        <select id="filter-tag-hist" name="tag">
             <option value="">All tags</option>
             {% for t in tags %}
             <option value="{{ t.id }}" {% if tag_id == t.id %}selected{% endif %}>{{ t.name }}</option>
             {% endfor %}
         </select>
-        <button type="submit" class="btn btn-primary">Search</button>
-        {% if search_query or tag_id %}<a href="{% url 'history' %}" class="btn btn-secondary">Clear</a>{% endif %}
+        <label for="sort-history">Sort</label>
+        <select id="sort-history" name="sort">
+            <option value="-start_time" {% if sort == '-start_time' %}selected{% endif %}>Newest first</option>
+            <option value="start_time" {% if sort == 'start_time' %}selected{% endif %}>Oldest first</option>
+            <option value="satellite__name" {% if sort == 'satellite__name' %}selected{% endif %}>Satellite A–Z</option>
+            <option value="-satellite__name" {% if sort == '-satellite__name' %}selected{% endif %}>Satellite Z–A</option>
+            <option value="procedure__name" {% if sort == 'procedure__name' %}selected{% endif %}>Procedure A–Z</option>
+            <option value="-procedure__name" {% if sort == '-procedure__name' %}selected{% endif %}>Procedure Z–A</option>
+            <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
+            <option value="-status" {% if sort == '-status' %}selected{% endif %}>Status (desc)</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter / Sort</button>
+        {% if search_query or tag_id %}<a href="{% url 'history' %}?sort={{ sort }}" class="btn btn-secondary">Clear filters</a>{% endif %}
     </form>
 </div>
 <div class="card">

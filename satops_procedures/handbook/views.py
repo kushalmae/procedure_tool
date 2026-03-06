@@ -21,23 +21,35 @@ def alert_list(request):
             del request.session['handbook_filters']
         return redirect('handbook_alert_list')
 
+    HANDBOOK_SORT_OPTIONS = [
+        'subsystem__name',
+        'parameter',
+        '-parameter',
+        '-updated_at',
+        'severity',
+        '-severity',
+    ]
     saved = request.session.get('handbook_filters') or {}
     subsystem_id = request.GET.get('subsystem', saved.get('subsystem', ''))
     severity = request.GET.get('severity', saved.get('severity', ''))
     q = (request.GET.get('q') or saved.get('q') or '').strip()
+    sort = request.GET.get('sort', saved.get('sort', 'subsystem__name'))
+    if sort not in HANDBOOK_SORT_OPTIONS:
+        sort = 'subsystem__name'
 
     has_filters = any([subsystem_id, severity, q])
-    if has_filters:
+    if has_filters or sort != 'subsystem__name':
         request.session['handbook_filters'] = {
             'subsystem': subsystem_id or '',
             'severity': severity or '',
             'q': q or '',
+            'sort': sort,
         }
 
     alerts = (
         AlertDefinition.objects
         .select_related('subsystem', 'procedure')
-        .order_by('subsystem__name', 'parameter')
+        .order_by(sort)
     )
 
     if subsystem_id:
@@ -48,7 +60,10 @@ def alert_list(request):
         alerts = alerts.filter(severity=severity)
     if q:
         alerts = alerts.filter(
-            Q(parameter__icontains=q) | Q(description__icontains=q)
+            Q(parameter__icontains=q)
+            | Q(description__icontains=q)
+            | Q(mnemonic__icontains=q)
+            | Q(apids__icontains=q)
         )
 
     alerts = alerts[:200]
@@ -59,6 +74,7 @@ def alert_list(request):
         'filter_subsystem_id': _int_or_none(subsystem_id),
         'filter_severity': severity or None,
         'search_query': q,
+        'sort': sort,
         'severity_choices': AlertDefinition.SEVERITY_CHOICES,
     }
     return render(request, 'handbook/alert_list.html', context)
@@ -76,6 +92,10 @@ def alert_detail(request, alert_id):
 def alert_create(request):
     if request.method == 'POST':
         parameter = (request.POST.get('parameter') or '').strip()
+        mnemonic = (request.POST.get('mnemonic') or '').strip()
+        mnemonic_description = (request.POST.get('mnemonic_description') or '').strip()
+        user_notes = (request.POST.get('user_notes') or '').strip()
+        apids = (request.POST.get('apids') or '').strip()
         subsystem_id = request.POST.get('subsystem')
         description = (request.POST.get('description') or '').strip()
         alert_conditions = (request.POST.get('alert_conditions') or '').strip()
@@ -93,6 +113,10 @@ def alert_create(request):
                 'severity_choices': AlertDefinition.SEVERITY_CHOICES,
                 'form': {
                     'parameter': parameter,
+                    'mnemonic': mnemonic,
+                    'mnemonic_description': mnemonic_description,
+                    'user_notes': user_notes,
+                    'apids': apids,
                     'subsystem_id': _int_or_none(subsystem_id),
                     'description': description,
                     'alert_conditions': alert_conditions,
@@ -109,6 +133,10 @@ def alert_create(request):
 
         alert = AlertDefinition.objects.create(
             parameter=parameter,
+            mnemonic=mnemonic,
+            mnemonic_description=mnemonic_description,
+            user_notes=user_notes,
+            apids=apids,
             subsystem=subsystem,
             description=description,
             alert_conditions=alert_conditions,
@@ -127,6 +155,10 @@ def alert_create(request):
         'severity_choices': AlertDefinition.SEVERITY_CHOICES,
         'form': {
             'parameter': '',
+            'mnemonic': '',
+            'mnemonic_description': '',
+            'user_notes': '',
+            'apids': '',
             'subsystem_id': None,
             'description': '',
             'alert_conditions': '',
@@ -145,6 +177,10 @@ def alert_edit(request, alert_id):
     alert = get_object_or_404(AlertDefinition, pk=alert_id)
     if request.method == 'POST':
         parameter = (request.POST.get('parameter') or '').strip()
+        mnemonic = (request.POST.get('mnemonic') or '').strip()
+        mnemonic_description = (request.POST.get('mnemonic_description') or '').strip()
+        user_notes = (request.POST.get('user_notes') or '').strip()
+        apids = (request.POST.get('apids') or '').strip()
         subsystem_id = request.POST.get('subsystem')
         description = (request.POST.get('description') or '').strip()
         alert_conditions = (request.POST.get('alert_conditions') or '').strip()
@@ -163,6 +199,10 @@ def alert_edit(request, alert_id):
                 'severity_choices': AlertDefinition.SEVERITY_CHOICES,
                 'form': {
                     'parameter': parameter,
+                    'mnemonic': mnemonic,
+                    'mnemonic_description': mnemonic_description,
+                    'user_notes': user_notes,
+                    'apids': apids,
                     'subsystem_id': _int_or_none(subsystem_id),
                     'description': description,
                     'alert_conditions': alert_conditions,
@@ -178,6 +218,10 @@ def alert_edit(request, alert_id):
         procedure = get_object_or_404(Procedure, pk=procedure_id) if procedure_id else None
 
         alert.parameter = parameter
+        alert.mnemonic = mnemonic
+        alert.mnemonic_description = mnemonic_description
+        alert.user_notes = user_notes
+        alert.apids = apids
         alert.subsystem = subsystem
         alert.description = description
         alert.alert_conditions = alert_conditions
@@ -197,6 +241,10 @@ def alert_edit(request, alert_id):
         'severity_choices': AlertDefinition.SEVERITY_CHOICES,
         'form': {
             'parameter': alert.parameter,
+            'mnemonic': alert.mnemonic,
+            'mnemonic_description': alert.mnemonic_description,
+            'user_notes': alert.user_notes,
+            'apids': alert.apids,
             'subsystem_id': alert.subsystem_id,
             'description': alert.description,
             'alert_conditions': alert.alert_conditions,

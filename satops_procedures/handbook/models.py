@@ -20,6 +20,24 @@ class AlertDefinition(models.Model):
     ]
 
     parameter = models.CharField(max_length=120)
+    mnemonic = models.CharField(
+        max_length=80,
+        blank=True,
+        help_text='Telemetry mnemonic or short code (e.g. BAT_TEMP, V_BUS)',
+    )
+    mnemonic_description = models.TextField(
+        blank=True,
+        help_text='Extended description of what this mnemonic is (e.g. engineering unit, where it appears in telemetry)',
+    )
+    user_notes = models.TextField(
+        blank=True,
+        help_text='Operator or team notes (e.g. observed behavior, fleet-specific notes)',
+    )
+    apids = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='APID(s) this parameter can come down on (e.g. 0x0801, 0x0802 or HK, Science)',
+    )
     subsystem = models.ForeignKey(
         Subsystem,
         on_delete=models.PROTECT,
@@ -65,6 +83,10 @@ class AlertDefinition(models.Model):
             existing = AlertDefinition.objects.get(pk=self.pk)
             if (
                 existing.parameter != self.parameter
+                or                 existing.mnemonic != self.mnemonic
+                or existing.mnemonic_description != self.mnemonic_description
+                or existing.user_notes != self.user_notes
+                or existing.apids != self.apids
                 or existing.subsystem_id != self.subsystem_id
                 or existing.description != self.description
                 or existing.alert_conditions != self.alert_conditions

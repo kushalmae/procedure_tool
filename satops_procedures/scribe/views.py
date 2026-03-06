@@ -73,8 +73,11 @@ def timeline(request):
     q = (request.GET.get('q') or saved.get('q') or '').strip()
 
     # Save current filter state to session when any filter or search is set (so they persist on next visit)
+    sort_param = request.GET.get('sort', saved.get('sort', '-timestamp'))
+    if sort_param not in ('-timestamp', 'timestamp'):
+        sort_param = '-timestamp'
     has_filters = any([role_id, satellite_id, category_id, severity, shift_id, tag_id, q])
-    if has_filters:
+    if has_filters or sort_param != '-timestamp':
         request.session['scribe_filters'] = {
             'role': role_id or '',
             'satellite': satellite_id or '',
@@ -83,13 +86,14 @@ def timeline(request):
             'shift': shift_id or '',
             'tag': tag_id or '',
             'q': q or '',
+            'sort': sort_param,
         }
 
     entries = (
         MissionLogEntry.objects
         .select_related('role', 'satellite', 'category', 'shift', 'created_by')
         .prefetch_related('tags')
-        .order_by('-timestamp')
+        .order_by(sort_param)
     )
 
     if role_id:
@@ -144,6 +148,7 @@ def timeline(request):
         'filter_shift_id': _int_or_none(shift_id),
         'filter_tag_id': _int_or_none(tag_id),
         'search_query': q,
+        'sort': sort_param,
         'severity_choices': MissionLogEntry.SEVERITY_CHOICES,
     }
     # Form defaults for add-entry form (left column) when user is authenticated

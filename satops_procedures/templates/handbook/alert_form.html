@@ -9,6 +9,12 @@
     <form method="post">{% csrf_token %}
         <label for="parameter">Parameter <span style="color: var(--fail);">*</span></label>
         <input id="parameter" name="parameter" type="text" value="{{ form.parameter }}" required maxlength="120" placeholder="e.g. Battery Temperature">
+        <label for="mnemonic">Mnemonic</label>
+        <input id="mnemonic" name="mnemonic" type="text" value="{{ form.mnemonic }}" maxlength="80" placeholder="e.g. BAT_TEMP, V_BUS">
+        <label for="mnemonic_description">Mnemonic description</label>
+        <textarea id="mnemonic_description" name="mnemonic_description" rows="3" placeholder="What this mnemonic is (e.g. engineering unit, where it appears in telemetry, packet offset)">{{ form.mnemonic_description }}</textarea>
+        <label for="apids">APID(s)</label>
+        <input id="apids" name="apids" type="text" value="{{ form.apids }}" maxlength="200" placeholder="e.g. 0x0801, 0x0802 or HK, Science">
         <label for="subsystem">Subsystem <span style="color: var(--fail);">*</span></label>
         <select id="subsystem" name="subsystem" required>
             <option value="">—</option>
@@ -26,6 +32,8 @@
         <input id="critical_threshold" name="critical_threshold" type="text" value="{{ form.critical_threshold }}" maxlength="80" placeholder="e.g. > 55 C">
         <label for="recommended_response">Recommended response</label>
         <textarea id="recommended_response" name="recommended_response" rows="3" placeholder="Operator actions or procedure reference">{{ form.recommended_response }}</textarea>
+        <label for="user_notes">User notes</label>
+        <textarea id="user_notes" name="user_notes" rows="3" placeholder="Operator or team notes (e.g. observed behavior, fleet-specific notes)">{{ form.user_notes }}</textarea>
         <label for="procedure">Linked procedure (optional)</label>
         <select id="procedure" name="procedure">
             <option value="">—</option>

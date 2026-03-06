@@ -11,6 +11,18 @@ from .services.procedure_loader import load_procedure, save_procedure
 from .services.runner import get_next_step
 
 
+RUN_SORT_OPTIONS = [
+    '-start_time',  # newest first (default)
+    'start_time',
+    'satellite__name',
+    '-satellite__name',
+    'procedure__name',
+    '-procedure__name',
+    'status',
+    '-status',
+]
+
+
 def _search_runs(queryset, q, tag_id):
     """Filter runs by search query and/or tag."""
     if q:
@@ -30,7 +42,6 @@ def dashboard(request):
     from django.utils import timezone
     from datetime import timedelta
 
-    runs = ProcedureRun.objects.select_related('satellite', 'procedure').prefetch_related('procedure__tags').order_by('-start_time')
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     if tag_id:
@@ -40,6 +51,15 @@ def dashboard(request):
             tag_id = None
     else:
         tag_id = None
+    sort = request.GET.get('sort', '-start_time')
+    if sort not in RUN_SORT_OPTIONS:
+        sort = '-start_time'
+    runs = (
+        ProcedureRun.objects
+        .select_related('satellite', 'procedure')
+        .prefetch_related('procedure__tags')
+        .order_by(sort)
+    )
     runs = _search_runs(runs, q, tag_id)[:50]
     tags = Tag.objects.all()
 
@@ -62,6 +82,8 @@ def dashboard(request):
         'search_query': q,
         'tag_id': tag_id,
         'tags': tags,
+        'sort': sort,
+        'sort_options': RUN_SORT_OPTIONS,
         'running_count': running_count,
         'procedures_count': procedures_count,
         'satellites_count': satellites_count,
@@ -120,9 +142,33 @@ def start(request):
     })
 
 
+PROCEDURE_SORT_OPTIONS = [
+    ('name', 'Name A–Z'),
+    ('-name', 'Name Z–A'),
+    ('version', 'Version'),
+    ('-version', 'Version (newest first)'),
+]
+
+
 def procedure_list(request):
-    """List all procedures with links to review and start."""
-    procedures = Procedure.objects.prefetch_related('tags').order_by('name')
+    """List all procedures with links to review and start. Filter by tag, sort by name/version."""
+    q = request.GET.get('q', '').strip()
+    tag_id = request.GET.get('tag', '')
+    try:
+        filter_tag_id = int(tag_id) if tag_id else None
+    except ValueError:
+        filter_tag_id = None
+    sort = request.GET.get('sort', 'name')
+    allowed_sort = [s[0] for s in PROCEDURE_SORT_OPTIONS]
+    if sort not in allowed_sort:
+        sort = 'name'
+    procedures = Procedure.objects.prefetch_related('tags').order_by(sort)
+    if filter_tag_id:
+        procedures = procedures.filter(tags__id=filter_tag_id).distinct()
+    if q:
+        procedures = procedures.filter(
+            Q(name__icontains=q) | Q(version__icontains=q)
+        )
     # Attach step count where YAML is loadable
     for p in procedures:
         try:
@@ -130,7 +176,15 @@ def procedure_list(request):
             p.step_count = len(proc.get('steps', []))
         except (FileNotFoundError, OSError):
             p.step_count = None
-    return render(request, 'procedure_list.html', {'procedures': procedures})
+    tags = Tag.objects.all()
+    return render(request, 'procedure_list.html', {
+        'procedures': procedures,
+        'tags': tags,
+        'filter_tag_id': filter_tag_id,
+        'search_query': q,
+        'sort': sort,
+        'sort_options': PROCEDURE_SORT_OPTIONS,
+    })
 
 
 def procedure_review(request):
@@ -361,6 +415,17 @@ def run_procedure(request, run_id):
         ProcedureRun.objects.select_related('satellite', 'procedure'),
         pk=run_id,
     )
+    if run.status != ProcedureRun.STATUS_RUNNING:
+        return redirect('run_summary', run_id=run_id)
+
+    if request.method == 'POST' and request.POST.get('abort') is not None:
+        from django.utils import timezone
+        run.status = ProcedureRun.STATUS_CANCELLED
+        run.end_time = timezone.now()
+        run.save()
+        messages.success(request, 'Procedure run aborted.')
+        return redirect('dashboard')
+
     executed_list = list(run.step_executions.order_by('timestamp'))
     proc = load_procedure(run.procedure.yaml_file)
     step_index = int(request.GET.get('step', 0))
@@ -468,7 +533,6 @@ def run_summary(request, run_id):
 
 
 def history(request):
-    runs = ProcedureRun.objects.select_related('satellite', 'procedure').prefetch_related('procedure__tags').order_by('-start_time')
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     if tag_id:
@@ -478,6 +542,15 @@ def history(request):
             tag_id = None
     else:
         tag_id = None
+    sort = request.GET.get('sort', '-start_time')
+    if sort not in RUN_SORT_OPTIONS:
+        sort = '-start_time'
+    runs = (
+        ProcedureRun.objects
+        .select_related('satellite', 'procedure')
+        .prefetch_related('procedure__tags')
+        .order_by(sort)
+    )
     runs = _search_runs(runs, q, tag_id)[:100]
     tags = Tag.objects.all()
     return render(request, 'history.html', {
@@ -485,4 +558,6 @@ def history(request):
         'search_query': q,
         'tag_id': tag_id,
         'tags': tags,
+        'sort': sort,
+        'sort_options': RUN_SORT_OPTIONS,
     })

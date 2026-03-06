@@ -5,14 +5,22 @@
   <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; {{ procedure.name }} &rarr; Run (step {{ step_index|add:1 }} of {{ total_steps }})
 </nav>
 <h2>{{ procedure.name }} — {{ satellite }}</h2>
-<p class="no-print">
-  {% if view_all %}
-  <a href="{% url 'run' run.id %}?step={{ num_done }}">See one step at a time</a>
-  {% else %}
-  <a href="{% url 'run' run.id %}?view=all">See all steps at once</a>
-  {% endif %}
-  | <a href="{% url 'run_summary' run.id %}">View all steps / Print</a>
-</p>
+<div class="no-print run-actions">
+  <p>
+    {% if view_all %}
+    <a href="{% url 'run' run.id %}?step={{ num_done }}">See one step at a time</a>
+    {% else %}
+    <a href="{% url 'run' run.id %}?view=all">See all steps at once</a>
+    {% endif %}
+    | <a href="{% url 'run_summary' run.id %}">View all steps / Print</a>
+  </p>
+  <p>
+    <form method="post" action="{% url 'run' run.id %}" style="display: inline;" onsubmit="return confirm('Abort this procedure run? The run will be marked as cancelled.');">{% csrf_token %}
+      <input type="hidden" name="abort" value="1">
+      <button type="submit" class="btn btn-secondary abort-btn">Abort procedure</button>
+    </form>
+  </p>
+</div>
 
 <div class="run-notes-card card no-print">
     <h3 style="margin-top: 0;">Run notes</h3>

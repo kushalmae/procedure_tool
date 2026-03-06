@@ -39,7 +39,16 @@
             {% endfor %}
         </select>
         {% endif %}
-        <button type="submit" class="btn btn-primary">Filter</button>
+        <label for="sort-fdir">Sort</label>
+        <select id="sort-fdir" name="sort">
+            <option value="subsystem__name" {% if sort == 'subsystem__name' %}selected{% endif %}>Subsystem, name</option>
+            <option value="name" {% if sort == 'name' %}selected{% endif %}>Name A–Z</option>
+            <option value="-name" {% if sort == '-name' %}selected{% endif %}>Name Z–A</option>
+            <option value="-updated_at" {% if sort == '-updated_at' %}selected{% endif %}>Updated (newest)</option>
+            <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
+            <option value="-severity" {% if sort == '-severity' %}selected{% endif %}>Severity (desc)</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter / Sort</button>
         {% if search_query or filter_subsystem_id or filter_severity or filter_fault_type %}
         <a href="{% url 'fdir_entry_list' %}?clear=1" class="btn btn-secondary">Clear filters</a>
         {% endif %}

@@ -11,10 +11,10 @@ class SubsystemAdmin(admin.ModelAdmin):
 @admin.register(AlertDefinition)
 class AlertDefinitionAdmin(admin.ModelAdmin):
     list_display = [
-        'parameter', 'subsystem', 'severity',
+        'parameter', 'mnemonic', 'apids', 'subsystem', 'severity',
         'warning_threshold', 'critical_threshold', 'version', 'updated_at',
     ]
     list_filter = ['subsystem', 'severity']
-    search_fields = ['parameter', 'description', 'recommended_response']
+    search_fields = ['parameter', 'mnemonic', 'apids', 'description', 'mnemonic_description', 'user_notes', 'recommended_response']
     raw_id_fields = ['procedure']
     readonly_fields = ['version', 'created_at', 'updated_at']

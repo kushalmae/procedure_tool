@@ -9,6 +9,18 @@
     <dl class="detail-list">
         <dt>Subsystem</dt>
         <dd>{{ alert.subsystem.name }}</dd>
+        {% if alert.mnemonic %}
+        <dt>Mnemonic</dt>
+        <dd><code>{{ alert.mnemonic }}</code></dd>
+        {% if alert.mnemonic_description %}
+        <dt>What this mnemonic is</dt>
+        <dd>{{ alert.mnemonic_description|linebreaks }}</dd>
+        {% endif %}
+        {% endif %}
+        {% if alert.apids %}
+        <dt>APID(s)</dt>
+        <dd>{{ alert.apids }}</dd>
+        {% endif %}
         <dt>Severity</dt>
         <dd>{{ alert.get_severity_display }}</dd>
         <dt>Description</dt>
@@ -28,6 +40,10 @@
         {% if alert.procedure %}
         <dt>Procedure</dt>
         <dd><a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a></dd>
+        {% endif %}
+        {% if alert.user_notes %}
+        <dt>User notes</dt>
+        <dd class="user-notes">{{ alert.user_notes|linebreaks }}</dd>
         {% endif %}
         <dt>Version</dt>
         <dd>{{ alert.version }}</dd>

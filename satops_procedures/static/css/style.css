@@ -92,9 +92,8 @@ body {
   padding: 0 0.75rem;
 }
 .sidebar-auth {
-  margin-top: auto;
-  padding: 1rem 1rem 0;
-  border-top: 1px solid var(--border);
+  padding: 1rem 1rem 1rem;
+  border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -229,6 +228,12 @@ h3 { font-size: 1.15rem; color: var(--text-muted); }
 .detail-list dt { font-weight: 600; margin-top: 0.75rem; color: var(--text-muted-on-light); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .detail-list dt:first-child { margin-top: 0; }
 .detail-list dd { margin: 0.25rem 0 0 0; }
+.detail-list dd.user-notes {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.06);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+}
 
 /* Tables */
 table {
@@ -310,6 +315,8 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--border);
 }
 .btn-secondary:hover { background: var(--jet-black); color: var(--pure-white); border-color: var(--jet-black); }
+.btn.abort-btn { color: var(--fail); border-color: var(--fail); }
+.btn.abort-btn:hover { background: var(--fail); color: var(--pure-white); border-color: var(--fail); }
 .btn + .btn { margin-left: 0.5rem; }
 
 /* Search */

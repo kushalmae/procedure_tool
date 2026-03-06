@@ -22,27 +22,41 @@ def registry(request):
             del request.session['anomaly_filters']
         return redirect('anomalies_registry')
 
+    ANOMALY_SORT_OPTIONS = [
+        '-detection_time',
+        'detection_time',
+        'satellite__name',
+        '-satellite__name',
+        'severity',
+        '-severity',
+        'status',
+        '-status',
+    ]
     saved = request.session.get('anomaly_filters') or {}
     satellite_id = request.GET.get('satellite', saved.get('satellite', ''))
     subsystem_id = request.GET.get('subsystem', saved.get('subsystem', ''))
     severity = request.GET.get('severity', saved.get('severity', ''))
     status = request.GET.get('status', saved.get('status', ''))
     q = (request.GET.get('q') or saved.get('q') or '').strip()
+    sort = request.GET.get('sort', saved.get('sort', '-detection_time'))
+    if sort not in ANOMALY_SORT_OPTIONS:
+        sort = '-detection_time'
 
     has_filters = any([satellite_id, subsystem_id, severity, status, q])
-    if has_filters:
+    if has_filters or sort != '-detection_time':
         request.session['anomaly_filters'] = {
             'satellite': satellite_id or '',
             'subsystem': subsystem_id or '',
             'severity': severity or '',
             'status': status or '',
             'q': q or '',
+            'sort': sort,
         }
 
     anomalies = (
         Anomaly.objects
         .select_related('satellite', 'subsystem', 'anomaly_type', 'reported_by')
-        .order_by('-detection_time')
+        .order_by(sort)
     )
 
     if satellite_id:
@@ -73,6 +87,7 @@ def registry(request):
         'filter_severity': severity or None,
         'filter_status': status or None,
         'search_query': q,
+        'sort': sort,
         'severity_choices': Anomaly.SEVERITY_CHOICES,
         'status_choices': Anomaly.STATUS_CHOICES,
     }

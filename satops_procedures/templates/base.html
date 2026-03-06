@@ -10,20 +10,6 @@
 <body>
     <a href="#main" class="skip-link">Skip to main content</a>
     <nav class="sidebar no-print" aria-label="Main navigation">
-        <div class="sidebar-links">
-            <div class="sidebar-section">
-                <span class="sidebar-section-label">Procedures</span>
-                <a href="{% url 'dashboard' %}">Dashboard</a>
-                <a href="{% url 'start' %}">Start Procedure</a>
-                <a href="{% url 'procedure_list' %}">Procedures</a>
-                <a href="{% url 'procedure_create' %}">Create Procedure</a>
-                <a href="{% url 'history' %}">History</a>
-            </div>
-            <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
-            <a href="{% url 'anomalies_registry' %}">Fleet Anomaly Tracker</a>
-            <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a>
-            <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
-        </div>
         <div class="sidebar-auth">
             {% if user.is_authenticated %}
             <span class="sidebar-username">{{ user.get_username }}</span>
@@ -33,6 +19,23 @@
             {% else %}
             <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>
             {% endif %}
+        </div>
+        <div class="sidebar-links">
+            <div class="sidebar-section">
+                <span class="sidebar-section-label">Procedures</span>
+                <a href="{% url 'dashboard' %}">Dashboard</a>
+                <a href="{% url 'start' %}">Start Procedure</a>
+                <a href="{% url 'procedure_list' %}">Procedures</a>
+                <a href="{% url 'procedure_create' %}">Create Procedure</a>
+                <a href="{% url 'history' %}">History</a>
+            </div>
+            <div class="sidebar-section">
+                <span class="sidebar-section-label">Operations & reference</span>
+                <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
+                <a href="{% url 'anomalies_registry' %}">Fleet Anomaly Tracker</a>
+                <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a>
+                <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
+            </div>
         </div>
     </nav>
     <div class="page-content">

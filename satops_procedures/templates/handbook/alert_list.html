@@ -15,7 +15,7 @@
 </p>
 <div class="search-bar card no-print">
     <form method="get" class="search-form">
-        <input type="text" name="q" value="{{ search_query }}" placeholder="Search parameter or description..." class="search-input">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search parameter, mnemonic, APID, description..." class="search-input">
         <label for="filter-subsystem">Subsystem</label>
         <select id="filter-subsystem" name="subsystem">
             <option value="">All</option>
@@ -30,7 +30,16 @@
             <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
         </select>
-        <button type="submit" class="btn btn-primary">Filter</button>
+        <label for="sort-handbook">Sort</label>
+        <select id="sort-handbook" name="sort">
+            <option value="subsystem__name" {% if sort == 'subsystem__name' %}selected{% endif %}>Subsystem, parameter</option>
+            <option value="parameter" {% if sort == 'parameter' %}selected{% endif %}>Parameter A–Z</option>
+            <option value="-parameter" {% if sort == '-parameter' %}selected{% endif %}>Parameter Z–A</option>
+            <option value="-updated_at" {% if sort == '-updated_at' %}selected{% endif %}>Updated (newest)</option>
+            <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
+            <option value="-severity" {% if sort == '-severity' %}selected{% endif %}>Severity (desc)</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Filter / Sort</button>
         {% if search_query or filter_subsystem_id or filter_severity %}
         <a href="{% url 'handbook_alert_list' %}?clear=1" class="btn btn-secondary">Clear filters</a>
         {% endif %}
@@ -41,6 +50,8 @@
         <thead>
             <tr>
                 <th>Parameter</th>
+                <th>Mnemonic</th>
+                <th>APID(s)</th>
                 <th>Subsystem</th>
                 <th>Severity</th>
                 <th>Warning</th>
@@ -55,6 +66,8 @@
             {% for a in alerts %}
             <tr>
                 <td><a href="{% url 'handbook_alert_detail' a.id %}">{{ a.parameter }}</a></td>
+                <td>{% if a.mnemonic %}<a href="{% url 'handbook_alert_detail' a.id %}" title="View details, mnemonic description and user notes"><code>{{ a.mnemonic }}</code></a>{% else %}—{% endif %}</td>
+                <td>{{ a.apids|default:"—" }}</td>
                 <td>{{ a.subsystem.name }}</td>
                 <td>{{ a.get_severity_display }}</td>
                 <td>{{ a.warning_threshold|default:"—" }}</td>
@@ -72,7 +85,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="9">No alerts. {% if user.is_authenticated %}<a href="{% url 'handbook_alert_create' %}">Add one</a> or run <code>python manage.py seed_handbook --alerts</code>.{% else %}Run <code>python manage.py seed_handbook --alerts</code> for samples.{% endif %} Or clear filters.</td>
+                <td colspan="11">No alerts. {% if user.is_authenticated %}<a href="{% url 'handbook_alert_create' %}">Add one</a> or run <code>python manage.py seed_handbook --alerts</code>.{% else %}Run <code>python manage.py seed_handbook --alerts</code> for samples.{% endif %} Or clear filters.</td>
             </tr>
             {% endfor %}
         </tbody>

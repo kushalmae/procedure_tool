@@ -22,26 +22,38 @@ def entry_list(request):
             del request.session['fdir_filters']
         return redirect('fdir_entry_list')
 
+    FDIR_SORT_OPTIONS = [
+        'subsystem__name',
+        'name',
+        '-name',
+        '-updated_at',
+        'severity',
+        '-severity',
+    ]
     saved = request.session.get('fdir_filters') or {}
     subsystem_id = request.GET.get('subsystem', saved.get('subsystem', ''))
     severity = request.GET.get('severity', saved.get('severity', ''))
     fault_type = request.GET.get('fault_type', saved.get('fault_type', ''))
     q = (request.GET.get('q') or saved.get('q') or '').strip()
+    sort = request.GET.get('sort', saved.get('sort', 'subsystem__name'))
+    if sort not in FDIR_SORT_OPTIONS:
+        sort = 'subsystem__name'
 
     has_filters = any([subsystem_id, severity, fault_type, q])
-    if has_filters:
+    if has_filters or sort != 'subsystem__name':
         request.session['fdir_filters'] = {
             'subsystem': subsystem_id or '',
             'severity': severity or '',
             'fault_type': fault_type or '',
             'q': q or '',
+            'sort': sort,
         }
 
     entries = (
         FDIREntry.objects
         .select_related('subsystem')
         .prefetch_related('operator_procedures')
-        .order_by('subsystem__name', 'name')
+        .order_by(sort)
     )
 
     if subsystem_id:
@@ -79,6 +91,7 @@ def entry_list(request):
         'filter_fault_type': fault_type or None,
         'fault_type_choices': fault_types,
         'search_query': q,
+        'sort': sort,
         'severity_choices': FDIREntry.SEVERITY_CHOICES,
     }
     return render(request, 'fdir/entry_list.html', context)

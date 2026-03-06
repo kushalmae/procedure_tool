@@ -16,6 +16,10 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Battery Temperature',
         'subsystem': 'Thermal',
+        'mnemonic': 'BAT_TEMP',
+        'mnemonic_description': 'Battery pack temperature in degrees Celsius. Sampled from thermistor on the battery module; appears in HK APID as a 16-bit signed value (0.1 C LSB).',
+        'user_notes': 'Typical range 10–40 C in orbit. Spikes above 45 C often during peak charge in sun.',
+        'apids': '0x0801 (HK), 0x0802 (Power)',
         'description': 'Battery pack temperature out of nominal range. Prolonged exposure may reduce battery life or trigger safehold.',
         'alert_conditions': 'Triggered when battery temperature exceeds warning or critical limits.',
         'warning_threshold': '> 45 C',
@@ -26,6 +30,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Panel Temperature',
         'subsystem': 'Thermal',
+        'mnemonic': 'PANEL_TEMP',
+        'apids': '0x0801 (HK)',
         'description': 'Solar panel or structure temperature outside design range. Can affect power output and structural margins.',
         'alert_conditions': 'Triggered when panel temp exceeds limits in sun or eclipse.',
         'warning_threshold': '< -20 C or > 80 C',
@@ -36,6 +42,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Payload Bay Temperature',
         'subsystem': 'Thermal',
+        'mnemonic': 'PL_BAY_TEMP',
+        'apids': '0x0801 (HK), 0x0810 (Payload)',
         'description': 'Payload compartment temperature out of range. May impact instrument performance or calibration.',
         'alert_conditions': 'Triggered when payload bay temp exceeds limits.',
         'warning_threshold': 'Outside 10–35 C',
@@ -47,6 +55,10 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Bus Voltage',
         'subsystem': 'Power',
+        'mnemonic': 'V_BUS',
+        'mnemonic_description': 'Main 28 V bus voltage in volts. Engineering unit; reported in HK and Power APIDs. Nominal 28 V, range typically 26–34 V.',
+        'user_notes': '',
+        'apids': '0x0801 (HK), 0x0802 (Power)',
         'description': 'Main power bus voltage outside nominal range. May indicate solar array or battery regulator issue.',
         'alert_conditions': 'Triggered when bus voltage falls below or rises above limits.',
         'warning_threshold': '< 26 V or > 34 V',
@@ -57,6 +69,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Battery State of Charge',
         'subsystem': 'Power',
+        'mnemonic': 'SOC',
+        'apids': '0x0801 (HK), 0x0802 (Power)',
         'description': 'Battery state of charge (SOC) below or above expected range. Low SOC risks loss of power in eclipse.',
         'alert_conditions': 'Triggered when SOC falls below warning or critical level.',
         'warning_threshold': '< 30%',
@@ -67,6 +81,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Solar Array Current',
         'subsystem': 'Power',
+        'mnemonic': 'I_SA',
+        'apids': '0x0802 (Power)',
         'description': 'Solar array output current below expected for sun angle. May indicate partial failure or shadowing.',
         'alert_conditions': 'Triggered when array current is below limit for given beta angle.',
         'warning_threshold': '< 80% of expected',
@@ -78,6 +94,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Wheel Speed',
         'subsystem': 'ADCS',
+        'mnemonic': 'RW_SPEED',
+        'apids': '0x0803 (ADCS)',
         'description': 'Reaction wheel speed outside nominal operating range. May indicate saturation or fault.',
         'alert_conditions': 'Triggered when any wheel speed exceeds limit (RPM or Nms).',
         'warning_threshold': '> 85% max speed',
@@ -88,6 +106,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Pointing Error',
         'subsystem': 'ADCS',
+        'mnemonic': 'PT_ERR',
+        'apids': '0x0803 (ADCS)',
         'description': 'Attitude pointing error exceeds mission requirement. Affects payload pointing and power.',
         'alert_conditions': 'Triggered when pointing error (e.g. roll/pitch/yaw) exceeds threshold.',
         'warning_threshold': '> 0.5 deg',
@@ -98,6 +118,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Magnetometer Range',
         'subsystem': 'ADCS',
+        'mnemonic': 'MAG_SAT',
+        'apids': '0x0803 (ADCS)',
         'description': 'Magnetometer reading saturated or out of expected range. May affect attitude determination.',
         'alert_conditions': 'Triggered when any magnetometer axis is at limit.',
         'warning_threshold': 'Any axis at ±80% range',
@@ -109,6 +131,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'RF Power Output',
         'subsystem': 'Communications',
+        'mnemonic': 'TX_PWR',
+        'apids': '0x0804 (Comm)',
         'description': 'Transmitter RF power outside nominal. Low power may cause link loss; high may indicate fault.',
         'alert_conditions': 'Triggered when TX power telemetry is outside limits.',
         'warning_threshold': '< 90% or > 110% nominal',
@@ -119,6 +143,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Link Margin',
         'subsystem': 'Communications',
+        'mnemonic': 'LINK_MARGIN',
+        'apids': '0x0804 (Comm), ground-computed',
         'description': 'Command or telemetry link margin below requirement. Risk of loss of link.',
         'alert_conditions': 'Triggered when computed link margin falls below threshold.',
         'warning_threshold': '< 3 dB',
@@ -129,6 +155,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Receiver Lock',
         'subsystem': 'Communications',
+        'mnemonic': 'RX_LOCK',
+        'apids': '0x0804 (Comm)',
         'description': 'Uplink receiver has lost lock. Command capability may be degraded or lost.',
         'alert_conditions': 'Triggered when receiver lock status goes false.',
         'warning_threshold': 'Lock lost',
@@ -140,6 +168,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Detector Temperature',
         'subsystem': 'Payload',
+        'mnemonic': 'DET_TEMP',
+        'apids': '0x0810 (Payload)',
         'description': 'Payload detector or focal plane temperature out of operating range. Affects data quality and lifetime.',
         'alert_conditions': 'Triggered when detector temp is outside limits.',
         'warning_threshold': 'Outside -40 to -20 C',
@@ -150,6 +180,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Data Buffer Fill',
         'subsystem': 'Payload',
+        'mnemonic': 'BUF_FILL',
+        'apids': '0x0810 (Payload)',
         'description': 'Onboard data buffer fill level high. Risk of overflow and data loss if not dumped.',
         'alert_conditions': 'Triggered when buffer fill exceeds threshold.',
         'warning_threshold': '> 75%',
@@ -160,6 +192,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Payload Power',
         'subsystem': 'Payload',
+        'mnemonic': 'PL_PWR',
+        'apids': '0x0801 (HK), 0x0810 (Payload)',
         'description': 'Payload subsystem power draw outside nominal. May indicate fault or mode change.',
         'alert_conditions': 'Triggered when payload power telemetry exceeds limits.',
         'warning_threshold': '< 90% or > 110% nominal',
@@ -171,6 +205,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Charge Current',
         'subsystem': 'Power',
+        'mnemonic': 'I_CHG',
+        'apids': '0x0802 (Power)',
         'description': 'Battery charge current outside expected range. May indicate BCR fault or cell imbalance.',
         'alert_conditions': 'Triggered when charge current exceeds or falls below limits for mode.',
         'warning_threshold': '> 5 A in float or < 0.5 A in bulk',
@@ -181,6 +217,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Sun Vector Residual',
         'subsystem': 'ADCS',
+        'mnemonic': 'SUN_VEC_RES',
+        'apids': '0x0803 (ADCS)',
         'description': 'Difference between measured and expected sun vector exceeds limit. May indicate sun sensor fault or eclipse.',
         'alert_conditions': 'Triggered when sun vector residual exceeds threshold (deg or magnitude).',
         'warning_threshold': '> 2 deg',
@@ -191,6 +229,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Star Tracker Valid',
         'subsystem': 'ADCS',
+        'mnemonic': 'ST_VALID',
+        'apids': '0x0803 (ADCS)',
         'description': 'Star tracker has lost valid solution. Attitude knowledge may be degraded.',
         'alert_conditions': 'Triggered when star tracker valid flag goes false.',
         'warning_threshold': 'Valid lost',
@@ -201,6 +241,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'TX Temperature',
         'subsystem': 'Communications',
+        'mnemonic': 'TX_TEMP',
+        'apids': '0x0804 (Comm)',
         'description': 'Transmitter or PA temperature out of range. May cause power roll-off or shutdown.',
         'alert_conditions': 'Triggered when TX temp telemetry exceeds limits.',
         'warning_threshold': '> 60 C',
@@ -211,6 +253,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Bit Error Rate',
         'subsystem': 'Communications',
+        'mnemonic': 'BER',
+        'apids': '0x0804 (Comm), ground-computed',
         'description': 'Downlink or uplink bit error rate above acceptable level. Data integrity at risk.',
         'alert_conditions': 'Triggered when BER exceeds threshold over averaging window.',
         'warning_threshold': '> 1e-6',
@@ -221,6 +265,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Optics Temperature',
         'subsystem': 'Payload',
+        'mnemonic': 'OPT_TEMP',
+        'apids': '0x0810 (Payload)',
         'description': 'Optical assembly temperature out of range. Affects focus and radiometric accuracy.',
         'alert_conditions': 'Triggered when optics temp is outside limits.',
         'warning_threshold': 'Outside 18–28 C',
@@ -231,6 +277,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Safehold Status',
         'subsystem': 'Other',
+        'mnemonic': 'SAFEHOLD',
+        'apids': '0x0801 (HK), 0x0800 (Events)',
         'description': 'Spacecraft has entered safehold mode. Requires operator assessment and recovery.',
         'alert_conditions': 'Triggered when safehold mode is asserted.',
         'warning_threshold': 'N/A (event)',
@@ -241,6 +289,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Watchdog Reset',
         'subsystem': 'Other',
+        'mnemonic': 'WDT_RST',
+        'apids': '0x0800 (Events)',
         'description': 'Processor watchdog timer has triggered a reset. Indicates possible software hang or fault.',
         'alert_conditions': 'Triggered on watchdog reset event.',
         'warning_threshold': 'Single event',
@@ -251,6 +301,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Propellant Tank Pressure',
         'subsystem': 'Other',
+        'mnemonic': 'PROP_PRES',
+        'apids': '0x0801 (HK), 0x0805 (Propulsion)',
         'description': 'Propellant tank pressure outside nominal. May indicate leak or thermal effect.',
         'alert_conditions': 'Triggered when tank pressure exceeds limits.',
         'warning_threshold': '< 90% or > 110% nominal',
@@ -261,6 +313,8 @@ SAMPLE_ALERTS = [
     {
         'parameter': 'Eclipse Duration',
         'subsystem': 'Power',
+        'mnemonic': 'ECL_DUR',
+        'apids': 'ground-computed (ephemeris)',
         'description': 'Upcoming or current eclipse longer than design margin. Battery may not support full load.',
         'alert_conditions': 'Triggered when eclipse duration exceeds threshold for current SOC.',
         'warning_threshold': '> 35 min at current load',
@@ -294,6 +348,10 @@ class Command(BaseCommand):
                     parameter=data['parameter'],
                     subsystem=subsystem,
                     defaults={
+                        'mnemonic': data.get('mnemonic', ''),
+                        'mnemonic_description': data.get('mnemonic_description', ''),
+                        'user_notes': data.get('user_notes', ''),
+                        'apids': data.get('apids', ''),
                         'description': data['description'],
                         'alert_conditions': data['alert_conditions'],
                         'warning_threshold': data['warning_threshold'],
