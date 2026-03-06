@@ -30,6 +30,7 @@
                 <td>
                     <a href="{% url 'procedure_review' %}?procedure={{ p.id }}" class="btn btn-secondary">Review</a>
                     <a href="{% url 'procedure_edit' p.id %}" class="btn btn-secondary">Edit</a>
+                    <a href="{% url 'procedure_clone' p.id %}" class="btn btn-secondary">Clone</a>
                     {% if user.is_authenticated %}<a href="{% url 'start' %}?procedure={{ p.id }}" class="btn btn-primary">Start</a>{% endif %}
                     <a href="{% url 'procedure_delete' p.id %}" class="btn btn-secondary" style="color: var(--fail);">Delete</a>
                 </td>

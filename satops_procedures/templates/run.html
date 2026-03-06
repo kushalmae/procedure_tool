@@ -7,6 +7,17 @@
 <h2>{{ procedure.name }} — {{ satellite }}</h2>
 <p class="no-print"><a href="{% url 'run_summary' run.id %}">View all steps / Print</a></p>
 
+<div class="run-notes-card card no-print">
+    <h3 style="margin-top: 0;">Run notes</h3>
+    <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">Handover or anomaly notes for this run. Shown on the run summary.</p>
+    <form method="post">{% csrf_token %}
+        <input type="hidden" name="save_run_notes" value="1">
+        <label for="run-notes-field">Notes</label>
+        <textarea name="run_notes" id="run-notes-field" rows="3" placeholder="e.g. Anomaly at step 2, discussed with shift lead...">{{ run.run_notes }}</textarea>
+        <p><button type="submit" class="btn btn-secondary">Save run notes</button></p>
+    </form>
+</div>
+
 <div class="run-layout">
     <aside class="step-list no-print" aria-label="Procedure steps">
         <strong>Steps</strong>

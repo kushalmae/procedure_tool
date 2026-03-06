@@ -67,6 +67,7 @@ class ProcedureRun(models.Model):
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RUNNING)
+    run_notes = models.TextField(blank=True, help_text='Handover or anomaly notes for this run.')
 
     class Meta:
         ordering = ['-start_time']

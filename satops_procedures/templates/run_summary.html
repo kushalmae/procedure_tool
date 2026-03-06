@@ -28,6 +28,12 @@
                 &nbsp;|&nbsp; Status: <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
             </div>
         </div>
+        {% if run.run_notes %}
+        <div class="card run-notes-summary">
+            <h3 style="margin-top: 0;">Run notes</h3>
+            <p style="white-space: pre-wrap;">{{ run.run_notes }}</p>
+        </div>
+        {% endif %}
         <div class="card">
             {% for item in steps_with_execution %}
             <div class="summary-step">

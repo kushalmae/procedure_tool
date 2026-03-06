@@ -30,6 +30,7 @@
         <p>
             <button type="submit" class="btn btn-primary">Save changes</button>
             <a href="{% url 'procedure_review' %}?procedure={{ procedure.id }}" class="btn btn-secondary">Cancel</a>
+            <a href="{% url 'procedure_clone' procedure.id %}" class="btn btn-secondary">Clone procedure</a>
             <a href="{% url 'procedure_delete' procedure.id %}" class="btn btn-secondary" style="color: var(--fail); margin-left: 1rem;">Delete procedure</a>
         </p>
     </form>

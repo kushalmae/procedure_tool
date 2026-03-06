@@ -284,6 +284,37 @@ def procedure_delete(request, procedure_id):
     })
 
 
+def procedure_clone(request, procedure_id):
+    """Clone a procedure: new name, new YAML file, copy steps and tags; redirect to edit."""
+    procedure = get_object_or_404(Procedure.objects.prefetch_related('tags'), pk=procedure_id)
+    try:
+        proc = load_procedure(procedure.yaml_file)
+    except (FileNotFoundError, OSError):
+        messages.error(request, 'Could not load procedure to clone.')
+        return redirect('procedure_list')
+    new_name = f"Copy of {procedure.name}"
+    new_stem = _unique_yaml_stem(new_name)
+    proc_dict = {
+        'name': new_name,
+        'version': procedure.version,
+        'steps': proc.get('steps', []),
+    }
+    try:
+        save_procedure(proc_dict, new_stem)
+    except OSError as e:
+        messages.error(request, f'Could not save cloned procedure: {e}')
+        return redirect('procedure_list')
+    new_procedure = Procedure.objects.create(
+        name=new_name,
+        version=procedure.version,
+        yaml_file=new_stem,
+    )
+    for tag in procedure.tags.all():
+        new_procedure.tags.add(tag)
+    messages.success(request, f'Cloned as "{new_name}". Edit the new procedure as needed.')
+    return redirect(reverse('procedure_edit', kwargs={'procedure_id': new_procedure.pk}))
+
+
 def _run_step_context(run, proc, step_index, executed_list):
     """Build step list for sidebar and clamp step_index."""
     steps = proc.get('steps', [])
@@ -313,6 +344,11 @@ def run_procedure(request, run_id):
     step_index, step_list, total_steps, num_done = _run_step_context(run, proc, step_index, executed_list)
 
     if request.method == 'POST':
+        if request.POST.get('save_run_notes') is not None:
+            run.run_notes = request.POST.get('run_notes', '').strip()
+            run.save()
+            messages.success(request, 'Run notes saved.')
+            return redirect(reverse('run', kwargs={'run_id': run_id}) + f'?step={step_index}')
         step = get_next_step(proc, step_index)
         if step is None:
             return redirect('dashboard')
