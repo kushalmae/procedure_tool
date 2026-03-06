@@ -8,13 +8,17 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <nav class="no-print">
+    <a href="#main" class="skip-link">Skip to main content</a>
+    <nav class="no-print" aria-label="Main navigation">
         <a href="{% url 'run' run.id %}">Back to run</a>
         <a href="{% url 'dashboard' %}">Dashboard</a>
         <a href="{% url 'history' %}">History</a>
-        <button type="button" onclick="window.print();" class="btn btn-primary" style="margin-left: auto;">Print</button>
+        <button type="button" onclick="window.print();" class="btn btn-primary" style="margin-left: auto;" aria-label="Print this run summary">Print</button>
     </nav>
-    <main>
+    <main id="main">
+        <nav class="breadcrumb no-print" aria-label="Breadcrumb">
+            <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; {{ procedure.name }} &rarr; Summary
+        </nav>
         <div class="run-summary-header">
             <h2>{{ procedure.name }} — {{ run.satellite.name }}</h2>
             <div class="run-summary-meta">

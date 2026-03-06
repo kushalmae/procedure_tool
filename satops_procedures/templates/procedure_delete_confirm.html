@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Delete: {{ procedure.name }}{% endblock %}
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; Delete
+</nav>
+<h2>Delete procedure</h2>
+<div class="card">
+    <p>Are you sure you want to delete <strong>{{ procedure.name }}</strong> (v{{ procedure.version }})?</p>
+    <p>This will also delete <strong>{{ run_count }}</strong> run{{ run_count|pluralize }} that used this procedure. This cannot be undone.</p>
+    <form method="post">{% csrf_token %}
+        <p>
+            <button type="submit" class="btn btn-primary" style="background: var(--fail);">Yes, delete procedure</button>
+            <a href="{% url 'procedure_edit' procedure.id %}" class="btn btn-secondary">Cancel</a>
+        </p>
+    </form>
+</div>
+{% endblock %}

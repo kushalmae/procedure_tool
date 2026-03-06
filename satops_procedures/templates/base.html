@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <nav class="no-print">
+    <a href="#main" class="skip-link">Skip to main content</a>
+    <nav class="no-print" aria-label="Main navigation">
         <a href="{% url 'dashboard' %}">Dashboard</a>
         <a href="{% url 'start' %}">Start Procedure</a>
         <a href="{% url 'procedure_list' %}">Procedures</a>
@@ -23,7 +24,14 @@
         <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" style="margin-left: auto;">Log in</a>
         {% endif %}
     </nav>
-    <main>
+    {% if messages %}
+    <div class="messages no-print" aria-live="polite">
+        {% for message in messages %}
+        <p class="message message-{{ message.tags }}">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <main id="main">
         {% block content %}{% endblock %}
     </main>
 </body>

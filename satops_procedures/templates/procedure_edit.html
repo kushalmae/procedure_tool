@@ -1,7 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Create Procedure{% endblock %}
+{% block title %}Edit: {{ procedure.name }}{% endblock %}
 {% block content %}
-<h2>Create procedure</h2>
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; Edit
+</nav>
+<h2>Edit procedure</h2>
 {% if error %}<p class="card" style="color: var(--fail);">{{ error }}</p>{% endif %}
 <div class="card">
     <form method="post" id="procedure-form">{% csrf_token %}
@@ -11,7 +14,7 @@
         <input id="version" name="version" type="text" placeholder="e.g. 1.0" value="{{ form_version }}" maxlength="20">
         <hr style="margin: 1.25rem 0; border: none; border-top: 1px solid var(--border);">
         <label>Steps</label>
-        <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">Each step needs an id (e.g. power, telemetry) and a description. Optionally add an input label (e.g. voltage).</p>
+        <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">Each step needs an id and description. Optionally add an input label.</p>
         <div id="steps-container">
             {% for s in form_steps %}
             <div class="step-row">
@@ -25,8 +28,9 @@
         <p><button type="button" id="add-step" class="btn btn-secondary" aria-label="Add another step">Add step</button></p>
         <hr style="margin: 1.25rem 0; border: none; border-top: 1px solid var(--border);">
         <p>
-            <button type="submit" class="btn btn-primary">Create procedure</button>
-            <a href="{% url 'start' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save changes</button>
+            <a href="{% url 'procedure_review' %}?procedure={{ procedure.id }}" class="btn btn-secondary">Cancel</a>
+            <a href="{% url 'procedure_delete' procedure.id %}" class="btn btn-secondary" style="color: var(--fail); margin-left: 1rem;">Delete procedure</a>
         </p>
     </form>
 </div>
@@ -35,7 +39,6 @@
     var container = document.getElementById('steps-container');
     var addBtn = document.getElementById('add-step');
     if (!container || !addBtn) return;
-
     function newStepRow() {
         var div = document.createElement('div');
         div.className = 'step-row';
@@ -49,11 +52,7 @@
         });
         return div;
     }
-
-    addBtn.addEventListener('click', function() {
-        container.appendChild(newStepRow());
-    });
-
+    addBtn.addEventListener('click', function() { container.appendChild(newStepRow()); });
     container.querySelectorAll('.btn-remove-step').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var row = btn.closest('.step-row');

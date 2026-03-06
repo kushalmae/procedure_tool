@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -190,6 +192,95 @@ def procedure_create(request):
         'form_name': '',
         'form_version': '1.0',
         'form_steps': [{'id': '', 'description': '', 'input': ''}],
+    })
+
+
+def procedure_edit(request, procedure_id):
+    """Edit an existing procedure (name, version, steps). Keeps same yaml_file."""
+    procedure = get_object_or_404(Procedure.objects.prefetch_related('tags'), pk=procedure_id)
+    try:
+        proc = load_procedure(procedure.yaml_file)
+    except (FileNotFoundError, OSError):
+        return redirect('procedure_list')
+    steps = proc.get('steps', [])
+    form_steps = [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in steps]
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        version = request.POST.get('version', '1.0').strip() or '1.0'
+        step_ids = request.POST.getlist('step_id')
+        step_descriptions = request.POST.getlist('step_description')
+        step_inputs = request.POST.getlist('step_input')
+        new_steps = []
+        for i, sid in enumerate(step_ids):
+            sid = (sid or '').strip()
+            desc = (step_descriptions[i] if i < len(step_descriptions) else '').strip()
+            inp = (step_inputs[i] if i < len(step_inputs) else '').strip()
+            if sid and desc:
+                step = {'id': sid, 'description': desc}
+                if inp:
+                    step['input'] = inp
+                new_steps.append(step)
+        if not name:
+            return render(request, 'procedure_edit.html', {
+                'procedure': procedure,
+                'error': 'Procedure name is required.',
+                'form_name': request.POST.get('name'),
+                'form_version': request.POST.get('version'),
+                'form_steps': [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in (new_steps or [{}])] or [{'id': '', 'description': '', 'input': ''}],
+            })
+        if not new_steps:
+            return render(request, 'procedure_edit.html', {
+                'procedure': procedure,
+                'error': 'At least one step (id and description) is required.',
+                'form_name': name,
+                'form_version': version,
+                'form_steps': [{'id': '', 'description': '', 'input': ''}],
+            })
+        proc_dict = {'name': name, 'version': version, 'steps': new_steps}
+        try:
+            save_procedure(proc_dict, procedure.yaml_file)
+        except OSError as e:
+            return render(request, 'procedure_edit.html', {
+                'procedure': procedure,
+                'error': f'Could not save procedure file: {e}',
+                'form_name': name,
+                'form_version': version,
+                'form_steps': [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in new_steps] or [{'id': '', 'description': '', 'input': ''}],
+            })
+        procedure.name = name
+        procedure.version = version
+        procedure.save()
+        messages.success(request, f'Procedure "{name}" updated.')
+        return redirect(reverse('procedure_review') + f'?procedure={procedure.id}')
+    return render(request, 'procedure_edit.html', {
+        'procedure': procedure,
+        'form_name': procedure.name,
+        'form_version': procedure.version,
+        'form_steps': form_steps or [{'id': '', 'description': '', 'input': ''}],
+    })
+
+
+def procedure_delete(request, procedure_id):
+    """Confirm and delete a procedure (and its YAML file). Runs are deleted by CASCADE."""
+    procedure = get_object_or_404(Procedure, pk=procedure_id)
+    run_count = procedure.procedurerun_set.count()
+    if request.method == 'POST':
+        name = procedure.name
+        yaml_file = procedure.yaml_file
+        yaml_dir = getattr(settings, 'PROCEDURES_YAML_DIR', None)
+        if yaml_dir:
+            yaml_path = yaml_dir / f"{yaml_file}.yaml"
+            if yaml_path.exists():
+                try:
+                    yaml_path.unlink()
+                except OSError:
+                    pass
+        procedure.delete()
+        messages.success(request, f'Procedure "{name}" has been deleted.')
+        return redirect('procedure_list')
+    return render(request, 'procedure_delete_confirm.html', {
+        'procedure': procedure,
+        'run_count': run_count,
     })
 
 
