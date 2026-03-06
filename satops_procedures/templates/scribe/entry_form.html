@@ -5,6 +5,20 @@
     <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / Add entry
 </nav>
 <h2>Add log entry</h2>
+{% if entry_templates %}
+<div class="card no-print" style="margin-bottom: 1rem;">
+    <h3 style="margin-top: 0;">Quick entry (templates)</h3>
+    <p class="text-muted" style="font-size: 0.9rem;">Pre-fill the form with one click. Edit as needed before saving.</p>
+    <p>
+        {% for t in entry_templates %}
+        <a href="{% url 'scribe_add_entry' %}?template={{ t.id }}" class="btn btn-secondary" style="margin-right: 0.5rem; margin-bottom: 0.5rem;">{{ t.name }}</a>
+        {% endfor %}
+    </p>
+</div>
+{% endif %}
+{% if selected_template %}
+<p class="no-print" style="color: var(--accent);">Using template: <strong>{{ selected_template.name }}</strong>. <a href="{% url 'scribe_add_entry' %}">Clear and start blank</a>.</p>
+{% endif %}
 <div class="card">
     <form method="post">{% csrf_token %}
         <label for="timestamp">Timestamp</label>
@@ -37,7 +51,7 @@
             {% endfor %}
         </select>
         <label for="description">Description <span style="color: var(--fail);">*</span></label>
-        <textarea id="description" name="description" rows="4" required placeholder="Operational context..."></textarea>
+        <textarea id="description" name="description" rows="4" required placeholder="Operational context...">{{ default_description }}</textarea>
         <label for="shift">Shift</label>
         <select id="shift" name="shift">
             <option value="">—</option>

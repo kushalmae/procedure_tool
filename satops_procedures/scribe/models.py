@@ -104,3 +104,38 @@ class MissionLogEntry(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} {self.role} – {self.description[:50]}"
+
+
+class EntryTemplate(models.Model):
+    """Quick-entry template: pre-filled role, category, description, severity for one-click log entries."""
+    name = models.CharField(max_length=120, help_text='Short label (e.g. Pass complete, Contact logged)')
+    role = models.ForeignKey(
+        Role,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='entry_templates',
+    )
+    category = models.ForeignKey(
+        EventCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='entry_templates',
+    )
+    default_description = models.TextField(
+        blank=True,
+        help_text='Pre-filled description; user can edit before saving.',
+    )
+    default_severity = models.CharField(
+        max_length=20,
+        choices=MissionLogEntry.SEVERITY_CHOICES,
+        default=MissionLogEntry.SEVERITY_INFO,
+    )
+    display_order = models.PositiveIntegerField(default=0, help_text='Lower = first in list.')
+
+    class Meta:
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return self.name

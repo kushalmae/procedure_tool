@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from procedures.models import Satellite
-from .models import Role, EventCategory, ScribeTag, Shift, MissionLogEntry
+from .models import Role, EventCategory, ScribeTag, Shift, MissionLogEntry, EntryTemplate
 
 
 def _create_log_entry_from_post(request):
@@ -141,6 +141,7 @@ def timeline(request):
         'categories': EventCategory.objects.all(),
         'shifts': Shift.objects.all()[:50],
         'scribe_tags': ScribeTag.objects.all(),
+        'entry_templates': EntryTemplate.objects.all(),
         'filter_role_id': _int_or_none(role_id),
         'filter_satellite_id': _int_or_none(satellite_id),
         'filter_category_id': _int_or_none(category_id),
@@ -155,16 +156,34 @@ def timeline(request):
     if request.user.is_authenticated:
         now = timezone.now()
         context['timestamp_default'] = now.strftime('%Y-%m-%dT%H:%M')
-        last = (
-            MissionLogEntry.objects.filter(created_by=request.user)
-            .order_by('-timestamp')
-            .first()
-        )
-        context['default_role_id'] = last.role_id if last else None
-        context['default_satellite_id'] = last.satellite_id if last else None
-        context['default_category_id'] = last.category_id if last else None
-        context['default_shift_id'] = last.shift_id if last else None
-        context['default_severity'] = last.severity if last else MissionLogEntry.SEVERITY_INFO
+        context['default_description'] = ''
+        template_id = request.GET.get('template')
+        selected_template = None
+        if template_id:
+            try:
+                selected_template = EntryTemplate.objects.get(pk=int(template_id))
+            except (ValueError, EntryTemplate.DoesNotExist):
+                pass
+        if selected_template:
+            context['default_role_id'] = selected_template.role_id
+            context['default_satellite_id'] = None
+            context['default_category_id'] = selected_template.category_id
+            context['default_shift_id'] = None
+            context['default_severity'] = selected_template.default_severity
+            context['default_description'] = selected_template.default_description or ''
+            context['selected_template'] = selected_template
+        else:
+            last = (
+                MissionLogEntry.objects.filter(created_by=request.user)
+                .order_by('-timestamp')
+                .first()
+            )
+            context['default_role_id'] = last.role_id if last else None
+            context['default_satellite_id'] = last.satellite_id if last else None
+            context['default_category_id'] = last.category_id if last else None
+            context['default_shift_id'] = last.shift_id if last else None
+            context['default_severity'] = last.severity if last else MissionLogEntry.SEVERITY_INFO
+            context['selected_template'] = None
     return render(request, 'scribe/timeline.html', context)
 
 
@@ -213,19 +232,35 @@ def add_entry(request):
                 return redirect(reverse('scribe_add_entry'))
             return redirect('scribe_timeline')
 
-    # GET: default timestamp to now; auto-populate role/satellite/category/shift from last entry by this user
+    # GET: default timestamp to now; auto-populate from template=id or from last entry by this user
     now = timezone.now()
     ts_default = now.strftime('%Y-%m-%dT%H:%M')
-    last = (
-        MissionLogEntry.objects.filter(created_by=request.user)
-        .order_by('-timestamp')
-        .first()
-    )
-    default_role_id = last.role_id if last else None
-    default_satellite_id = last.satellite_id if last else None
-    default_category_id = last.category_id if last else None
-    default_shift_id = last.shift_id if last else None
-    default_severity = last.severity if last else MissionLogEntry.SEVERITY_INFO
+    default_description = ''
+    template_id = request.GET.get('template')
+    template = None
+    if template_id:
+        try:
+            template = EntryTemplate.objects.get(pk=int(template_id))
+        except (ValueError, EntryTemplate.DoesNotExist):
+            pass
+    if template:
+        default_role_id = template.role_id
+        default_category_id = template.category_id
+        default_severity = template.default_severity
+        default_description = template.default_description or ''
+        default_satellite_id = None
+        default_shift_id = None
+    else:
+        last = (
+            MissionLogEntry.objects.filter(created_by=request.user)
+            .order_by('-timestamp')
+            .first()
+        )
+        default_role_id = last.role_id if last else None
+        default_satellite_id = last.satellite_id if last else None
+        default_category_id = last.category_id if last else None
+        default_shift_id = last.shift_id if last else None
+        default_severity = last.severity if last else MissionLogEntry.SEVERITY_INFO
 
     context = {
         'roles': Role.objects.all(),
@@ -233,6 +268,7 @@ def add_entry(request):
         'categories': EventCategory.objects.all(),
         'shifts': Shift.objects.all(),
         'scribe_tags': ScribeTag.objects.all(),
+        'entry_templates': EntryTemplate.objects.all(),
         'timestamp_default': ts_default,
         'severity_choices': MissionLogEntry.SEVERITY_CHOICES,
         'default_role_id': default_role_id,
@@ -240,6 +276,8 @@ def add_entry(request):
         'default_category_id': default_category_id,
         'default_shift_id': default_shift_id,
         'default_severity': default_severity,
+        'default_description': default_description,
+        'selected_template': template,
     }
     return render(request, 'scribe/entry_form.html', context)
 

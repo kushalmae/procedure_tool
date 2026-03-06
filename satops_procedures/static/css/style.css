@@ -599,3 +599,12 @@ td.scribe-description {
 .badge-run { background: var(--accent); color: var(--bg); }
 .badge-scribe { background: #5a7a9a; color: #fff; }
 .badge-anomaly { background: #9a6a5a; color: #fff; }
+
+/* Scribe quick-entry template dropdown on timeline */
+.quick-template-select { width: 100%; max-width: 20em; padding: 0.4rem 0.5rem; font-size: 0.95rem; }
+
+/* Fleet health */
+.badge-health-green { background: #2d8a3e; color: #fff; }
+.badge-health-yellow { background: #c9a227; color: #1a1a1a; }
+.badge-health-red { background: #c42b2b; color: #fff; }
+.summary-card-health .summary-value { font-size: 1rem; }

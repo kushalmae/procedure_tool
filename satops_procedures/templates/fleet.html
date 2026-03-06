@@ -3,7 +3,7 @@
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
 <h2>Fleet Overview</h2>
-<p class="tagline no-print">Per-satellite status: last procedure run, open anomalies, latest mission log.</p>
+<p class="tagline no-print">Per-satellite status: last procedure run, open anomalies, latest mission log. <strong>Fleet health:</strong> <span class="badge badge-health-{{ fleet_health }}" title="Green: nominal; Yellow: open medium/low anomalies or recent fail/cancel; Red: open critical/high anomaly">{{ fleet_health|upper }}</span></p>
 
 <div class="no-print" style="margin-bottom: 1rem;">
     <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
@@ -16,6 +16,7 @@
         <table class="dashboard-runs-table fleet-table">
             <thead>
                 <tr>
+                    <th>Health</th>
                     <th>Satellite</th>
                     <th>Last procedure run</th>
                     <th>Open anomalies</th>
@@ -26,6 +27,7 @@
             <tbody>
                 {% for row in fleet_rows %}
                 <tr>
+                    <td><span class="badge badge-health-{{ row.health_status }}" title="Satellite health">{{ row.health_status|upper }}</span></td>
                     <td><strong>{{ row.satellite.name }}</strong></td>
                     <td>
                         {% if row.last_run %}
@@ -60,7 +62,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5">No satellites. Add satellites via <a href="{% url 'admin:index' %}">Admin</a> or by starting a procedure with a new satellite name.</td></tr>
+                <tr><td colspan="6">No satellites. Add satellites via <a href="{% url 'admin:index' %}">Admin</a> or by starting a procedure with a new satellite name.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -10,6 +10,27 @@
 <div class="scribe-layout no-print">
     <aside class="scribe-form-col">
         {% if user.is_authenticated %}
+        {% if entry_templates %}
+        <div class="card" style="margin-bottom: 0.75rem;">
+            <h3 style="margin-top: 0;">Quick entry</h3>
+            <label for="quick-template-select" style="display: block; margin-bottom: 0.35rem; font-size: 0.9rem;">Template</label>
+            <select id="quick-template-select" class="quick-template-select">
+                <option value="">— Select a template —</option>
+                {% for t in entry_templates %}
+                <option value="{% url 'scribe_timeline' %}?template={{ t.id }}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}{% if request.GET.satellite %}&satellite={{ request.GET.satellite }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" {% if selected_template and selected_template.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+            </select>
+            {% if selected_template %}
+            <p style="margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--text-muted);">Using: <strong>{{ selected_template.name }}</strong>. <a href="{% url 'scribe_timeline' %}">Clear template</a></p>
+            {% endif %}
+            <script>
+            (function() {
+                var sel = document.getElementById('quick-template-select');
+                if (sel) sel.addEventListener('change', function() { if (this.value) window.location = this.value; });
+            })();
+            </script>
+        </div>
+        {% endif %}
         <div class="card">
             <h3 style="margin-top: 0;">Add entry</h3>
             <form method="post" action="{% url 'scribe_timeline' %}">{% csrf_token %}
@@ -43,7 +64,7 @@
                     {% endfor %}
                 </select>
                 <label for="entry-description">Description <span style="color: var(--fail);">*</span></label>
-                <textarea id="entry-description" name="description" rows="3" required placeholder="Operational context..."></textarea>
+                <textarea id="entry-description" name="description" rows="3" required placeholder="Operational context...">{{ default_description }}</textarea>
                 <label for="entry-shift">Shift</label>
                 <select id="entry-shift" name="shift">
                     <option value="">—</option>

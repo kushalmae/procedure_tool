@@ -6,6 +6,10 @@
 
 <div class="dashboard-summary no-print">
     <div class="summary-cards">
+        <div class="summary-card summary-card-health" title="Fleet health: Green = nominal, Yellow = anomalies or recent fail, Red = critical/high anomaly">
+            <span class="summary-value"><span class="badge badge-health-{{ fleet_health }}">{{ fleet_health|upper }}</span></span>
+            <span class="summary-label">Fleet health</span>
+        </div>
         <div class="summary-card">
             <span class="summary-value">{{ running_count }}</span>
             <span class="summary-label">Running now</span>

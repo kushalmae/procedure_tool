@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Role, EventCategory, ScribeTag, Shift, MissionLogEntry
+from .models import Role, EventCategory, ScribeTag, Shift, MissionLogEntry, EntryTemplate
 
 
 @admin.register(Role)
@@ -26,6 +26,13 @@ class ShiftAdmin(admin.ModelAdmin):
     list_display = ['id', 'start_time', 'end_time']
     list_filter = ['start_time']
     date_hierarchy = 'start_time'
+
+
+@admin.register(EntryTemplate)
+class EntryTemplateAdmin(admin.ModelAdmin):
+    list_display = ['name', 'role', 'category', 'default_severity', 'display_order']
+    list_editable = ['display_order']
+    search_fields = ['name', 'default_description']
 
 
 @admin.register(MissionLogEntry)

@@ -83,6 +83,7 @@ def dashboard(request):
 
     active_anomalies_count = 0
     recent_anomalies = []
+    fleet_health = 'green'
     try:
         Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
         active_anomalies_count = Anomaly.objects.exclude(status=Anomaly.STATUS_RESOLVED).count()
@@ -90,6 +91,17 @@ def dashboard(request):
             Anomaly.objects.select_related('satellite')
             .order_by('-detection_time')[:5]
         )
+        has_high_critical = Anomaly.objects.exclude(status=Anomaly.STATUS_RESOLVED).filter(
+            severity__in=[Anomaly.SEVERITY_CRITICAL, Anomaly.SEVERITY_HIGH]
+        ).exists()
+        recent_fail_or_cancel = ProcedureRun.objects.filter(
+            status__in=[ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED],
+            start_time__gte=week_ago,
+        ).exists()
+        if has_high_critical:
+            fleet_health = 'red'
+        elif active_anomalies_count > 0 or recent_fail_or_cancel:
+            fleet_health = 'yellow'
     except Exception:
         pass
 
@@ -108,6 +120,7 @@ def dashboard(request):
         'recent_scribe_entries': recent_scribe_entries,
         'active_anomalies_count': active_anomalies_count,
         'recent_anomalies': recent_anomalies,
+        'fleet_health': fleet_health,
     })
 
 
@@ -620,7 +633,7 @@ def fleet(request):
     """Fleet-centric single pane of glass: per-satellite last run, open anomalies, last scribe."""
     satellites = list(Satellite.objects.order_by('name'))
     if not satellites:
-        return render(request, 'fleet.html', {'fleet_rows': [], 'satellites_count': 0})
+        return render(request, 'fleet.html', {'fleet_rows': [], 'satellites_count': 0, 'fleet_health': 'green'})
 
     # Latest run per satellite (one query, then first per satellite in Python)
     runs = (
@@ -634,7 +647,9 @@ def fleet(request):
         if r.satellite_id not in last_run_by_sat:
             last_run_by_sat[r.satellite_id] = r
 
-    # Open anomaly counts per satellite
+    # Open anomaly counts and high/critical flags per satellite (for health)
+    open_anomaly_counts = {}
+    satellites_with_high_or_critical = set()
     try:
         Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
         open_anomaly_counts = dict(
@@ -644,8 +659,14 @@ def fleet(request):
             .annotate(cnt=Count('id'))
             .values_list('satellite_id', 'cnt')
         )
+        satellites_with_high_or_critical = set(
+            Anomaly.objects
+            .exclude(status=Anomaly.STATUS_RESOLVED)
+            .filter(severity__in=[Anomaly.SEVERITY_CRITICAL, Anomaly.SEVERITY_HIGH])
+            .values_list('satellite_id', flat=True)
+        )
     except Exception:
-        open_anomaly_counts = {}
+        pass
 
     # Last scribe entry per satellite
     last_scribe_by_sat = {}
@@ -663,18 +684,34 @@ def fleet(request):
     except Exception:
         pass
 
+    def _health_for_sat(sat_id, last_run, open_count, has_high_critical):
+        if has_high_critical:
+            return 'red'
+        if open_count > 0 or (last_run and last_run.status in (ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED)):
+            return 'yellow'
+        return 'green'
+
     fleet_rows = []
+    health_values = []
     for s in satellites:
+        last_run = last_run_by_sat.get(s.id)
+        open_count = open_anomaly_counts.get(s.id, 0)
+        has_high_critical = s.id in satellites_with_high_or_critical
+        health = _health_for_sat(s.id, last_run, open_count, has_high_critical)
+        health_values.append(health)
         fleet_rows.append({
             'satellite': s,
-            'last_run': last_run_by_sat.get(s.id),
-            'open_anomalies_count': open_anomaly_counts.get(s.id, 0),
+            'last_run': last_run,
+            'open_anomalies_count': open_count,
             'last_scribe_entry': last_scribe_by_sat.get(s.id),
+            'health_status': health,
         })
+    fleet_health = 'red' if 'red' in health_values else ('yellow' if 'yellow' in health_values else 'green')
 
     return render(request, 'fleet.html', {
         'fleet_rows': fleet_rows,
         'satellites_count': len(satellites),
+        'fleet_health': fleet_health,
     })
 
 
