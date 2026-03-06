@@ -11,11 +11,13 @@ python -m venv .venv
 # source .venv/Scripts/activate # Linux/macOS
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_procedures   # optional: Bus Checkout procedure + sample satellites
-python manage.py seed_scribe       # optional: Mission Scribe roles + event categories
-python manage.py seed_anomalies    # optional: Fleet Anomaly Tracker subsystems + types; use --anomalies for sample data
-python manage.py seed_fdir         # optional: FDIR Handbook subsystems; use --entries for sample FDIR entries
-python manage.py seed_handbook      # optional: Alerts & Limits Handbook subsystems; use --alerts for sample alerts
+python manage.py seed_all          # optional: seed everything (procedures, scribe, handbook, fdir, anomalies) in one go
+# Or seed individually:
+# python manage.py seed_procedures   # Bus Checkout procedure + sample satellites
+# python manage.py seed_scribe      # Mission Scribe roles + event categories
+# python manage.py seed_handbook     # Alerts & Limits Handbook (seed_all uses --alerts)
+# python manage.py seed_fdir        # FDIR Handbook (seed_all uses --entries if applicable)
+# python manage.py seed_anomalies   # Fleet Anomaly Tracker
 python manage.py createsuperuser   # optional: for Django Admin
 ```
 
