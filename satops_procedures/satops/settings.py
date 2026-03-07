@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'fdir',
     'cmdtlm',
     'references',
+    'smerequests',
 ]
 
 MIDDLEWARE = [

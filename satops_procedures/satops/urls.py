@@ -13,4 +13,5 @@ urlpatterns = [
     path('fdir/', include('fdir.urls')),
     path('cmdtlm/', include('cmdtlm.urls')),
     path('references/', include('references.urls')),
+    path('requests/', include('smerequests.urls')),
 ]
