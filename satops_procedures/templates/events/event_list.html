@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Event Workflow — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Event Workflow
+</nav>
+
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-2xl font-semibold text-gray-900">Event Workflow</h1>
+  <div class="no-print">
+    {% if user.is_authenticated %}
+    <a href="{% url 'events_create' %}" class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Create Event
+    </a>
+    {% else %}
+    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary">Log in to create</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Lifecycle legend -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-3 mb-4">
+  <p class="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wider">Lifecycle</p>
+  <div class="flex flex-wrap gap-2 text-xs">
+    <span class="badge badge-new">New</span>
+    <span class="text-gray-400">&rarr;</span>
+    <span class="badge badge-investigating">Investigating</span>
+    <span class="text-gray-400">&rarr;</span>
+    <span class="badge badge-mitigated">Mitigated</span>
+    <span class="text-gray-400">&rarr;</span>
+    <span class="badge badge-resolved">Resolved</span>
+    <span class="text-gray-400">&rarr;</span>
+    <span class="badge badge-event-closed">Closed</span>
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[140px]">
+      <label class="first" for="evt-q">Search</label>
+      <input type="text" id="evt-q" name="q" value="{{ search_query }}" placeholder="Search title or description…">
+    </div>
+    <div>
+      <label for="filter-satellite">Satellite</label>
+      <select id="filter-satellite" name="satellite">
+        <option value="">All</option>
+        {% for s in satellites %}
+        <option value="{{ s.id }}" {% if filter_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="filter-subsystem">Subsystem</label>
+      <select id="filter-subsystem" name="subsystem">
+        <option value="">All</option>
+        {% for val, label in subsystem_choices %}
+        <option value="{{ val }}" {% if filter_subsystem == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="filter-severity">Severity</label>
+      <select id="filter-severity" name="severity">
+        <option value="">All</option>
+        {% for val, label in severity_choices %}
+        <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="filter-status">Status</label>
+      <select id="filter-status" name="status">
+        <option value="">All</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="sort-events">Sort</label>
+      <select id="sort-events" name="sort">
+        <option value="-detected_time" {% if sort == '-detected_time' %}selected{% endif %}>Newest first</option>
+        <option value="detected_time" {% if sort == 'detected_time' %}selected{% endif %}>Oldest first</option>
+        <option value="satellite__name" {% if sort == 'satellite__name' %}selected{% endif %}>Satellite A–Z</option>
+        <option value="-severity" {% if sort == '-severity' %}selected{% endif %}>Severity (high first)</option>
+        <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if search_query or filter_satellite_id or filter_subsystem or filter_severity or filter_status %}
+      <a href="{% url 'events_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-100">
+    <p class="text-xs text-gray-500">
+      Showing {{ events|length }} event{{ events|length|pluralize }}
+      {% if search_query or filter_satellite_id or filter_subsystem or filter_severity or filter_status %}(filtered){% endif %}
+    </p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">ID</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Title</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Satellite</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Subsystem</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Severity</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Detected</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for evt in events %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-mono text-xs text-gray-500">
+            <a href="{% url 'events_detail' event_id=evt.id %}" class="text-brand hover:underline">EVT-{{ evt.id }}</a>
+          </td>
+          <td class="px-4 py-3 font-medium text-gray-900">
+            <a href="{% url 'events_detail' event_id=evt.id %}" class="hover:underline">{{ evt.title|truncatewords:10 }}</a>
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ evt.satellite.name }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ evt.get_subsystem_display }}</td>
+          <td class="px-4 py-3"><span class="badge badge-severity-{{ evt.severity|lower }}">{{ evt.get_severity_display }}</span></td>
+          <td class="px-4 py-3"><span class="badge badge-{{ evt.status|lower }}">{{ evt.get_status_display }}</span></td>
+          <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ evt.detected_time|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+            No events.
+            {% if user.is_authenticated %}<a href="{% url 'events_create' %}" class="text-brand hover:underline">Create one</a>.{% else %}Log in to create.{% endif %}
+            {% if search_query or filter_satellite_id or filter_subsystem or filter_severity or filter_status %}<a href="{% url 'events_list' %}?clear=1" class="text-brand hover:underline">Clear filters</a>.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

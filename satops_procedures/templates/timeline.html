@@ -27,6 +27,7 @@
         <option value="run" {% if filter_type == 'run' %}selected{% endif %}>Procedure runs</option>
         <option value="scribe" {% if filter_type == 'scribe' %}selected{% endif %}>Mission log</option>
         <option value="anomaly" {% if filter_type == 'anomaly' %}selected{% endif %}>Anomalies</option>
+        <option value="event" {% if filter_type == 'event' %}selected{% endif %}>Events</option>
       </select>
     </div>
     <div>
@@ -68,6 +69,8 @@
             <span class="badge badge-scribe">Log</span>
             {% elif ev.type == 'anomaly' %}
             <span class="badge badge-anomaly">Anomaly</span>
+            {% elif ev.type == 'event' %}
+            <span class="badge badge-event">Event</span>
             {% else %}
             <span class="badge badge-cancelled">{{ ev.type }}</span>
             {% endif %}
@@ -83,6 +86,11 @@
             {% elif ev.type == 'anomaly' %}
             <span class="badge badge-{{ ev.severity|lower }}">{{ ev.severity }}</span>
             {{ ev.status }}{% if ev.description %} — <span class="text-gray-600">{{ ev.description|truncatewords:12 }}</span>{% endif %}
+            {% elif ev.type == 'event' %}
+            <span class="font-medium">{{ ev.event_title }}</span>
+            <span class="badge badge-severity-{{ ev.severity|lower }} ml-1">{{ ev.severity }}</span>
+            <span class="badge badge-{{ ev.status|lower }} ml-1">{{ ev.status }}</span>
+            {% if ev.description %}<span class="text-gray-600 block text-xs mt-0.5">{{ ev.description|truncatewords:12 }}</span>{% endif %}
             {% endif %}
           </td>
           <td class="px-4 py-3 no-print">
@@ -92,6 +100,8 @@
             <a href="{% url 'scribe_timeline' %}" class="text-brand hover:underline">Timeline</a>
             {% elif ev.type == 'anomaly' %}
             <a href="{% url 'anomalies_detail' ev.anomaly_id %}" class="text-brand hover:underline">View</a>
+            {% elif ev.type == 'event' %}
+            <a href="{% url 'events_detail' event_id=ev.event_id %}" class="text-brand hover:underline">View</a>
             {% endif %}
           </td>
         </tr>

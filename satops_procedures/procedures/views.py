@@ -699,10 +699,32 @@ def fleet(request):
     except Exception:
         pass
 
+    # Open events per satellite
+    open_event_counts = {}
+    satellites_with_critical_events = set()
+    try:
+        Event = __import__('events.models', fromlist=['Event']).Event
+        open_event_counts = dict(
+            Event.objects
+            .exclude(status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED])
+            .values('satellite_id')
+            .annotate(cnt=Count('id'))
+            .values_list('satellite_id', 'cnt')
+        )
+        satellites_with_critical_events = set(
+            Event.objects
+            .exclude(status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED])
+            .filter(severity__in=[Event.SEVERITY_L4, Event.SEVERITY_L5])
+            .values_list('satellite_id', flat=True)
+        )
+    except Exception:
+        pass
+
     def _health_for_sat(sat_id, last_run, open_count, has_high_critical):
-        if has_high_critical:
+        if has_high_critical or sat_id in satellites_with_critical_events:
             return 'red'
-        if open_count > 0 or (last_run and last_run.status in (ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED)):
+        open_events = open_event_counts.get(sat_id, 0)
+        if open_count > 0 or open_events > 0 or (last_run and last_run.status in (ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED)):
             return 'yellow'
         return 'green'
 
@@ -718,6 +740,7 @@ def fleet(request):
             'satellite': s,
             'last_run': last_run,
             'open_anomalies_count': open_count,
+            'open_events_count': open_event_counts.get(s.id, 0),
             'last_scribe_entry': last_scribe_by_sat.get(s.id),
             'health_status': health,
         })
@@ -971,6 +994,40 @@ def timeline(request):
     except Exception:
         pass
 
+    # Events (Event Workflow)
+    try:
+        EventModel = __import__('events.models', fromlist=['Event']).Event
+        evt_qs = EventModel.objects.select_related('satellite').order_by('-detected_time')
+        if sat_id:
+            evt_qs = evt_qs.filter(satellite_id=sat_id)
+        if date_from:
+            try:
+                from datetime import date as date_type
+                evt_qs = evt_qs.filter(detected_time__date__gte=date_type.fromisoformat(date_from[:10]))
+            except (ValueError, TypeError):
+                pass
+        if date_to:
+            try:
+                from datetime import date as date_type
+                evt_qs = evt_qs.filter(detected_time__date__lte=date_type.fromisoformat(date_to[:10]))
+            except (ValueError, TypeError):
+                pass
+        if event_type and event_type != 'event':
+            evt_qs = evt_qs.none()
+        for ev_obj in evt_qs[:200]:
+            events.append({
+                'timestamp': ev_obj.detected_time,
+                'type': 'event',
+                'satellite_name': ev_obj.satellite.name,
+                'event_id': ev_obj.id,
+                'event_title': ev_obj.title,
+                'severity': ev_obj.severity,
+                'status': ev_obj.status,
+                'description': (ev_obj.description or '')[:200],
+            })
+    except Exception:
+        pass
+
     events.sort(key=lambda x: x['timestamp'], reverse=True)
     events = events[:300]
 
@@ -990,6 +1047,8 @@ def timeline(request):
                 detail = f"{ev.get('role_name', '')} — {ev.get('category_name', '')}: {(ev.get('description') or '')[:80]}"
             elif ev['type'] == 'anomaly':
                 detail = f"Severity {ev.get('severity', '')} Status {ev.get('status', '')}: {(ev.get('description') or '')[:80]}"
+            elif ev['type'] == 'event':
+                detail = f"EVT {ev.get('event_title', '')} [{ev.get('severity', '')}] {ev.get('status', '')}: {(ev.get('description') or '')[:80]}"
             w.writerow([
                 ev['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if hasattr(ev['timestamp'], 'strftime') else str(ev['timestamp']),
                 ev['type'],

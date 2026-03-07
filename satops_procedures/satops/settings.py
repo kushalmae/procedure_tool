@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'anomalies',
     'handbook',
     'fdir',
+    'events',
 ]
 
 MIDDLEWARE = [
