@@ -417,4 +417,106 @@ fly scale count 2                  # add a second machine
 
 ---
 
+## CI/CD (GitHub Actions)
+
+Two workflows in `.github/workflows/` automate linting, testing, and deployment.
+
+### CI — runs on every push and pull request to `main`
+
+**Workflow:** `.github/workflows/ci.yml`
+
+| Step | What it does | Runs against |
+|------|-------------|--------------|
+| **Lint** | `ruff check .` — enforces code style, import ordering, catches bugs | Source files only |
+| **Test** | `python manage.py test` — 56+ tests covering models, views, and seed commands | PostgreSQL 16 (service container) |
+| **Django checks** | `python manage.py check` — validates models, URLs, settings | PostgreSQL 16 |
+| **Deploy checks** | `python manage.py check --deploy` — warns about security settings | Informational (non-blocking) |
+
+The test job runs against a real PostgreSQL service container, not SQLite,
+so CI catches any database-specific issues before they reach production.
+
+### CD — auto-deploys to Fly.io on push to `main`
+
+**Workflow:** `.github/workflows/deploy.yml`
+
+1. CI pipeline runs first (lint + test must pass).
+2. If CI passes, the deploy job runs `flyctl deploy --remote-only`.
+3. Fly.io builds the Docker image and rolls out the new version.
+
+The `concurrency` setting ensures only one deployment runs at a time;
+if a new push arrives while deploying, the in-progress deploy is cancelled.
+
+### One-time setup for CD
+
+Add a Fly.io API token to your GitHub repository secrets:
+
+```bash
+# Generate a token
+fly tokens create deploy -x 999999h
+
+# Add to GitHub → Settings → Secrets and variables → Actions → New repository secret
+#   Name:  FLY_API_TOKEN
+#   Value: <the token from above>
+```
+
+### Running CI locally
+
+```bash
+cd satops_procedures/
+make ci          # runs: lint → check → test (all in one command)
+
+# Or individually:
+make lint        # ruff check .
+make test        # python manage.py test
+make check       # python manage.py check
+```
+
+### Linting
+
+The project uses [Ruff](https://docs.astral.sh/ruff/) for linting and import sorting.
+Configuration is in `ruff.toml`. Migrations are excluded.
+
+```bash
+make lint        # check for issues
+make lint-fix    # auto-fix what's fixable
+```
+
+### Test suite
+
+Tests live in each app's `tests.py`. Coverage includes:
+
+| App | Tests |
+|-----|-------|
+| `procedures` | Models (Satellite, Tag, Procedure, ProcedureRun, StepExecution), views (dashboard, procedure list, history, start), seed commands |
+| `scribe` | Models (Role, EventCategory, ScribeTag, Shift, MissionLogEntry), views (timeline, shift list), seed command |
+| `anomalies` | Models (Subsystem, AnomalyType, Anomaly, AnomalyNote), views (registry, add), seed command |
+| `handbook` | Models (Subsystem, AlertDefinition + version auto-increment), views (alert list, create), seed command |
+| `fdir` | Models (Subsystem + slug, FDIREntry), views (entry list, create), seed command |
+
+Run with `make test` or `python manage.py test --verbosity=2`.
+
+---
+
+### Full pipeline flow
+
+```
+Developer pushes code
+        │
+        ▼
+  ┌─────────────┐     ┌──────────────────┐     ┌────────────────┐
+  │   Lint       │────▶│  Test (Postgres)  │────▶│ Django checks  │
+  │  ruff check  │     │  56+ tests        │     │  manage.py     │
+  └─────────────┘     └──────────────────┘     └────────────────┘
+                                                        │
+                              Push to main? ────────────┤
+                              │ No (PR)                 │ Yes
+                              ▼                         ▼
+                           Done                ┌────────────────┐
+                                               │ Deploy to Fly  │
+                                               │ flyctl deploy  │
+                                               └────────────────┘
+```
+
+---
+
 For detailed layout, deployment, and offline use see `procedure_tool.wiki/Architecture.md`.
