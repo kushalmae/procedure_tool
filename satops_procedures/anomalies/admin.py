@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Subsystem, AnomalyType, Anomaly, AnomalyNote
+
+from .models import Anomaly, AnomalyNote, AnomalyType, Subsystem
 
 
 @admin.register(Subsystem)

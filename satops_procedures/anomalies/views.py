@@ -1,12 +1,13 @@
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from procedures.models import Satellite, ProcedureRun, Procedure
-from .models import Subsystem, AnomalyType, Anomaly, AnomalyNote
+from procedures.models import Procedure, ProcedureRun, Satellite
+
+from .models import Anomaly, AnomalyNote, AnomalyType, Subsystem
 
 
 def _int_or_none(val):
@@ -20,7 +21,6 @@ def get_suggested_procedures(subsystem_id=None, subsystem_name=None, anomaly_typ
     """Return list of (Procedure, source_label) for anomaly resolution suggestions.
     Uses FDIR (by subsystem name), Handbook (by subsystem name), and past anomalies (by type/subsystem).
     """
-    from django.db.models import Q
     seen_ids = set()
     result = []
     subs_name = subsystem_name
@@ -32,7 +32,7 @@ def get_suggested_procedures(subsystem_id=None, subsystem_name=None, anomaly_typ
     # FDIR: procedures linked from FDIR entries whose subsystem name matches
     if subs_name:
         try:
-            FDIREntry = __import__('fdir.models', fromlist=['FDIREntry']).FDIREntry
+            __import__('fdir.models', fromlist=['FDIREntry'])
             for proc in Procedure.objects.filter(
                 fdir_entries__subsystem__name__iexact=subs_name
             ).distinct():
@@ -45,7 +45,7 @@ def get_suggested_procedures(subsystem_id=None, subsystem_name=None, anomaly_typ
     # Handbook: procedures linked from alert definitions whose subsystem name matches
     if subs_name:
         try:
-            AlertDefinition = __import__('handbook.models', fromlist=['AlertDefinition']).AlertDefinition
+            __import__('handbook.models', fromlist=['AlertDefinition'])
             for proc in Procedure.objects.filter(
                 handbook_alerts__subsystem__name__iexact=subs_name
             ).filter(handbook_alerts__procedure__isnull=False).distinct():
