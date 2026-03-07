@@ -54,6 +54,15 @@
           <input type="text" id="dash-q" name="q" value="{{ search_query }}" placeholder="Satellite, procedure, operator…">
         </div>
         <div>
+          <label for="dash-satellite">Satellite</label>
+          <select id="dash-satellite" name="satellite">
+            <option value="">All satellites</option>
+            {% for s in satellites %}
+            <option value="{{ s.id }}" {% if satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
           <label for="dash-tag">Tag</label>
           <select id="dash-tag" name="tag">
             <option value="">All tags</option>
@@ -76,7 +85,7 @@
         </div>
         <div class="flex items-end gap-2">
           <button type="submit" class="btn btn-primary">Filter</button>
-          {% if search_query or tag_id %}<a href="{% url 'dashboard' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
+          {% if search_query or tag_id or satellite_id %}<a href="{% url 'dashboard' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
         </div>
       </form>
     </div>
@@ -118,7 +127,7 @@
             <tr>
               <td colspan="5" class="px-4 py-8 text-center text-gray-500">
                 No runs found.
-                {% if search_query or tag_id %}
+                {% if search_query or tag_id or satellite_id %}
                 <a href="{% url 'dashboard' %}" class="text-brand hover:underline">Clear filters</a>
                 {% else %}
                 <a href="{% url 'start' %}" class="text-brand hover:underline">Start a procedure</a>
@@ -133,17 +142,19 @@
   </div>
 
   <!-- Sidebar widgets -->
-  <div class="w-full lg:w-72 flex-shrink-0 space-y-4 no-print">
+  <div class="w-full lg:w-96 flex-shrink-0 space-y-5 no-print">
     {% if recent_anomalies %}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-      <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Anomalies</h3>
-      <ul class="space-y-2">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <h3 class="text-sm font-semibold text-gray-900 mb-4">Recent Anomalies</h3>
+      <ul class="space-y-1">
         {% for a in recent_anomalies %}
-        <li class="text-sm">
-          <a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="font-medium text-gray-900 hover:text-brand">{{ a.satellite.name }}</a>
-          <span class="mx-1">—</span><span class="badge badge-severity-{{ a.severity|lower }}">{{ a.get_severity_display }}</span>
-          <span class="badge badge-{{ a.status|lower }}">{{ a.get_status_display }}</span>
-          <p class="text-gray-400 text-xs mt-0.5 truncate">{{ a.title }}</p>
+        <li>
+          <a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="block py-2.5 px-2 -mx-2 rounded-lg text-sm hover:bg-gray-50 transition-colors group">
+            <span class="font-medium text-gray-900 group-hover:text-brand">{{ a.satellite.name }}</span>
+            <span class="mx-1">—</span><span class="badge badge-severity-{{ a.severity|lower }}">{{ a.get_severity_display }}</span>
+            <span class="badge badge-{{ a.status|lower }}">{{ a.get_status_display }}</span>
+            <p class="text-gray-500 text-xs mt-1 truncate">{{ a.title }}</p>
+          </a>
         </li>
         {% endfor %}
       </ul>
@@ -155,15 +166,15 @@
     {% endif %}
 
     {% if recent_scribe_entries %}
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-      <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Mission Log</h3>
-      <ul class="space-y-2">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <h3 class="text-sm font-semibold text-gray-900 mb-4">Recent Mission Log</h3>
+      <ul class="space-y-2.5">
         {% for e in recent_scribe_entries %}
-        <li class="text-sm">
+        <li class="text-sm py-1">
           <span class="font-medium text-gray-700">{{ e.timestamp|date:"m-d H:i" }}</span>
           <span class="text-gray-500">{{ e.role.name }} — {{ e.category.name }}</span>
           {% if e.satellite %}<span class="text-gray-400">({{ e.satellite.name }})</span>{% endif %}
-          <p class="text-gray-500 text-xs mt-0.5">{{ e.description|truncatewords:10 }}</p>
+          <p class="text-gray-500 text-xs mt-1">{{ e.description|truncatewords:12 }}</p>
         </li>
         {% endfor %}
       </ul>

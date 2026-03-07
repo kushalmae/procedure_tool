@@ -304,6 +304,7 @@ def reference_csv_export(request):
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="references.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
 
     writer = csv.writer(response)
     writer.writerow(['Title', 'Document Type', 'Subsystem', 'Section', 'Version', 'Location', 'User Notes'])

@@ -1,6 +1,10 @@
+import csv
+import io
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
@@ -280,3 +284,169 @@ def request_detail(request, request_id):
         'priority_choices': SMERequest.PRIORITY_CHOICES,
     }
     return render(request, 'smerequests/request_detail.html', context)
+
+
+# ---------------------------------------------------------------------------
+# CSV Import / Export
+# ---------------------------------------------------------------------------
+
+
+def request_csv_export(request):
+    """Export SME requests as CSV with current filters."""
+    qs = (
+        SMERequest.objects
+        .select_related('satellite', 'subsystem', 'request_type', 'requested_by', 'assigned_to')
+        .order_by('-created_at')
+    )
+    satellite_id = request.GET.get('satellite')
+    request_type_id = request.GET.get('request_type')
+    status = request.GET.get('status')
+    priority = request.GET.get('priority')
+    q = (request.GET.get('q') or '').strip()
+    if satellite_id:
+        try:
+            qs = qs.filter(satellite_id=int(satellite_id))
+        except ValueError:
+            pass
+    if request_type_id:
+        try:
+            qs = qs.filter(request_type_id=int(request_type_id))
+        except ValueError:
+            pass
+    if status:
+        qs = qs.filter(status=status)
+    if priority:
+        qs = qs.filter(priority=priority)
+    if q:
+        qs = qs.filter(title__icontains=q)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="sme_requests.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Title', 'Satellite', 'Subsystem', 'Request Type', 'Priority', 'Status',
+        'Description', 'Time Range Start', 'Time Range End', 'Requested By',
+        'Assigned To', 'Result Notes', 'Rejection Reason', 'Created At',
+    ])
+    for r in qs:
+        writer.writerow([
+            r.pk,
+            r.title,
+            r.satellite.name if r.satellite else '',
+            r.subsystem.name if r.subsystem else '',
+            r.request_type.name if r.request_type else '',
+            r.priority,
+            r.status,
+            r.description,
+            r.time_range_start.strftime('%Y-%m-%d %H:%M') if r.time_range_start else '',
+            r.time_range_end.strftime('%Y-%m-%d %H:%M') if r.time_range_end else '',
+            r.requested_by.username if r.requested_by else '',
+            r.assigned_to.username if r.assigned_to else '',
+            r.result_notes,
+            r.rejection_reason,
+            r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '',
+        ])
+    return response
+
+
+@login_required
+def request_csv_import(request):
+    """Import SME requests from CSV (POST with csv_file) or redirect to list."""
+    if request.method != 'POST':
+        return redirect('sme_request_list')
+
+    csv_file = request.FILES.get('csv_file')
+    if not csv_file:
+        messages.error(request, 'Please select a CSV file.')
+        return redirect('sme_request_list')
+    if not csv_file.name.endswith('.csv'):
+        messages.error(request, 'File must be a CSV.')
+        return redirect('sme_request_list')
+
+    try:
+        decoded = csv_file.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(decoded))
+    except Exception:
+        messages.error(request, 'Could not read the CSV file.')
+        return redirect('sme_request_list')
+
+    def get(row, *keys):
+        for k in keys:
+            val = (row.get(k) or '').strip()
+            if val:
+                return val
+        return ''
+
+    fieldnames = [h.strip().lower() for h in (reader.fieldnames or []) if h]
+    has_title = any('title' in k for k in fieldnames)
+    has_description = any('description' in k for k in fieldnames)
+    if not has_title or not has_description:
+        messages.error(request, 'CSV must contain Title and Description columns.')
+        return redirect('sme_request_list')
+
+    satellites = {s.name: s for s in Satellite.objects.all()}
+    subsystems = {s.name: s for s in Subsystem.objects.all()}
+    request_types = {rt.name: rt for rt in RequestType.objects.all()}
+    created = 0
+    skipped = 0
+
+    for row in reader:
+        title = get(row, 'Title', 'title')
+        description = get(row, 'Description', 'description')
+        if not title or not description:
+            skipped += 1
+            continue
+
+        sat_name = get(row, 'Satellite', 'satellite')
+        satellite = satellites.get(sat_name)
+        if sat_name and not satellite:
+            satellite = Satellite.objects.filter(name=sat_name).first()
+            if satellite:
+                satellites[satellite.name] = satellite
+
+        sub_name = get(row, 'Subsystem', 'subsystem')
+        subsystem = subsystems.get(sub_name)
+        if sub_name and not subsystem:
+            subsystem = Subsystem.objects.filter(name=sub_name).first()
+            if subsystem:
+                subsystems[subsystem.name] = subsystem
+
+        rt_name = get(row, 'Request Type', 'request_type')
+        request_type = request_types.get(rt_name)
+        if rt_name and not request_type:
+            request_type = RequestType.objects.filter(name=rt_name).first()
+            if request_type:
+                request_types[request_type.name] = request_type
+
+        priority = get(row, 'Priority', 'priority') or SMERequest.PRIORITY_NORMAL
+        if priority not in dict(SMERequest.PRIORITY_CHOICES):
+            priority = SMERequest.PRIORITY_NORMAL
+        status = get(row, 'Status', 'status') or SMERequest.STATUS_SUBMITTED
+        if status not in dict(SMERequest.STATUS_CHOICES):
+            status = SMERequest.STATUS_SUBMITTED
+
+        tr_start = get(row, 'Time Range Start', 'time_range_start')
+        tr_end = get(row, 'Time Range End', 'time_range_end')
+        time_range_start = parse_datetime(tr_start) if tr_start else None
+        time_range_end = parse_datetime(tr_end) if tr_end else None
+
+        SMERequest.objects.create(
+            title=title,
+            satellite=satellite,
+            subsystem=subsystem,
+            request_type=request_type,
+            priority=priority,
+            status=status,
+            description=description,
+            time_range_start=time_range_start,
+            time_range_end=time_range_end,
+            requested_by=request.user,
+        )
+        created += 1
+
+    msg = f'Imported {created} SME request(s).'
+    if skipped:
+        msg += f' Skipped {skipped} row(s).'
+    messages.success(request, msg)
+    return redirect('sme_request_list')

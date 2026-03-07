@@ -15,6 +15,7 @@ urlpatterns = [
     path('run/<int:run_id>/', views.run_procedure, name='run'),
     path('run/<int:run_id>/summary/', views.run_summary, name='run_summary'),
     path('history/', views.history, name='history'),
+    path('history/export/', views.history_csv_export, name='history_csv_export'),
     path('fleet/', views.fleet, name='fleet'),
     path('handover/', views.handover, name='handover'),
     path('metrics/', views.metrics, name='metrics'),

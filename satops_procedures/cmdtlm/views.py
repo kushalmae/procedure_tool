@@ -1,9 +1,12 @@
 import csv
 import io
 
+import csv
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import CommandDefinition, CommandInput, TelemetryDefinition, TelemetryEnum
@@ -334,6 +337,72 @@ def _import_telemetry(rows):
         )
         count += 1
     return count
+
+
+# ---------------------------------------------------------------------------
+# CSV Export
+# ---------------------------------------------------------------------------
+
+
+def csv_export_commands(request):
+    """Export commands as CSV with current filters."""
+    qs = CommandDefinition.objects.prefetch_related('inputs').order_by('subsystem', 'name')
+    subsystem = request.GET.get('subsystem')
+    category = request.GET.get('category')
+    q = (request.GET.get('q') or '').strip()
+    if subsystem:
+        qs = qs.filter(subsystem=subsystem)
+    if category:
+        qs = qs.filter(category=category)
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q)
+            | Q(command_id__icontains=q)
+            | Q(subsystem__icontains=q)
+            | Q(description__icontains=q)
+            | Q(category__icontains=q)
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="commands.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response)
+    writer.writerow(['Name', 'Command ID', 'Subsystem', 'Description', 'Category', 'Notes'])
+    for cmd in qs:
+        writer.writerow([cmd.name, cmd.command_id, cmd.subsystem, cmd.description, cmd.category, cmd.notes])
+    return response
+
+
+def csv_export_telemetry(request):
+    """Export telemetry definitions as CSV with current filters."""
+    qs = TelemetryDefinition.objects.prefetch_related('enums').order_by('subsystem', 'name')
+    subsystem = request.GET.get('subsystem')
+    data_type = request.GET.get('data_type')
+    q = (request.GET.get('q') or '').strip()
+    if subsystem:
+        qs = qs.filter(subsystem=subsystem)
+    if data_type:
+        qs = qs.filter(data_type=data_type)
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q)
+            | Q(mnemonic__icontains=q)
+            | Q(apid__icontains=q)
+            | Q(subsystem__icontains=q)
+            | Q(description__icontains=q)
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="telemetry.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response)
+    writer.writerow(['Name', 'Mnemonic', 'APID', 'Subsystem', 'Description', 'Data Type', 'Units', 'Notes'])
+    for tlm in qs:
+        writer.writerow([
+            tlm.name, tlm.mnemonic, tlm.apid, tlm.subsystem, tlm.description,
+            tlm.data_type, tlm.units, tlm.notes,
+        ])
+    return response
 
 
 def _import_telemetry_enums(rows):

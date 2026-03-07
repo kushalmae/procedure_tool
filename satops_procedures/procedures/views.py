@@ -1,9 +1,11 @@
+import csv
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -25,8 +27,8 @@ RUN_SORT_OPTIONS = [
 ]
 
 
-def _search_runs(queryset, q, tag_id):
-    """Filter runs by search query and/or tag."""
+def _search_runs(queryset, q, tag_id, satellite_id=None):
+    """Filter runs by search query, tag, and/or satellite."""
     if q:
         q = q.strip()
         if q:
@@ -37,6 +39,8 @@ def _search_runs(queryset, q, tag_id):
             )
     if tag_id:
         queryset = queryset.filter(procedure__tags__id=tag_id).distinct()
+    if satellite_id:
+        queryset = queryset.filter(satellite_id=satellite_id)
     return queryset
 
 
@@ -47,6 +51,7 @@ def homepage(request):
 def dashboard(request):
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
+    satellite_id = request.GET.get('satellite', '')
     if tag_id:
         try:
             tag_id = int(tag_id)
@@ -54,6 +59,13 @@ def dashboard(request):
             tag_id = None
     else:
         tag_id = None
+    if satellite_id:
+        try:
+            satellite_id = int(satellite_id)
+        except ValueError:
+            satellite_id = None
+    else:
+        satellite_id = None
     sort = request.GET.get('sort', '-start_time')
     if sort not in RUN_SORT_OPTIONS:
         sort = '-start_time'
@@ -63,25 +75,37 @@ def dashboard(request):
         .prefetch_related('procedure__tags')
         .order_by(sort)
     )
-    runs = _search_runs(runs, q, tag_id)[:50]
+    runs = _search_runs(runs, q, tag_id, satellite_id)[:50]
     tags = Tag.objects.all()
+    satellites = Satellite.objects.order_by('name')
 
-    # Summary stats for dashboard
-    running_count = ProcedureRun.objects.filter(status='RUNNING').count()
+    # Base querysets - optionally scoped by satellite
+    run_qs = ProcedureRun.objects
+    if satellite_id:
+        run_qs = run_qs.filter(satellite_id=satellite_id)
+
+    # Summary stats for dashboard (all scoped by satellite when filter applied)
+    running_count = run_qs.filter(status='RUNNING').count()
     procedures_count = Procedure.objects.count()
-    satellites_count = Satellite.objects.count()
+    satellites_count = 1 if satellite_id else Satellite.objects.count()
     week_ago = timezone.now() - timedelta(days=7)
-    runs_last_7_days = ProcedureRun.objects.filter(start_time__gte=week_ago).count()
+    runs_last_7_days = run_qs.filter(start_time__gte=week_ago).count()
     scribe_entries_24h = 0
     recent_scribe_entries = []
     try:
         MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
         day_ago = timezone.now() - timedelta(days=1)
-        scribe_entries_24h = MissionLogEntry.objects.filter(timestamp__gte=day_ago).count()
-        recent_scribe_entries = list(
+        scribe_qs = MissionLogEntry.objects.filter(timestamp__gte=day_ago)
+        if satellite_id:
+            scribe_qs = scribe_qs.filter(satellite_id=satellite_id)
+        scribe_entries_24h = scribe_qs.count()
+        recent_scribe_qs = (
             MissionLogEntry.objects.select_related('role', 'satellite', 'category')
-            .order_by('-timestamp')[:5]
+            .order_by('-timestamp')
         )
+        if satellite_id:
+            recent_scribe_qs = recent_scribe_qs.filter(satellite_id=satellite_id)
+        recent_scribe_entries = list(recent_scribe_qs[:8])
     except Exception:
         pass
 
@@ -90,17 +114,23 @@ def dashboard(request):
     fleet_health = 'green'
     try:
         Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
-        active_anomalies_count = Anomaly.objects.exclude(
+        anomaly_qs = Anomaly.objects.exclude(
             status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED]
-        ).count()
-        recent_anomalies = list(
-            Anomaly.objects.select_related('satellite')
-            .order_by('-detected_time')[:5]
         )
-        has_critical = Anomaly.objects.exclude(
-            status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED]
-        ).filter(severity__in=[Anomaly.SEVERITY_L4, Anomaly.SEVERITY_L5]).exists()
-        recent_fail_or_cancel = ProcedureRun.objects.filter(
+        if satellite_id:
+            anomaly_qs = anomaly_qs.filter(satellite_id=satellite_id)
+        active_anomalies_count = anomaly_qs.count()
+        recent_anomaly_qs = (
+            Anomaly.objects.select_related('satellite')
+            .order_by('-detected_time')
+        )
+        if satellite_id:
+            recent_anomaly_qs = recent_anomaly_qs.filter(satellite_id=satellite_id)
+        recent_anomalies = list(recent_anomaly_qs[:8])
+        has_critical = anomaly_qs.filter(
+            severity__in=[Anomaly.SEVERITY_L4, Anomaly.SEVERITY_L5]
+        ).exists()
+        recent_fail_or_cancel = run_qs.filter(
             status__in=[ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED],
             start_time__gte=week_ago,
         ).exists()
@@ -115,7 +145,9 @@ def dashboard(request):
         'runs': runs,
         'search_query': q,
         'tag_id': tag_id,
+        'satellite_id': satellite_id,
         'tags': tags,
+        'satellites': satellites,
         'sort': sort,
         'sort_options': RUN_SORT_OPTIONS,
         'running_count': running_count,
@@ -646,6 +678,52 @@ def history(request):
     })
 
 
+def history_csv_export(request):
+    """Export procedure runs (history) as CSV with current filters."""
+    q = request.GET.get('q', '')
+    tag_id = request.GET.get('tag', '')
+    if tag_id:
+        try:
+            tag_id = int(tag_id)
+        except ValueError:
+            tag_id = None
+    else:
+        tag_id = None
+    sort = request.GET.get('sort', '-start_time')
+    if sort not in RUN_SORT_OPTIONS:
+        sort = '-start_time'
+    runs = (
+        ProcedureRun.objects
+        .select_related('satellite', 'procedure', 'operator')
+        .prefetch_related('procedure__tags')
+        .order_by(sort)
+    )
+    runs = _search_runs(runs, q, tag_id)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="procedure_runs.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Satellite', 'Procedure', 'Operator', 'Status', 'Start Time', 'End Time',
+        'Run Notes', 'Tags',
+    ])
+    for r in runs:
+        tags_str = ', '.join(t.name for t in r.procedure.tags.all())
+        writer.writerow([
+            r.pk,
+            r.satellite.name,
+            r.procedure.name,
+            r.operator_name or (r.operator.username if r.operator else ''),
+            r.status,
+            r.start_time.strftime('%Y-%m-%d %H:%M') if r.start_time else '',
+            r.end_time.strftime('%Y-%m-%d %H:%M') if r.end_time else '',
+            r.run_notes or '',
+            tags_str,
+        ])
+    return response
+
+
 def fleet(request):
     """Fleet-centric single pane of glass: per-satellite last run, open anomalies, last scribe."""
     satellites = list(Satellite.objects.order_by('name'))
@@ -983,6 +1061,7 @@ def timeline(request):
         from django.http import HttpResponse
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="mission_timeline.csv"'
+        response['X-Content-Type-Options'] = 'nosniff'
         w = csv.writer(response)
         w.writerow(['Timestamp', 'Type', 'Satellite', 'Detail'])
         for ev in events:

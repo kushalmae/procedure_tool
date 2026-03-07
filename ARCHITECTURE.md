@@ -242,7 +242,7 @@ only difference is which environment variables are set.
 Fastest way to develop. No env vars needed.
 
 ```bash
-cd satops_procedures/
+
 
 # One-time setup
 pip install -r requirements.txt   # or: make install

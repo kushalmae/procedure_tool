@@ -40,7 +40,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       <a href="{% url 'timeline' %}" class="btn btn-secondary">Clear</a>
-      <a href="{% url 'timeline' %}?satellite={{ filter_satellite_id|default:'' }}&type={{ filter_type }}&from={{ filter_from }}&to={{ filter_to }}&export=csv" class="btn btn-secondary">Export CSV</a>
+      <a href="{% url 'timeline' %}?satellite={{ filter_satellite_id|default:'' }}&type={{ filter_type }}&from={{ filter_from }}&to={{ filter_to }}&export=csv" class="btn btn-secondary" download="mission_timeline.csv">Export CSV</a>
     </div>
   </form>
 </div>

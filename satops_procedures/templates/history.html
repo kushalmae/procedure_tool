@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}History — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold text-gray-900">Run History</h1>
+  <a href="{% url 'history_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary no-print" download="procedure_runs.csv">Export CSV</a>
 </div>
 
 <!-- Filter bar -->

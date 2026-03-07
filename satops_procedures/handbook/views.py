@@ -1,6 +1,10 @@
+import csv
+import io
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from procedures.models import Procedure
@@ -267,3 +271,155 @@ def alert_delete(request, alert_id):
         messages.success(request, f'Alert "{name}" has been deleted.')
         return redirect('handbook_alert_list')
     return render(request, 'handbook/alert_confirm_delete.html', {'alert': alert})
+
+
+# ---------------------------------------------------------------------------
+# CSV Import / Export
+# ---------------------------------------------------------------------------
+
+
+def alert_csv_export(request):
+    """Export alert definitions as CSV with current filters."""
+    qs = (
+        AlertDefinition.objects
+        .select_related('subsystem', 'procedure')
+        .order_by('subsystem__name', 'parameter')
+    )
+    subsystem_id = request.GET.get('subsystem')
+    severity = request.GET.get('severity')
+    q = (request.GET.get('q') or '').strip()
+    if subsystem_id:
+        sid = _int_or_none(subsystem_id)
+        if sid is not None:
+            qs = qs.filter(subsystem_id=sid)
+    if severity:
+        qs = qs.filter(severity=severity)
+    if q:
+        qs = qs.filter(
+            Q(parameter__icontains=q)
+            | Q(description__icontains=q)
+            | Q(mnemonic__icontains=q)
+            | Q(apids__icontains=q)
+        )
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="handbook_alerts.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response)
+    writer.writerow([
+        'Parameter', 'Mnemonic', 'Mnemonic Description', 'User Notes', 'APIDs', 'Subsystem',
+        'Description', 'Alert Conditions', 'Warning Threshold', 'Critical Threshold',
+        'Recommended Response', 'Procedure', 'Severity', 'Version', 'Updated At',
+    ])
+    for a in qs:
+        writer.writerow([
+            a.parameter,
+            a.mnemonic,
+            a.mnemonic_description,
+            a.user_notes,
+            a.apids,
+            a.subsystem.name,
+            a.description,
+            a.alert_conditions,
+            a.warning_threshold,
+            a.critical_threshold,
+            a.recommended_response,
+            a.procedure.name if a.procedure else '',
+            a.severity,
+            a.version,
+            a.updated_at.strftime('%Y-%m-%d %H:%M') if a.updated_at else '',
+        ])
+    return response
+
+
+@login_required
+def alert_csv_import(request):
+    """Import alert definitions from CSV (POST with csv_file)."""
+    if request.method != 'POST':
+        return redirect('handbook_alert_list')
+
+    csv_file = request.FILES.get('csv_file')
+    if not csv_file:
+        messages.error(request, 'Please select a CSV file.')
+        return redirect('handbook_alert_list')
+    if not csv_file.name.endswith('.csv'):
+        messages.error(request, 'File must be a CSV.')
+        return redirect('handbook_alert_list')
+
+    try:
+        decoded = csv_file.read().decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(decoded))
+    except Exception:
+        messages.error(request, 'Could not read the CSV file.')
+        return redirect('handbook_alert_list')
+
+    def get(row, *keys):
+        for k in keys:
+            val = (row.get(k) or '').strip()
+            if val:
+                return val
+        return ''
+
+    fieldnames = [h.strip().lower() for h in (reader.fieldnames or []) if h]
+    has_param = any('parameter' in k for k in fieldnames)
+    has_subsystem = any('subsystem' in k for k in fieldnames)
+    has_desc = any('description' in k for k in fieldnames)
+    if not (has_param and has_subsystem and has_desc):
+        messages.error(request, 'CSV must contain: Parameter, Subsystem, Description.')
+        return redirect('handbook_alert_list')
+
+    subsystems = {s.name: s for s in Subsystem.objects.all()}
+    procedures = {p.name: p for p in Procedure.objects.all()}
+    created = 0
+    skipped = 0
+
+    for row in reader:
+        parameter = get(row, 'Parameter', 'parameter')
+        sub_name = get(row, 'Subsystem', 'subsystem')
+        description = get(row, 'Description', 'description')
+        if not parameter or not sub_name or not description:
+            skipped += 1
+            continue
+
+        subsystem = subsystems.get(sub_name)
+        if not subsystem:
+            subsystem = Subsystem.objects.filter(name=sub_name).first()
+            if subsystem:
+                subsystems[subsystem.name] = subsystem
+            else:
+                subsystem = Subsystem.objects.create(name=sub_name)
+                subsystems[subsystem.name] = subsystem
+
+        proc_name = get(row, 'Procedure', 'procedure')
+        procedure = procedures.get(proc_name) if proc_name else None
+        if proc_name and not procedure:
+            procedure = Procedure.objects.filter(name=proc_name).first()
+            if procedure:
+                procedures[procedure.name] = procedure
+
+        severity = get(row, 'Severity', 'severity') or AlertDefinition.SEVERITY_WARNING
+        if severity not in dict(AlertDefinition.SEVERITY_CHOICES):
+            severity = AlertDefinition.SEVERITY_WARNING
+
+        AlertDefinition.objects.create(
+            parameter=parameter,
+            mnemonic=get(row, 'Mnemonic', 'mnemonic'),
+            mnemonic_description=get(row, 'Mnemonic Description', 'mnemonic_description'),
+            user_notes=get(row, 'User Notes', 'user_notes'),
+            apids=get(row, 'APIDs', 'apids', 'apid'),
+            subsystem=subsystem,
+            description=description,
+            alert_conditions=get(row, 'Alert Conditions', 'alert_conditions'),
+            warning_threshold=get(row, 'Warning Threshold', 'warning_threshold'),
+            critical_threshold=get(row, 'Critical Threshold', 'critical_threshold'),
+            recommended_response=get(row, 'Recommended Response', 'recommended_response'),
+            procedure=procedure,
+            severity=severity,
+        )
+        created += 1
+
+    msg = f'Imported {created} alert(s).'
+    if skipped:
+        msg += f' Skipped {skipped} row(s).'
+    messages.success(request, msg)
+    return redirect('handbook_alert_list')

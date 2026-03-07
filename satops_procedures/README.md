@@ -1,6 +1,6 @@
-# Satops Procedures (Django)
+# Satops Procedures (Django) v1.0.0
 
-Satellite operations procedure tool: multi-user, fleet tracking, YAML procedures, SQLite, Django Admin. Runs offline.
+Satellite operations procedure tool: multi-user, fleet tracking, YAML procedures, SQLite, Django Admin. Runs offline. **CSV import/export** on most modules for easy adaptation.
 
 ## Setup
 
@@ -18,6 +18,7 @@ python manage.py seed_all          # optional: seed everything (procedures, scri
 # python manage.py seed_handbook     # Alerts & Limits Handbook (seed_all uses --alerts)
 # python manage.py seed_fdir        # FDIR Handbook (seed_all uses --entries if applicable)
 # python manage.py seed_anomalies   # Fleet Anomaly Tracker
+# python manage.py seed_references  # Central Reference Page (subsystems + sample refs)
 python manage.py createsuperuser   # optional: for Django Admin
 ```
 

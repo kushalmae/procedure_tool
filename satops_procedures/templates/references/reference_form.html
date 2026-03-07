@@ -25,12 +25,19 @@
     </select>
 
     <label for="subsystem">Subsystem <span class="text-brand">*</span></label>
+    {% if not subsystems %}
+    <p class="text-amber-600 text-sm mb-2">No subsystems yet. Run <code class="bg-gray-100 px-1 rounded">python manage.py seed_references</code> (or <code class="bg-gray-100 px-1 rounded">seed_all</code>) to create them.</p>
+    <select id="subsystem" name="subsystem" required disabled class="opacity-60 cursor-not-allowed">
+      <option value="">— No subsystems available —</option>
+    </select>
+    {% else %}
     <select id="subsystem" name="subsystem" required>
-      <option value="">—</option>
+      <option value="">— Select subsystem —</option>
       {% for s in subsystems %}
       <option value="{{ s.id }}" {% if form.subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
       {% endfor %}
     </select>
+    {% endif %}
 
     <label for="section">Section / Topic <span class="text-gray-400 font-normal">(optional)</span></label>
     <input id="section" name="section" type="text" value="{{ form.section }}" maxlength="200" placeholder="e.g. Command Interface">

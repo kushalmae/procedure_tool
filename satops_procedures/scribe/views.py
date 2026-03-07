@@ -1,5 +1,8 @@
+import csv
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -185,6 +188,80 @@ def timeline(request):
             context['default_severity'] = last.severity if last else MissionLogEntry.SEVERITY_INFO
             context['selected_template'] = None
     return render(request, 'scribe/timeline.html', context)
+
+
+def scribe_csv_export(request):
+    """Export Mission Log entries as CSV with current filters."""
+    saved = request.session.get('scribe_filters') or {}
+    role_id = request.GET.get('role', saved.get('role', ''))
+    satellite_id = request.GET.get('satellite', saved.get('satellite', ''))
+    category_id = request.GET.get('category', saved.get('category', ''))
+    severity = request.GET.get('severity', saved.get('severity', ''))
+    shift_id = request.GET.get('shift', saved.get('shift', ''))
+    tag_id = request.GET.get('tag', saved.get('tag', ''))
+    q = (request.GET.get('q') or saved.get('q') or '').strip()
+    sort_param = request.GET.get('sort', saved.get('sort', '-timestamp'))
+    if sort_param not in ('-timestamp', 'timestamp'):
+        sort_param = '-timestamp'
+
+    entries = (
+        MissionLogEntry.objects
+        .select_related('role', 'satellite', 'category', 'shift', 'created_by')
+        .prefetch_related('tags')
+        .order_by(sort_param)
+    )
+    if role_id:
+        try:
+            entries = entries.filter(role_id=int(role_id))
+        except ValueError:
+            pass
+    if satellite_id:
+        try:
+            entries = entries.filter(satellite_id=int(satellite_id))
+        except ValueError:
+            pass
+    if category_id:
+        try:
+            entries = entries.filter(category_id=int(category_id))
+        except ValueError:
+            pass
+    if severity:
+        entries = entries.filter(severity=severity)
+    if shift_id:
+        try:
+            entries = entries.filter(shift_id=int(shift_id))
+        except ValueError:
+            pass
+    if tag_id:
+        try:
+            entries = entries.filter(tags__id=int(tag_id)).distinct()
+        except ValueError:
+            pass
+    if q:
+        entries = entries.filter(description__icontains=q)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="mission_log.csv"'
+    response['X-Content-Type-Options'] = 'nosniff'
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'Timestamp', 'Role', 'Satellite', 'Category', 'Severity',
+        'Description', 'Shift', 'Tags', 'Created By',
+    ])
+    for e in entries:
+        writer.writerow([
+            e.pk,
+            e.timestamp.strftime('%Y-%m-%d %H:%M') if e.timestamp else '',
+            e.role.name if e.role else '',
+            e.satellite.name if e.satellite else '',
+            e.category.name if e.category else '',
+            e.severity,
+            e.description,
+            f"{e.shift.start_time} – {e.shift.end_time}" if e.shift else '',
+            ', '.join(t.name for t in e.tags.all()),
+            e.created_by.username if e.created_by else '',
+        ])
+    return response
 
 
 @login_required

@@ -149,6 +149,18 @@
 </div>
 {% endif %}
 
+{% if user.is_authenticated %}
+<!-- Add Note -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-5 mb-5">
+  <h3 class="text-sm font-semibold text-gray-900 mb-3">Add Note</h3>
+  <form method="post" action="{% url 'anomalies_add_note' anomaly_id=anomaly.id %}">{% csrf_token %}
+    <label class="first" for="add_note_body">Note</label>
+    <textarea id="add_note_body" name="note_body" rows="3" placeholder="Add an investigation or follow-up note…" required></textarea>
+    <button type="submit" class="btn btn-primary mt-2">Add Note</button>
+  </form>
+</div>
+{% endif %}
+
 <!-- Anomaly Timeline -->
 <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-5">
   <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">

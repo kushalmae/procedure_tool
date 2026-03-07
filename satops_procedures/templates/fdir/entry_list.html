@@ -9,13 +9,16 @@
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">FDIR Handbook</h1>
-  <div class="no-print">
+  <div class="no-print flex gap-2">
+    <a href="{% url 'fdir_entry_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary">Export CSV</a>
     {% if user.is_authenticated %}
+    <button type="button" onclick="document.getElementById('fdirCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
     <a href="{% url 'fdir_entry_create' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add FDIR entry
     </a>
-    {% else %}
+    {% endif %}
+    {% if not user.is_authenticated %}
     <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary">Log in to edit</a>
     {% endif %}
   </div>
@@ -124,5 +127,30 @@
     </table>
   </div>
 </div>
+
+{% if user.is_authenticated %}
+<!-- CSV Import Modal -->
+<dialog id="fdirCsvModal" class="rounded-lg border border-gray-200 shadow-xl p-0 backdrop:bg-zinc-900/50 max-w-md w-full">
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-gray-900">Import FDIR Entries CSV</h2>
+      <button type="button" onclick="this.closest('dialog').close()" class="text-gray-400 hover:text-gray-600">×</button>
+    </div>
+    <form method="post" action="{% url 'fdir_entry_csv_import' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <p class="text-sm text-gray-600 mb-3">
+        Upload a CSV with columns: <strong>Name</strong>, <strong>Subsystem</strong>.
+        Optional: Fault Code, Severity, Fault Type, Triggering Conditions, Detection Thresholds, Onboard Automated Response, Operator Procedures (comma-separated names), Version.
+      </p>
+      <label for="fdir_csv_file" class="first">CSV file <span class="text-brand">*</span></label>
+      <input type="file" id="fdir_csv_file" name="csv_file" accept=".csv" required class="mb-4">
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">Import</button>
+        <button type="button" onclick="this.closest('dialog').close()" class="btn btn-secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endif %}
 
 {% endblock %}
