@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 
-class Event(models.Model):
+class Anomaly(models.Model):
     STATUS_NEW = 'NEW'
     STATUS_INVESTIGATING = 'INVESTIGATING'
     STATUS_MITIGATED = 'MITIGATED'
@@ -56,7 +56,7 @@ class Event(models.Model):
     satellite = models.ForeignKey(
         'procedures.Satellite',
         on_delete=models.PROTECT,
-        related_name='events',
+        related_name='anomalies',
     )
     subsystem = models.CharField(
         max_length=20,
@@ -94,16 +94,17 @@ class Event(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_events',
+        related_name='created_anomalies',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-detected_time']
+        verbose_name_plural = 'anomalies'
 
     def __str__(self):
-        return f"EVT-{self.pk} {self.title}"
+        return f"ANOM-{self.pk} {self.title}"
 
     @property
     def is_open(self):
@@ -115,7 +116,7 @@ class Event(models.Model):
         return {'L1': 1, 'L2': 2, 'L3': 3, 'L4': 4, 'L5': 5}.get(self.severity, 0)
 
 
-class EventTimelineEntry(models.Model):
+class AnomalyTimelineEntry(models.Model):
     ENTRY_NOTE = 'NOTE'
     ENTRY_STATUS_CHANGE = 'STATUS_CHANGE'
     ENTRY_SEVERITY_CHANGE = 'SEVERITY_CHANGE'
@@ -129,8 +130,8 @@ class EventTimelineEntry(models.Model):
         (ENTRY_PROCEDURE, 'Procedure Run'),
     ]
 
-    event = models.ForeignKey(
-        Event,
+    anomaly = models.ForeignKey(
+        Anomaly,
         on_delete=models.CASCADE,
         related_name='timeline_entries',
     )
@@ -147,12 +148,13 @@ class EventTimelineEntry(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='event_timeline_entries',
+        related_name='anomaly_timeline_entries',
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
+        verbose_name_plural = 'anomaly timeline entries'
 
     def __str__(self):
-        return f"{self.event_id} — {self.get_entry_type_display()} — {self.created_at}"
+        return f"{self.anomaly_id} — {self.get_entry_type_display()} — {self.created_at}"

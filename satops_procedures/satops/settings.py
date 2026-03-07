@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     'scribe',
     'handbook',
     'fdir',
-    'events',
+    'anomalies',
 ]
 
 MIDDLEWARE = [

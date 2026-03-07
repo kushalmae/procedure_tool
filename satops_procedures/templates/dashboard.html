@@ -38,8 +38,8 @@
     <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Log (24h)</div>
   </div>
   <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
-    <div class="text-2xl font-bold {% if active_events_count > 0 %}text-red-600{% else %}text-gray-900{% endif %}">{{ active_events_count }}</div>
-    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Events</div>
+    <div class="text-2xl font-bold {% if active_anomalies_count > 0 %}text-red-600{% else %}text-gray-900{% endif %}">{{ active_anomalies_count }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Anomalies</div>
   </div>
 </div>
 
@@ -134,22 +134,22 @@
 
   <!-- Sidebar widgets -->
   <div class="w-full lg:w-72 flex-shrink-0 space-y-4 no-print">
-    {% if recent_events %}
+    {% if recent_anomalies %}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-      <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Events</h3>
+      <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Anomalies</h3>
       <ul class="space-y-2">
-        {% for evt in recent_events %}
+        {% for a in recent_anomalies %}
         <li class="text-sm">
-          <a href="{% url 'events_detail' event_id=evt.id %}" class="font-medium text-gray-900 hover:text-brand">{{ evt.satellite.name }}</a>
-          <span class="mx-1">—</span><span class="badge badge-severity-{{ evt.severity|lower }}">{{ evt.get_severity_display }}</span>
-          <span class="badge badge-{{ evt.status|lower }}">{{ evt.get_status_display }}</span>
-          <p class="text-gray-400 text-xs mt-0.5 truncate">{{ evt.title }}</p>
+          <a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="font-medium text-gray-900 hover:text-brand">{{ a.satellite.name }}</a>
+          <span class="mx-1">—</span><span class="badge badge-severity-{{ a.severity|lower }}">{{ a.get_severity_display }}</span>
+          <span class="badge badge-{{ a.status|lower }}">{{ a.get_status_display }}</span>
+          <p class="text-gray-400 text-xs mt-0.5 truncate">{{ a.title }}</p>
         </li>
         {% endfor %}
       </ul>
       <div class="mt-3 flex gap-2">
-        <a href="{% url 'events_list' %}" class="btn btn-secondary">View all</a>
-        {% if user.is_authenticated %}<a href="{% url 'events_create' %}" class="btn btn-secondary">Create</a>{% endif %}
+        <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">View all</a>
+        {% if user.is_authenticated %}<a href="{% url 'anomalies_create' %}" class="btn btn-secondary">Report</a>{% endif %}
       </div>
     </div>
     {% endif %}
@@ -173,11 +173,11 @@
     </div>
     {% endif %}
 
-    {% if not recent_events and not recent_scribe_entries %}
+    {% if not recent_anomalies and not recent_scribe_entries %}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-      <p class="text-sm text-gray-500">No recent events or mission log entries.</p>
+      <p class="text-sm text-gray-500">No recent anomalies or mission log entries.</p>
       <div class="mt-3 flex gap-2">
-        <a href="{% url 'events_list' %}" class="btn btn-secondary">Events</a>
+        <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">Anomalies</a>
         <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Scribe</a>
       </div>
     </div>

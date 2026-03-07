@@ -11,7 +11,7 @@ SEED_COMMANDS = [
     ('seed_scribe', {}, 'Scribe roles, event categories'),
     ('seed_handbook', {'alerts': True}, 'Handbook subsystems and sample alerts'),
     ('seed_fdir', {'entries': True}, 'FDIR subsystems and sample entries'),
-    ('seed_events', {'events': True}, 'Event workflow sample events'),
+    ('seed_anomalies', {'anomalies': True}, 'Anomaly tracker sample anomalies'),
 ]
 
 

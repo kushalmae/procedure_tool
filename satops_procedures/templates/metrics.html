@@ -11,7 +11,7 @@
     <a href="{% url 'handover' %}" class="btn btn-secondary">Handover</a>
   </div>
 </div>
-<p class="text-sm text-gray-500 mb-6 no-print">Procedure performance, event metrics, fleet utilization, and operator workload.</p>
+<p class="text-sm text-gray-500 mb-6 no-print">Procedure performance, anomaly metrics, fleet utilization, and operator workload.</p>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -51,11 +51,11 @@
     {% endif %}
   </section>
 
-  <!-- Event metrics -->
+  <!-- Anomaly metrics -->
   <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
-      <h2 class="text-sm font-semibold text-gray-900">Event Metrics</h2>
-      <p class="text-xs text-gray-500">Open events by severity; resolved/closed in last 30 days</p>
+      <h2 class="text-sm font-semibold text-gray-900">Anomaly Metrics</h2>
+      <p class="text-xs text-gray-500">Open anomalies by severity; resolved/closed in last 30 days</p>
     </div>
     <div class="p-5">
       {% if open_by_severity %}
@@ -78,7 +78,7 @@
         </table>
       </div>
       {% else %}
-      <p class="text-sm text-gray-500 mb-3">No open events.</p>
+      <p class="text-sm text-gray-500 mb-3">No open anomalies.</p>
       {% endif %}
       <p class="text-sm text-gray-700"><strong>Resolved / Closed (last 30 days):</strong> {{ resolved_30 }}</p>
     </div>

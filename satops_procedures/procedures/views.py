@@ -85,28 +85,28 @@ def dashboard(request):
     except Exception:
         pass
 
-    active_events_count = 0
-    recent_events = []
+    active_anomalies_count = 0
+    recent_anomalies = []
     fleet_health = 'green'
     try:
-        Event = __import__('events.models', fromlist=['Event']).Event
-        active_events_count = Event.objects.exclude(
-            status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED]
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        active_anomalies_count = Anomaly.objects.exclude(
+            status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED]
         ).count()
-        recent_events = list(
-            Event.objects.select_related('satellite')
+        recent_anomalies = list(
+            Anomaly.objects.select_related('satellite')
             .order_by('-detected_time')[:5]
         )
-        has_critical = Event.objects.exclude(
-            status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED]
-        ).filter(severity__in=[Event.SEVERITY_L4, Event.SEVERITY_L5]).exists()
+        has_critical = Anomaly.objects.exclude(
+            status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED]
+        ).filter(severity__in=[Anomaly.SEVERITY_L4, Anomaly.SEVERITY_L5]).exists()
         recent_fail_or_cancel = ProcedureRun.objects.filter(
             status__in=[ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED],
             start_time__gte=week_ago,
         ).exists()
         if has_critical:
             fleet_health = 'red'
-        elif active_events_count > 0 or recent_fail_or_cancel:
+        elif active_anomalies_count > 0 or recent_fail_or_cancel:
             fleet_health = 'yellow'
     except Exception:
         pass
@@ -124,8 +124,8 @@ def dashboard(request):
         'runs_last_7_days': runs_last_7_days,
         'scribe_entries_24h': scribe_entries_24h,
         'recent_scribe_entries': recent_scribe_entries,
-        'active_events_count': active_events_count,
-        'recent_events': recent_events,
+        'active_anomalies_count': active_anomalies_count,
+        'recent_anomalies': recent_anomalies,
         'fleet_health': fleet_health,
     })
 
@@ -680,32 +680,32 @@ def fleet(request):
     except Exception:
         pass
 
-    # Open events per satellite
-    open_event_counts = {}
-    satellites_with_critical_events = set()
+    # Open anomalies per satellite
+    open_anomaly_counts = {}
+    satellites_with_critical_anomalies = set()
     try:
-        Event = __import__('events.models', fromlist=['Event']).Event
-        open_event_counts = dict(
-            Event.objects
-            .exclude(status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED])
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        open_anomaly_counts = dict(
+            Anomaly.objects
+            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
             .values('satellite_id')
             .annotate(cnt=Count('id'))
             .values_list('satellite_id', 'cnt')
         )
-        satellites_with_critical_events = set(
-            Event.objects
-            .exclude(status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED])
-            .filter(severity__in=[Event.SEVERITY_L4, Event.SEVERITY_L5])
+        satellites_with_critical_anomalies = set(
+            Anomaly.objects
+            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
+            .filter(severity__in=[Anomaly.SEVERITY_L4, Anomaly.SEVERITY_L5])
             .values_list('satellite_id', flat=True)
         )
     except Exception:
         pass
 
     def _health_for_sat(sat_id, last_run):
-        if sat_id in satellites_with_critical_events:
+        if sat_id in satellites_with_critical_anomalies:
             return 'red'
-        open_events = open_event_counts.get(sat_id, 0)
-        if open_events > 0 or (last_run and last_run.status in (ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED)):
+        open_count = open_anomaly_counts.get(sat_id, 0)
+        if open_count > 0 or (last_run and last_run.status in (ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED)):
             return 'yellow'
         return 'green'
 
@@ -718,7 +718,7 @@ def fleet(request):
         fleet_rows.append({
             'satellite': s,
             'last_run': last_run,
-            'open_events_count': open_event_counts.get(s.id, 0),
+            'open_anomalies_count': open_anomaly_counts.get(s.id, 0),
             'last_scribe_entry': last_scribe_by_sat.get(s.id),
             'health_status': health,
         })
@@ -732,7 +732,7 @@ def fleet(request):
 
 
 def handover(request):
-    """Handover pack: running procedures, open events, latest shift notes, recent runs. Print-friendly."""
+    """Handover pack: running procedures, open anomalies, latest shift notes, recent runs. Print-friendly."""
     now = timezone.now()
 
     running_runs = (
@@ -742,12 +742,12 @@ def handover(request):
         .order_by('satellite__name')
     )
 
-    open_events = []
+    open_anomalies = []
     try:
-        Event = __import__('events.models', fromlist=['Event']).Event
-        open_events = list(
-            Event.objects
-            .exclude(status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED])
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        open_anomalies = list(
+            Anomaly.objects
+            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
             .select_related('satellite')
             .order_by('-severity', '-detected_time')[:50]
         )
@@ -770,7 +770,7 @@ def handover(request):
 
     return render(request, 'handover.html', {
         'running_runs': running_runs,
-        'open_events': open_events,
+        'open_anomalies': open_anomalies,
         'latest_shift': latest_shift,
         'recent_runs': recent_runs,
         'generated_at': now,
@@ -778,7 +778,7 @@ def handover(request):
 
 
 def metrics(request):
-    """Ops metrics / KPIs: procedure performance, event metrics, fleet utilization, operator workload."""
+    """Ops metrics / KPIs: procedure performance, anomaly metrics, fleet utilization, operator workload."""
     now = timezone.now()
     period_7 = now - timedelta(days=7)
     period_30 = now - timedelta(days=30)
@@ -798,19 +798,19 @@ def metrics(request):
         .order_by('-total')
     )
 
-    # Event metrics: open by severity
+    # Anomaly metrics: open by severity
     open_by_severity = []
     try:
-        Event = __import__('events.models', fromlist=['Event']).Event
+        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
         open_by_severity = list(
-            Event.objects
-            .exclude(status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED])
+            Anomaly.objects
+            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
             .values('severity')
             .annotate(cnt=Count('id'))
             .order_by('-cnt')
         )
-        resolved_30 = Event.objects.filter(
-            status__in=[Event.STATUS_RESOLVED, Event.STATUS_CLOSED],
+        resolved_30 = Anomaly.objects.filter(
+            status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED],
             updated_at__gte=period_30,
         ).count()
     except Exception:
@@ -940,10 +940,10 @@ def timeline(request):
     except Exception:
         pass
 
-    # Events (Event Workflow)
+    # Anomalies
     try:
-        EventModel = __import__('events.models', fromlist=['Event']).Event
-        evt_qs = EventModel.objects.select_related('satellite').order_by('-detected_time')
+        AnomalyModel = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        evt_qs = AnomalyModel.objects.select_related('satellite').order_by('-detected_time')
         if sat_id:
             evt_qs = evt_qs.filter(satellite_id=sat_id)
         if date_from:
@@ -958,15 +958,15 @@ def timeline(request):
                 evt_qs = evt_qs.filter(detected_time__date__lte=date_type.fromisoformat(date_to[:10]))
             except (ValueError, TypeError):
                 pass
-        if event_type and event_type != 'event':
+        if event_type and event_type != 'anomaly':
             evt_qs = evt_qs.none()
         for ev_obj in evt_qs[:200]:
             events.append({
                 'timestamp': ev_obj.detected_time,
-                'type': 'event',
+                'type': 'anomaly',
                 'satellite_name': ev_obj.satellite.name,
-                'event_id': ev_obj.id,
-                'event_title': ev_obj.title,
+                'anomaly_id': ev_obj.id,
+                'anomaly_title': ev_obj.title,
                 'severity': ev_obj.severity,
                 'status': ev_obj.status,
                 'description': (ev_obj.description or '')[:200],
@@ -991,8 +991,8 @@ def timeline(request):
                 detail = f"{ev.get('procedure_name', '')} — {ev.get('status', '')} ({ev.get('operator_name', '')})"
             elif ev['type'] == 'scribe':
                 detail = f"{ev.get('role_name', '')} — {ev.get('category_name', '')}: {(ev.get('description') or '')[:80]}"
-            elif ev['type'] == 'event':
-                detail = f"EVT {ev.get('event_title', '')} [{ev.get('severity', '')}] {ev.get('status', '')}: {(ev.get('description') or '')[:80]}"
+            elif ev['type'] == 'anomaly':
+                detail = f"ANOM {ev.get('anomaly_title', '')} [{ev.get('severity', '')}] {ev.get('status', '')}: {(ev.get('description') or '')[:80]}"
             w.writerow([
                 ev['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if hasattr(ev['timestamp'], 'strftime') else str(ev['timestamp']),
                 ev['type'],

@@ -10,5 +10,5 @@ urlpatterns = [
     path('scribe/', include('scribe.urls')),
     path('handbook/', include('handbook.urls')),
     path('fdir/', include('fdir.urls')),
-    path('events/', include('events.urls')),
+    path('anomalies/', include('anomalies.urls')),
 ]
