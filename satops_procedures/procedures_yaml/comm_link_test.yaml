@@ -1,0 +1,42 @@
+name: Communication Link Test
+version: "1.5"
+
+preconditions: >
+  Ground station antenna locked on satellite. Spacecraft in nominal attitude.
+  Link budget predicts positive margin at all test data rates.
+
+steps:
+  - id: uplink_carrier
+    description: Transmit uplink carrier; confirm spacecraft receiver lock indicator
+    input: uplink_frequency_mhz
+
+  - id: cmd_echo
+    description: Send test command; verify command echo in telemetry
+    input: cmd_id
+
+  - id: downlink_carrier
+    description: Verify downlink carrier presence on ground station receiver
+    input: signal_strength_dbm
+
+  - id: low_rate_test
+    description: Configure lowest data rate; measure bit-error rate over 60s window
+    input: ber_low_rate
+
+  - id: mid_rate_test
+    description: Configure medium data rate; measure BER and throughput
+    input: ber_mid_rate
+
+  - id: high_rate_test
+    description: Configure highest data rate; measure BER and throughput
+    input: ber_high_rate
+
+  - id: ranging
+    description: Perform two-way ranging measurement; record round-trip delay
+    input: range_delay_ms
+
+  - id: doppler_check
+    description: Verify Doppler compensation tracking; note residual offset
+    input: doppler_residual_hz
+
+  - id: comm_signoff
+    description: Comms lead signoff — all link margins positive, BER within spec

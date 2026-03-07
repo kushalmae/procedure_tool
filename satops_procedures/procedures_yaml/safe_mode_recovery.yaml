@@ -1,0 +1,43 @@
+name: Safe Mode Recovery
+version: "1.0"
+
+preconditions: >
+  Spacecraft has autonomously entered safe mode. Telemetry link established.
+  Ground team has reviewed event timeline and identified probable cause.
+
+steps:
+  - id: event_review
+    description: Review safe mode entry event log; document trigger cause and timestamp
+    input: trigger_cause
+
+  - id: tlm_assessment
+    description: Assess current telemetry state — power, thermal, attitude, comms
+    input: bus_voltage
+
+  - id: root_cause
+    description: Confirm or update root cause assessment; document in mission log
+
+  - id: power_budget
+    description: Verify power budget supports subsystem re-enable; check SOC and array output
+    input: soc_percent
+
+  - id: thermal_check
+    description: Verify all thermal zones within acceptable limits for recovery
+    input: coldest_zone_c
+
+  - id: adcs_reenable
+    description: Re-enable attitude control system; transition from safe-mode spin to pointing
+    input: pointing_mode
+
+  - id: comms_reenable
+    description: Re-enable nominal communications mode; verify full-rate downlink
+
+  - id: payload_assess
+    description: Assess payload status; determine if payload restart is safe
+
+  - id: nominal_transition
+    description: Command transition to nominal operations mode; monitor for stability
+    input: ops_mode
+
+  - id: recovery_signoff
+    description: Ops lead and systems lead signoff — spacecraft nominal, recovery complete

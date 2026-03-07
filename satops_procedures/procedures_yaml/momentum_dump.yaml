@@ -1,0 +1,36 @@
+name: Momentum Dump
+version: "2.3"
+
+preconditions: >
+  At least one reaction wheel approaching saturation (>80% max speed).
+  Propulsion system primed and healthy. Attitude control in fine-pointing mode.
+
+steps:
+  - id: wheel_assessment
+    description: Record all reaction wheel speeds; identify wheels requiring desaturation
+    input: max_wheel_speed_rpm
+
+  - id: thruster_prime
+    description: Verify thruster priming; confirm latch valves open and pressures nominal
+    input: tank_pressure_psi
+
+  - id: attitude_hold
+    description: Confirm attitude hold mode active; pointing within required deadband
+
+  - id: dump_config
+    description: Configure momentum dump parameters — duration, thrust direction, magnitude
+    input: dump_duration_sec
+
+  - id: execute_dump
+    description: Execute momentum dump; monitor wheel speeds decreasing
+    input: post_dump_max_rpm
+
+  - id: attitude_verify
+    description: Confirm attitude maintained within limits during and after dump
+
+  - id: propellant_accounting
+    description: Update propellant mass accounting with dump consumption estimate
+    input: prop_used_grams
+
+  - id: dump_signoff
+    description: ADCS lead signoff — wheels desaturated, attitude nominal

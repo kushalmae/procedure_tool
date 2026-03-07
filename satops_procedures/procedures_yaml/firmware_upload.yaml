@@ -1,0 +1,42 @@
+name: Firmware Upload
+version: "3.1"
+
+preconditions: >
+  New firmware image validated in ground testbed. Spacecraft in nominal ops with
+  stable power and comms. Rollback image verified in backup partition.
+
+steps:
+  - id: image_verify
+    description: Verify firmware image file integrity on ground system; record checksum
+    input: image_checksum
+
+  - id: backup_confirm
+    description: Confirm current firmware backed up to secondary partition on spacecraft
+
+  - id: upload_start
+    description: Begin firmware upload via command link; monitor transfer progress
+    input: transfer_rate_kbps
+
+  - id: upload_verify
+    description: Verify uploaded image checksum matches ground-truth checksum
+    input: onboard_checksum
+
+  - id: staging
+    description: Stage new image for activation; set boot pointer to new partition
+
+  - id: activate
+    description: Command firmware activation and controlled reboot
+    input: reboot_confirmed
+
+  - id: post_boot_health
+    description: Verify post-boot health — version string, subsystem status, no error flags
+    input: reported_version
+
+  - id: functional_test
+    description: Execute abbreviated functional test suite to validate new firmware behavior
+
+  - id: rollback_ready
+    description: Confirm rollback procedure is armed in case of anomaly within observation period
+
+  - id: firmware_signoff
+    description: Software and ops lead signoff — firmware upload and activation successful

@@ -1,0 +1,42 @@
+name: ADCS Calibration
+version: "2.0"
+
+preconditions: >
+  Spacecraft in stable sun-pointing mode. Star tracker powered and acquiring.
+  Ground contact window minimum 15 minutes.
+
+steps:
+  - id: mode_check
+    description: Verify current ADCS mode and confirm safe to enter calibration mode
+    input: current_mode
+
+  - id: gyro_bias
+    description: Initiate gyroscope bias estimation; record bias values
+    input: gyro_bias_dps
+
+  - id: star_tracker_cal
+    description: Run star tracker focal-plane calibration routine
+    input: cal_residual_arcsec
+
+  - id: sun_sensor_cal
+    description: Perform sun sensor cross-calibration against star tracker reference
+    input: sun_sensor_error_deg
+
+  - id: magnetometer_cal
+    description: Execute magnetometer calibration using IGRF model comparison
+    input: mag_residual_nt
+
+  - id: wheel_speed_check
+    description: Record reaction wheel speeds; confirm within nominal range
+    input: max_wheel_rpm
+
+  - id: torquer_test
+    description: Command magnetorquer test pulses; verify measured dipole
+    input: dipole_am2
+
+  - id: pointing_test
+    description: Command a small attitude slew; measure achieved vs commanded angle
+    input: pointing_error_deg
+
+  - id: cal_signoff
+    description: ADCS lead signoff — calibration parameters acceptable
