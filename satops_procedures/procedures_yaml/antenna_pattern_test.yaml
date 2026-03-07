@@ -1,0 +1,41 @@
+name: Antenna Pattern Test
+version: "2.0"
+
+preconditions: >
+  Antenna deployed and operational. Ground station calibrated for signal-strength measurement.
+  Spacecraft ADCS in slew-capable mode. Pass duration minimum 10 minutes.
+
+steps:
+  - id: baseline_measure
+    description: Record baseline signal strength at boresight pointing
+    input: boresight_signal_dbm
+
+  - id: slew_config
+    description: Configure ADCS for controlled roll/pitch slew sequence
+    input: slew_rate_deg_s
+
+  - id: roll_positive
+    description: Slew +roll; record signal strength at defined angles
+    input: roll_pos_signal_dbm
+
+  - id: roll_negative
+    description: Slew -roll; record signal strength at defined angles
+    input: roll_neg_signal_dbm
+
+  - id: pitch_positive
+    description: Slew +pitch; record signal strength at defined angles
+    input: pitch_pos_signal_dbm
+
+  - id: pitch_negative
+    description: Slew -pitch; record signal strength at defined angles
+    input: pitch_neg_signal_dbm
+
+  - id: return_boresight
+    description: Return to boresight; confirm signal recovery to baseline
+    input: return_signal_dbm
+
+  - id: data_collection
+    description: Compile gain pattern data; compare to pre-launch model predictions
+
+  - id: pattern_signoff
+    description: Comms and ADCS lead signoff — antenna pattern characterized

@@ -1,0 +1,44 @@
+name: Solar Array Deployment
+version: "1.0"
+
+preconditions: >
+  Spacecraft separated from launch vehicle. ADCS in detumble or sun-acquisition mode.
+  Battery state-of-charge above 60%. Telemetry link established.
+
+steps:
+  - id: separation_confirm
+    description: Confirm launch vehicle separation; verify deployment enable flags clear
+
+  - id: bus_health
+    description: Quick bus health check — power, comms, attitude rates
+    input: bus_voltage
+
+  - id: array_temp
+    description: Verify solar array hinge temperatures within deployment range
+    input: hinge_temp_c
+
+  - id: deploy_inhibit_release
+    description: Release deployment inhibit switches (primary and redundant)
+
+  - id: panel_1_deploy
+    description: Command Panel 1 deployment actuator; monitor current draw
+    input: actuator_current_ma
+
+  - id: panel_1_verify
+    description: Confirm Panel 1 deployed via microswitch and power output
+    input: panel_1_power_w
+
+  - id: panel_2_deploy
+    description: Command Panel 2 deployment actuator; monitor current draw
+    input: actuator_current_ma
+
+  - id: panel_2_verify
+    description: Confirm Panel 2 deployed via microswitch and power output
+    input: panel_2_power_w
+
+  - id: total_power_check
+    description: Verify total solar array power generation meets expected value
+    input: total_power_w
+
+  - id: deploy_signoff
+    description: Power lead signoff — solar arrays deployed and generating nominal power

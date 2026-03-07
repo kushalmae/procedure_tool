@@ -4,7 +4,10 @@
 {% block content %}
 
 <div class="flex items-center justify-between mb-6">
-  <h1 class="text-2xl font-semibold text-gray-900">All Procedures</h1>
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-900">All Procedures</h1>
+    <p class="text-sm text-gray-500 mt-1">{{ procedures|length }} procedure{{ procedures|length|pluralize }} in the library</p>
+  </div>
   <a href="{% url 'procedure_create' %}" class="btn btn-primary no-print">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
     Create procedure
@@ -12,11 +15,11 @@
 </div>
 
 <!-- Filter bar -->
-<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-6">
   <form method="get" class="flex flex-wrap items-end gap-3">
     <div class="flex-1 min-w-[160px]">
       <label class="first" for="proc-q">Search</label>
-      <input type="text" id="proc-q" name="q" value="{{ search_query }}" placeholder="Search name or version…">
+      <input type="text" id="proc-q" name="q" value="{{ search_query }}" placeholder="Search name, version, or description…">
     </div>
     <div>
       <label for="proc-tag">Tag</label>
@@ -42,54 +45,61 @@
   </form>
 </div>
 
-<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-  <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-      <thead class="bg-gray-900">
-        <tr>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Procedure</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Version</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Steps</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Tags</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider no-print">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        {% for p in procedures %}
-        <tr class="hover:bg-gray-50 transition-colors">
-          <td class="px-4 py-3 font-semibold text-gray-900">{{ p.name }}</td>
-          <td class="px-4 py-3 text-gray-500 font-mono text-xs">{{ p.version }}</td>
-          <td class="px-4 py-3 text-gray-600">{% if p.step_count is not None %}{{ p.step_count }}{% else %}—{% endif %}</td>
-          <td class="px-4 py-3">
-            {% if p.tags.exists %}
-            {% for t in p.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}
-            {% else %}
-            <span class="text-gray-400">—</span>
-            {% endif %}
-          </td>
-          <td class="px-4 py-3 no-print">
-            <a href="{% url 'procedure_review' %}?procedure={{ p.id }}" class="btn btn-secondary">Review</a>
-            <a href="{% url 'procedure_edit' p.id %}" class="btn btn-secondary">Edit</a>
-            <a href="{% url 'procedure_clone' p.id %}" class="btn btn-secondary">Clone</a>
-            {% if user.is_authenticated %}<a href="{% url 'start' %}?procedure={{ p.id }}" class="btn btn-primary">Start</a>{% endif %}
-            <a href="{% url 'procedure_delete' p.id %}" class="btn btn-secondary abort-btn">Delete</a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-            No procedures.
-            {% if search_query or filter_tag_id %}
-            <a href="{% url 'procedure_list' %}?sort={{ sort }}" class="text-brand hover:underline">Clear filters.</a>
-            {% else %}
-            <a href="{% url 'procedure_create' %}" class="text-brand hover:underline">Create one.</a>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if procedures %}
+<div class="grid gap-4">
+  {% for p in procedures %}
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div class="p-5">
+      <!-- Header: name + version -->
+      <div class="flex items-start justify-between gap-4 mb-2">
+        <div class="flex items-center gap-3 flex-wrap">
+          <h2 class="text-lg font-semibold text-gray-900 leading-tight">{{ p.name }}</h2>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold font-mono bg-gray-100 text-gray-600 border border-gray-200 tracking-wide">v{{ p.version }}</span>
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0 no-print">
+          <a href="{% url 'procedure_review' %}?procedure={{ p.id }}" class="btn btn-secondary text-xs">Review</a>
+          <a href="{% url 'procedure_edit' p.id %}" class="btn btn-secondary text-xs">Edit</a>
+          <a href="{% url 'procedure_clone' p.id %}" class="btn btn-secondary text-xs">Clone</a>
+          {% if user.is_authenticated %}<a href="{% url 'start' %}?procedure={{ p.id }}" class="btn btn-primary text-xs">Start</a>{% endif %}
+          <a href="{% url 'procedure_delete' p.id %}" class="btn btn-secondary abort-btn text-xs">Delete</a>
+        </div>
+      </div>
+
+      <!-- Description -->
+      {% if p.description %}
+      <p class="text-sm text-gray-600 leading-relaxed mb-3 max-w-3xl">{{ p.description }}</p>
+      {% else %}
+      <p class="text-sm text-gray-400 italic mb-3">No description available.</p>
+      {% endif %}
+
+      <!-- Meta: steps + tags -->
+      <div class="flex items-center gap-4 flex-wrap text-xs">
+        <span class="inline-flex items-center gap-1.5 text-gray-500">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          {% if p.step_count is not None %}{{ p.step_count }} step{{ p.step_count|pluralize }}{% else %}— steps{% endif %}
+        </span>
+        {% if p.tags.exists %}
+        <span class="inline-flex items-center gap-1 flex-wrap">
+          {% for t in p.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}
+        </span>
+        {% endif %}
+      </div>
+    </div>
   </div>
+  {% endfor %}
 </div>
+{% else %}
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center">
+  <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+  <p class="text-gray-500 text-sm">
+    No procedures found.
+    {% if search_query or filter_tag_id %}
+    <a href="{% url 'procedure_list' %}?sort={{ sort }}" class="text-brand hover:underline">Clear filters</a>
+    {% else %}
+    <a href="{% url 'procedure_create' %}" class="text-brand hover:underline">Create your first procedure</a>
+    {% endif %}
+  </p>
+</div>
+{% endif %}
 
 {% endblock %}

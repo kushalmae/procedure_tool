@@ -1,0 +1,35 @@
+name: Ground Station Handoff
+version: "1.4"
+
+preconditions: >
+  Outgoing station has active uplink/downlink lock. Incoming station antenna slewed
+  to predicted acquisition position. Handoff timeline coordinated between both stations.
+
+steps:
+  - id: outgoing_status
+    description: Confirm outgoing station link status — signal strength, lock, data flow
+    input: outgoing_signal_dbm
+
+  - id: incoming_acquire
+    description: Incoming station acquires satellite signal; confirm carrier lock
+    input: incoming_signal_dbm
+
+  - id: parallel_receive
+    description: Both stations receive telemetry in parallel; verify data consistency
+
+  - id: cmd_authority_transfer
+    description: Transfer command authority from outgoing to incoming station
+    input: incoming_station_id
+
+  - id: cmd_verification
+    description: Send verification command from incoming station; confirm execution
+
+  - id: outgoing_release
+    description: Outgoing station releases tracking; antenna stows or repositions
+
+  - id: continuity_check
+    description: Verify no telemetry gaps during handoff window
+    input: gap_duration_sec
+
+  - id: handoff_signoff
+    description: Ground ops signoff — handoff complete, incoming station in control

@@ -32,6 +32,11 @@ class Tag(models.Model):
 class Procedure(models.Model):
     name = models.CharField(max_length=100)
     version = models.CharField(max_length=20)
+    description = models.TextField(
+        blank=True,
+        default='',
+        help_text='High-level description of what this procedure accomplishes.',
+    )
     yaml_file = models.CharField(max_length=200)
     tags = models.ManyToManyField('Tag', related_name='procedures', blank=True)
 

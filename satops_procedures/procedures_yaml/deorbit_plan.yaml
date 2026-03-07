@@ -1,0 +1,43 @@
+name: Deorbit Planning & Execution
+version: "1.0"
+
+preconditions: >
+  Spacecraft designated for end-of-life disposal. Mission objectives complete.
+  Sufficient propellant for controlled deorbit or orbit lowering.
+
+steps:
+  - id: disposal_review
+    description: Review disposal requirements (25-year rule, controlled reentry zone if applicable)
+
+  - id: propellant_assessment
+    description: Assess remaining propellant; compute available delta-V for deorbit
+    input: remaining_prop_kg
+
+  - id: burn_plan
+    description: Generate deorbit burn plan — epoch, delta-V, expected perigee
+    input: target_perigee_km
+
+  - id: payload_safing
+    description: Safe payload subsystems — power off instruments, close shutters
+
+  - id: battery_safing
+    description: Configure battery for passivation — set charge limits, disable heaters
+    input: passivation_mode
+
+  - id: first_burn
+    description: Execute first deorbit burn; verify orbit lowering
+    input: achieved_delta_v_ms
+
+  - id: orbit_verify
+    description: Verify new orbit matches prediction; assess need for trim burn
+    input: actual_perigee_km
+
+  - id: trim_burn
+    description: Execute trim burn if needed to refine disposal orbit
+    input: trim_delta_v_ms
+
+  - id: final_passivation
+    description: Final spacecraft passivation — deplete propellant, disconnect batteries, disable transmitter
+
+  - id: deorbit_signoff
+    description: Mission director signoff — spacecraft disposed per regulatory requirements

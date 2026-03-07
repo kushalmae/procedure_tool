@@ -1,0 +1,45 @@
+name: Battery Conditioning Cycle
+version: "1.1"
+
+preconditions: >
+  Spacecraft in sun-lit orbit segment. Payload in standby or off. Solar array generating
+  surplus power. Battery management system in conditioning-enable mode.
+
+steps:
+  - id: initial_soc
+    description: Record current battery state-of-charge and voltage
+    input: soc_percent
+
+  - id: payload_standby
+    description: Confirm payload and non-essential loads powered down or in standby
+
+  - id: discharge_config
+    description: Configure controlled discharge rate and cutoff voltage
+    input: cutoff_voltage_v
+
+  - id: discharge_monitor
+    description: Monitor discharge progress; record voltage at 50% SOC checkpoint
+    input: voltage_at_50pct
+
+  - id: discharge_complete
+    description: Confirm discharge complete at cutoff voltage; record final SOC
+    input: final_discharge_soc
+
+  - id: rest_period
+    description: Allow battery rest period (30 min) before recharge; monitor temps
+    input: battery_temp_c
+
+  - id: charge_config
+    description: Configure charge profile (CC-CV) and charge current limit
+    input: charge_current_ma
+
+  - id: charge_monitor
+    description: Monitor charge progress; record voltage at 80% SOC
+    input: voltage_at_80pct
+
+  - id: charge_complete
+    description: Confirm full charge; record final SOC and cell balance delta
+    input: cell_balance_mv
+
+  - id: conditioning_signoff
+    description: Power lead signoff — battery conditioning cycle complete, health nominal
