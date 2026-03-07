@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Delete: {{ alert.parameter }}{% endblock %}
+{% block main_class %}main-full-width{% endblock %}
 {% block content %}
 <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / <a href="{% url 'handbook_alert_detail' alert.id %}">{{ alert.parameter }}</a> / Delete

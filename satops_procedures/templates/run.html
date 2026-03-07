@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ procedure.name }} — {{ satellite }}{% endblock %}
+{% block main_class %}main-full-width{% endblock %}
 {% block content %}
 <nav class="breadcrumb no-print" aria-label="Breadcrumb">
   <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; {{ procedure.name }} &rarr; Run (step {{ step_index|add:1 }} of {{ total_steps }})

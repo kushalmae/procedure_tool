@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{% if entry %}Edit: {{ entry.name }}{% else %}Add FDIR entry{% endif %} — FDIR Handbook{% endblock %}
+{% block main_class %}main-full-width{% endblock %}
 {% block content %}
 <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a> / {% if entry %}Edit{% else %}Add entry{% endif %}
