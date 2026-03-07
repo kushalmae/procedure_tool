@@ -18,4 +18,4 @@ ignore = [
 "**/migrations/*.py" = ["E", "W", "F", "I", "B", "UP"]
 
 [lint.isort]
-known-first-party = ["satops", "procedures", "scribe", "anomalies", "handbook", "fdir", "smerequests"]
+known-first-party = ["satops", "procedures", "scribe", "anomalies", "handbook", "fdir", "cmdtlm", "references", "smerequests"]

@@ -8,12 +8,20 @@ from django.db import migrations, models
 
 
 def _get_columns(cursor, table):
+    from django.db import connection
+
+    if connection.vendor != 'sqlite':
+        return set()
     cursor.execute("PRAGMA table_info(%s)" % table)
     return {row[1] for row in cursor.fetchall()}
 
 
 def add_missing_columns_and_rename(apps, schema_editor):
     from django.db import connection
+
+    # Only run on SQLite; PostgreSQL uses 0001_initial with correct schema
+    if connection.vendor != 'sqlite':
+        return
 
     with connection.cursor() as cursor:
         cols = _get_columns(cursor, "anomalies_anomaly")

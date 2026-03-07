@@ -9,6 +9,10 @@ from django.db import migrations, models
 def rename_old_columns(apps, schema_editor):
     from django.db import connection
 
+    # Only run on SQLite; PostgreSQL 0001 already has correct column names
+    if connection.vendor != 'sqlite':
+        return
+
     with connection.cursor() as cursor:
         cursor.execute("PRAGMA table_info(anomalies_anomaly)")
         cols = {row[1] for row in cursor.fetchall()}
@@ -24,6 +28,9 @@ def rename_old_columns(apps, schema_editor):
 
 def reverse_rename(apps, schema_editor):
     from django.db import connection
+
+    if connection.vendor != 'sqlite':
+        return
 
     with connection.cursor() as cursor:
         cursor.execute("PRAGMA table_info(anomalies_anomaly)")
