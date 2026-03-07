@@ -3,9 +3,8 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from anomalies.models import Anomaly, AnomalyNote, AnomalyType, Subsystem
 from procedures.models import Satellite
-from anomalies.models import Subsystem, AnomalyType, Anomaly, AnomalyNote
-
 
 DEFAULT_SUBSYSTEMS = [
     'Power',

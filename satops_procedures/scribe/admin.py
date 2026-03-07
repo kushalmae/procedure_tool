@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Role, EventCategory, ScribeTag, Shift, MissionLogEntry, EntryTemplate
+
+from .models import EntryTemplate, EventCategory, MissionLogEntry, Role, ScribeTag, Shift
 
 
 @admin.register(Role)

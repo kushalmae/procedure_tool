@@ -3,9 +3,8 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from procedures.models import Satellite, Tag, Procedure, ProcedureRun, StepExecution
+from procedures.models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
 from procedures.services.procedure_loader import load_procedure
-
 
 PROCEDURES = [
     {'yaml_file': 'bus_checkout', 'name': 'Bus Checkout', 'version': '1.0', 'tags': ['checkout', 'bus']},

@@ -1,13 +1,13 @@
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q
-from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from procedures.models import Satellite
-from .models import Role, EventCategory, ScribeTag, Shift, MissionLogEntry, EntryTemplate
+
+from .models import EntryTemplate, EventCategory, MissionLogEntry, Role, ScribeTag, Shift
 
 
 def _create_log_entry_from_post(request):

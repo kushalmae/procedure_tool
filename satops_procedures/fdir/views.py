@@ -1,11 +1,11 @@
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
+from django.shortcuts import get_object_or_404, redirect, render
 
 from procedures.models import Procedure
-from .models import Subsystem, FDIREntry
+
+from .models import FDIREntry, Subsystem
 
 
 def _int_or_none(val):

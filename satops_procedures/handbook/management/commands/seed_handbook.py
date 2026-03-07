@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from handbook.models import Subsystem, AlertDefinition
 
+from handbook.models import AlertDefinition, Subsystem
 
 DEFAULT_SUBSYSTEMS = [
     'Power',

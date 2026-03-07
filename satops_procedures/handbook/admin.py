@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Subsystem, AlertDefinition
+
+from .models import AlertDefinition, Subsystem
 
 
 @admin.register(Subsystem)

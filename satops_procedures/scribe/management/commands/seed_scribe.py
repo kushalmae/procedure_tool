@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from scribe.models import Role, EventCategory, EntryTemplate, MissionLogEntry
 
+from scribe.models import EntryTemplate, EventCategory, MissionLogEntry, Role
 
 DEFAULT_ROLES = [
     'Mission Director',
