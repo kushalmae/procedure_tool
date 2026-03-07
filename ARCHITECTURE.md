@@ -175,71 +175,245 @@ Procedure *definition* lives in YAML; runs and step results live in the database
 
 ---
 
-## Deployment (Fly.io + Docker + PostgreSQL)
+## Running the app — three modes
 
-### Architecture
+There are three ways to run the application. Each uses the same codebase; the
+only difference is which environment variables are set.
 
-The application runs inside a Docker container on Fly.io as a lightweight Fly Machine.
-Gunicorn serves the Django application; WhiteNoise handles static files.
-A Fly.io-managed PostgreSQL instance provides the production database, connected via `DATABASE_URL`.
+| Mode | Database | Server | When to use |
+|------|----------|--------|-------------|
+| **Bare Python** | SQLite (`ops.db`) | Django `runserver` | Quick local hacking, no Docker needed |
+| **Docker Compose** | PostgreSQL 16 (container) | Gunicorn (container) | Testing the full production stack locally |
+| **Fly.io** | Fly Postgres (managed) | Gunicorn (Fly Machine) | Production deployment |
 
-### Deployment files
+---
+
+### Deployment & configuration files
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile` | Builds the container: Python 3.12-slim, installs deps, collects static |
-| `.dockerignore` | Excludes dev-only files from the image |
-| `fly.toml` | Fly.io app config: region, VM size, env vars, HTTP service |
-| `entrypoint.sh` | Runs migrations, collectstatic, then starts Gunicorn |
+| `Dockerfile` | Builds the app image: Python 3.12-slim, deps, collectstatic |
+| `.dockerignore` | Keeps dev-only files out of the image |
+| `docker-compose.yml` | Local stack: PostgreSQL + app, reads `.env` |
+| `.env.example` | Annotated template — copy to `.env` for Docker Compose |
+| `fly.toml` | Fly.io app config: region, VM size, env vars, HTTP routing |
+| `entrypoint.sh` | Container startup: migrate → collectstatic → superuser → seed → Gunicorn |
+| `Makefile` | Shortcuts for every common operation (see `make help`) |
 
-### Environment variables
+---
 
-| Variable | Where set | Purpose |
-|----------|-----------|---------|
-| `DATABASE_URL` | Fly.io secret (auto-set by `fly postgres attach`) | PostgreSQL connection string |
-| `DJANGO_SECRET_KEY` | Fly.io secret (`fly secrets set`) | Production secret key |
-| `DJANGO_DEBUG` | `fly.toml` env | `False` in production |
-| `DJANGO_ALLOWED_HOSTS` | `fly.toml` env | `.fly.dev` (comma-separated) |
-| `CSRF_TRUSTED_ORIGINS` | `fly.toml` env | `https://<app>.fly.dev` |
+### Environment variables — complete reference
 
-### First deployment
+| Variable | Default (no env) | Local Docker (`.env`) | Fly.io | Purpose |
+|----------|-------------------|-----------------------|--------|---------|
+| `DATABASE_URL` | *(unset → SQLite)* | `postgres://satops:satops@db:5432/satops` | *(auto-set by `fly postgres attach`)* | Database connection string. When set, Django uses PostgreSQL; when absent, falls back to SQLite. |
+| `DJANGO_SECRET_KEY` | `dev-secret-change-in-production` | same default (fine locally) | **Set via `fly secrets set`** — must be a long random string | Django cryptographic signing key |
+| `DJANGO_DEBUG` | `True` | `True` | `False` (set in `fly.toml`) | Enables debug pages and disables HTTPS security settings |
+| `DJANGO_ALLOWED_HOSTS` | `*` | `*` | `.fly.dev` (set in `fly.toml`) | Comma-separated hostnames Django will serve |
+| `CSRF_TRUSTED_ORIGINS` | *(empty)* | *(empty — not needed for HTTP localhost)* | `https://satops-procedures.fly.dev` (in `fly.toml`) | Required when behind HTTPS to allow POST requests |
+| `SECURE_SSL_REDIRECT` | `True` when DEBUG=False | N/A (DEBUG=True) | `True` (default) or `False` if Fly handles redirect | HTTP → HTTPS redirect at Django level |
+| `POSTGRES_DB` | — | `satops` | — | Used only by the `docker-compose` PostgreSQL container |
+| `POSTGRES_USER` | — | `satops` | — | Used only by the `docker-compose` PostgreSQL container |
+| `POSTGRES_PASSWORD` | — | `satops` | — | Used only by the `docker-compose` PostgreSQL container |
+| `DJANGO_SUPERUSER_USERNAME` | *(unset)* | `admin` *(optional)* | Set via `fly secrets set` *(optional)* | If all three `SUPERUSER_*` vars are set, entrypoint auto-creates the account |
+| `DJANGO_SUPERUSER_EMAIL` | *(unset)* | `admin@example.com` *(optional)* | Set via `fly secrets set` *(optional)* | Superuser email |
+| `DJANGO_SUPERUSER_PASSWORD` | *(unset)* | `changeme` *(optional)* | Set via `fly secrets set` *(optional)* | Superuser password |
+| `SEED_ON_STARTUP` | *(unset)* | `true` *(optional)* | *(unset — seed manually)* | If `true`, entrypoint runs `seed_all` on every container start |
+| `GUNICORN_WORKERS` | `2` | `2` | `2` | Number of Gunicorn worker processes |
+
+**How variables escalate from local → Docker → Fly.io:**
+
+- **Bare Python** — zero env vars required. Everything has safe defaults (SQLite, DEBUG=True, SECRET_KEY placeholder, ALLOWED_HOSTS=*).
+- **Docker Compose** — you add `DATABASE_URL` and the `POSTGRES_*` trio to switch to PostgreSQL. Optionally set `DJANGO_SUPERUSER_*` and `SEED_ON_STARTUP` for one-command bootstrapping.
+- **Fly.io** — you add `DJANGO_DEBUG=False` (activates HTTPS security), a real `DJANGO_SECRET_KEY` (via secrets), `DJANGO_ALLOWED_HOSTS` restricted to your domain, and `CSRF_TRUSTED_ORIGINS` for HTTPS POST forms. `DATABASE_URL` is auto-injected by `fly postgres attach`.
+
+---
+
+### Mode 1 — Bare Python (SQLite, no Docker)
+
+Fastest way to develop. No env vars needed.
 
 ```bash
 cd satops_procedures/
 
-# Create the Fly.io app
+# One-time setup
+pip install -r requirements.txt   # or: make install
+python manage.py migrate           # or: make migrate
+python manage.py seed_all          # or: make seed
+python manage.py createsuperuser   # or: make superuser
+
+# Run
+python manage.py runserver 0.0.0.0:8000   # or: make run
+# → http://localhost:8000
+```
+
+Uses SQLite (`ops.db`), Django dev server, DEBUG=True. No static
+collection needed — Django serves files directly in debug mode.
+
+---
+
+### Mode 2 — Docker Compose (PostgreSQL, mirrors production)
+
+Tests the exact same container, database engine, and Gunicorn process that
+will run on Fly.io — but entirely on your machine.
+
+```bash
+cd satops_procedures/
+
+# 1. Create your .env from the template
+cp .env.example .env
+
+# 2. (Optional) Uncomment the DJANGO_SUPERUSER_* lines in .env
+#    to auto-create an admin account on first boot.
+
+# 3. (Optional) Add SEED_ON_STARTUP=true to .env
+#    to populate sample data automatically.
+
+# 4. Build and start
+docker compose up --build          # or: make docker-up
+# → http://localhost:8000
+
+# Run in background instead:
+docker compose up --build -d       # or: make docker-up-d
+docker compose logs -f             # or: make docker-logs
+```
+
+#### Useful Docker commands
+
+```bash
+# Open a shell inside the running container
+docker compose exec web bash              # or: make docker-shell
+
+# Run any manage.py command
+docker compose exec web python manage.py seed_all      # or: make docker-manage CMD="seed_all"
+docker compose exec web python manage.py createsuperuser
+
+# Connect to PostgreSQL directly
+docker compose exec db psql -U satops -d satops         # or: make docker-psql
+
+# Stop everything
+docker compose down                # or: make docker-down
+
+# Stop and wipe the database volume (full reset)
+docker compose down -v             # or: make docker-down-v
+```
+
+#### What happens on `docker compose up`
+
+1. PostgreSQL 16 container starts and waits to be healthy.
+2. App container builds from `Dockerfile` (Python 3.12, deps, collectstatic).
+3. `entrypoint.sh` runs:
+   - `migrate` — applies all pending migrations to PostgreSQL.
+   - `collectstatic` — gathers static files for WhiteNoise.
+   - Creates superuser if `DJANGO_SUPERUSER_*` env vars are set.
+   - Runs `seed_all` if `SEED_ON_STARTUP=true`.
+   - Starts Gunicorn on port 8000.
+
+#### Docker Compose `.env` — quick-start values
+
+Copy `.env.example` and uncomment the lines you want:
+
+```
+DJANGO_SECRET_KEY=dev-secret-change-in-production
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=*
+DATABASE_URL=postgres://satops:satops@db:5432/satops
+POSTGRES_DB=satops
+POSTGRES_USER=satops
+POSTGRES_PASSWORD=satops
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=changeme
+SEED_ON_STARTUP=true
+```
+
+---
+
+### Mode 3 — Fly.io (production)
+
+#### First deployment
+
+```bash
+cd satops_procedures/
+
+# Create the Fly.io app (writes fly.toml app name)
 fly launch --no-deploy
 
-# Create and attach a PostgreSQL database
+# Create a managed PostgreSQL cluster and attach it
+# (this automatically sets DATABASE_URL as a Fly secret)
 fly postgres create --name satops-db
 fly postgres attach satops-db
 
-# Set the Django secret key
+# Set the Django secret key (long, random)
 fly secrets set DJANGO_SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')"
 
 # Deploy
 fly deploy
 
-# (Optional) Create a Django superuser
+# (Optional) Create a superuser interactively
 fly ssh console -C "python manage.py createsuperuser"
 
 # (Optional) Seed initial data
 fly ssh console -C "python manage.py seed_all"
 ```
 
-### Subsequent deployments
+Or create the superuser automatically by setting secrets:
 
 ```bash
-cd satops_procedures/
-fly deploy
+fly secrets set \
+  DJANGO_SUPERUSER_USERNAME=admin \
+  DJANGO_SUPERUSER_EMAIL=admin@example.com \
+  DJANGO_SUPERUSER_PASSWORD=<strong-password>
+
+fly deploy   # entrypoint.sh will create the account
 ```
 
-The entrypoint script automatically runs migrations on every deployment.
+#### Subsequent deployments
 
-### VM sizing
+```bash
+fly deploy                         # or: make fly-deploy
+```
 
-For ~10 users the app runs on `shared-cpu-1x` with 256 MB RAM.
-Scale up via `fly scale vm` or add machines with `fly scale count` if traffic grows.
+The entrypoint runs `migrate` on every deploy, so schema changes apply
+automatically.
+
+#### Fly.io operations
+
+```bash
+fly logs                           # or: make fly-logs
+fly ssh console                    # or: make fly-ssh
+fly ssh console -C "python manage.py seed_all"   # or: make fly-manage CMD="seed_all"
+fly postgres connect -a satops-db  # or: make fly-psql
+```
+
+#### VM sizing
+
+For ~10 users: `shared-cpu-1x`, 256 MB RAM (set in `fly.toml`).
+To scale later:
+
+```bash
+fly scale vm shared-cpu-2x         # bigger machine
+fly scale count 2                  # add a second machine
+```
+
+---
+
+### Side-by-side comparison
+
+| Concern | Bare Python | Docker Compose | Fly.io |
+|---------|-------------|----------------|--------|
+| Database | SQLite (`ops.db`) | PostgreSQL 16 (container) | Fly Postgres (managed) |
+| Server | Django `runserver` | Gunicorn (2 workers) | Gunicorn (2 workers) |
+| Static files | Django serves directly | WhiteNoise | WhiteNoise |
+| DEBUG | True | True | **False** |
+| HTTPS | No | No | **Yes** (forced by Fly) |
+| Secret key | Placeholder | Placeholder | **Real secret** (Fly secrets) |
+| ALLOWED_HOSTS | `*` | `*` | `.fly.dev` |
+| CSRF origins | *(none)* | *(none)* | `https://satops-procedures.fly.dev` |
+| SSL redirect | Disabled (DEBUG on) | Disabled (DEBUG on) | **Enabled** |
+| Secure cookies | Disabled (DEBUG on) | Disabled (DEBUG on) | **Enabled** |
+| Cost | Free | Free | ~$0/month (auto-stop) to ~$3/month |
+| Start command | `make run` | `make docker-up` | `make fly-deploy` |
 
 ---
 
