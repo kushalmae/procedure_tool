@@ -58,7 +58,15 @@ procedure_tool/
       views.py, urls.py, admin.py
       management/commands/seed_fdir.py
     templates/fdir/             # entry_list, entry_detail, entry_form
-  procedure_tool.wiki/         # User guide, admin, architecture (long form)
+    tests/                      # Centralized test suite
+      test_procedures.py        # Procedures app tests
+      test_scribe.py            # Mission Scribe tests
+      test_anomalies.py         # Fleet Anomaly Tracker tests
+      test_handbook.py          # Alerts & Limits Handbook tests
+      test_fdir.py              # FDIR Handbook tests
+  .github/workflows/           # CI/CD pipelines
+    ci.yml                     # Lint + test on push/PR
+    deploy.yml                 # Auto-deploy to Fly.io on main
   ARCHITECTURE.md               # This file
 ```
 
@@ -483,17 +491,21 @@ make lint-fix    # auto-fix what's fixable
 
 ### Test suite
 
-Tests live in each app's `tests.py`. Coverage includes:
+All tests live in one place: `satops_procedures/tests/`. One file per app:
 
-| App | Tests |
-|-----|-------|
-| `procedures` | Models (Satellite, Tag, Procedure, ProcedureRun, StepExecution), views (dashboard, procedure list, history, start), seed commands |
-| `scribe` | Models (Role, EventCategory, ScribeTag, Shift, MissionLogEntry), views (timeline, shift list), seed command |
-| `anomalies` | Models (Subsystem, AnomalyType, Anomaly, AnomalyNote), views (registry, add), seed command |
-| `handbook` | Models (Subsystem, AlertDefinition + version auto-increment), views (alert list, create), seed command |
-| `fdir` | Models (Subsystem + slug, FDIREntry), views (entry list, create), seed command |
+| File | App | Tests |
+|------|-----|-------|
+| `test_procedures.py` | `procedures` | Models (Satellite, Tag, Procedure, ProcedureRun, StepExecution), views (dashboard, procedure list, history, start), seed commands |
+| `test_scribe.py` | `scribe` | Models (Role, EventCategory, ScribeTag, Shift, MissionLogEntry), views (timeline, shift list), seed command |
+| `test_anomalies.py` | `anomalies` | Models (Subsystem, AnomalyType, Anomaly, AnomalyNote), views (registry, add), seed command |
+| `test_handbook.py` | `handbook` | Models (Subsystem, AlertDefinition + version auto-increment), views (alert list, create), seed command |
+| `test_fdir.py` | `fdir` | Models (Subsystem + slug, FDIREntry), views (entry list, create), seed command |
 
-Run with `make test` or `python manage.py test --verbosity=2`.
+```bash
+make test                                  # run all 56 tests
+python manage.py test tests.test_procedures  # run one file
+python manage.py test tests                  # run everything in tests/
+```
 
 ---
 
