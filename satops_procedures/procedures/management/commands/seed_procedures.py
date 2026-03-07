@@ -7,10 +7,104 @@ from procedures.models import Procedure, ProcedureRun, Satellite, StepExecution,
 from procedures.services.procedure_loader import load_procedure
 
 PROCEDURES = [
-    {'yaml_file': 'bus_checkout', 'name': 'Bus Checkout', 'version': '1.0', 'tags': ['checkout', 'bus']},
-    {'yaml_file': 'payload_init', 'name': 'Payload Initialization', 'version': '2.1', 'tags': ['payload', 'commissioning']},
-    {'yaml_file': 'thermal_safehold', 'name': 'Thermal Safehold Procedure', 'version': '1.2', 'tags': ['thermal', 'safehold']},
-    {'yaml_file': 'orbit_maneuver', 'name': 'Orbit Correction Maneuver', 'version': '3.0', 'tags': ['orbit', 'maneuver', 'propulsion']},
+    {
+        'yaml_file': 'bus_checkout',
+        'name': 'Bus Checkout',
+        'version': '1.0',
+        'description': 'Full spacecraft bus health check covering power, thermal, telemetry, and operator signoff. Run after every contact gap or anomaly recovery.',
+        'tags': ['checkout', 'bus'],
+    },
+    {
+        'yaml_file': 'payload_init',
+        'name': 'Payload Initialization',
+        'version': '2.1',
+        'description': 'Power-up and configure the payload subsystem from safe mode through full operational readiness, including RF chain activation and telemetry verification.',
+        'tags': ['payload', 'commissioning'],
+    },
+    {
+        'yaml_file': 'thermal_safehold',
+        'name': 'Thermal Safehold Procedure',
+        'version': '1.2',
+        'description': 'Assess and maintain spacecraft thermal state during safehold events. Covers heater configuration, battery and propellant temps, and radiator checks.',
+        'tags': ['thermal', 'safehold'],
+    },
+    {
+        'yaml_file': 'orbit_maneuver',
+        'name': 'Orbit Correction Maneuver',
+        'version': '3.0',
+        'description': 'Plan, upload, arm, and execute an orbit correction burn with pre- and post-burn verification of propulsion, attitude, and ephemeris.',
+        'tags': ['orbit', 'maneuver', 'propulsion'],
+    },
+    {
+        'yaml_file': 'solar_array_deploy',
+        'name': 'Solar Array Deployment',
+        'version': '1.0',
+        'description': 'Command and verify deployment of solar array panels after launch vehicle separation. Includes pre-deploy health checks, actuator firing, and post-deploy power confirmation.',
+        'tags': ['commissioning', 'power', 'deployment'],
+    },
+    {
+        'yaml_file': 'adcs_calibration',
+        'name': 'ADCS Calibration',
+        'version': '2.0',
+        'description': 'Calibrate the Attitude Determination and Control System sensors (star trackers, sun sensors, magnetometers) and actuators (reaction wheels, magnetorquers).',
+        'tags': ['adcs', 'calibration'],
+    },
+    {
+        'yaml_file': 'comm_link_test',
+        'name': 'Communication Link Test',
+        'version': '1.5',
+        'description': 'End-to-end verification of uplink and downlink communication chains. Tests command reception, telemetry encoding, carrier lock, and bit-error rate across multiple data rates.',
+        'tags': ['comms', 'checkout'],
+    },
+    {
+        'yaml_file': 'battery_conditioning',
+        'name': 'Battery Conditioning Cycle',
+        'version': '1.1',
+        'description': 'Controlled deep-discharge and recharge cycle for Li-ion battery packs to recalibrate state-of-charge estimation and assess long-term cell health.',
+        'tags': ['power', 'battery', 'maintenance'],
+    },
+    {
+        'yaml_file': 'momentum_dump',
+        'name': 'Momentum Dump',
+        'version': '2.3',
+        'description': 'Desaturate reaction wheels by firing thrusters to offload accumulated angular momentum. Includes wheel speed assessment, thruster priming, and post-dump verification.',
+        'tags': ['adcs', 'propulsion', 'maintenance'],
+    },
+    {
+        'yaml_file': 'safe_mode_recovery',
+        'name': 'Safe Mode Recovery',
+        'version': '1.0',
+        'description': 'Step-by-step recovery of a spacecraft from autonomous safe mode, including root cause triage, subsystem re-enable sequence, and return to nominal operations.',
+        'tags': ['safehold', 'recovery'],
+    },
+    {
+        'yaml_file': 'firmware_upload',
+        'name': 'Firmware Upload',
+        'version': '3.1',
+        'description': 'Upload, verify, and activate new flight software on the onboard computer. Covers image staging, checksum verification, activation, and rollback contingency.',
+        'tags': ['software', 'maintenance'],
+    },
+    {
+        'yaml_file': 'ground_station_handoff',
+        'name': 'Ground Station Handoff',
+        'version': '1.4',
+        'description': 'Transfer active satellite tracking and commanding between ground stations during a pass. Ensures seamless telemetry continuity and command authority transfer.',
+        'tags': ['comms', 'ground'],
+    },
+    {
+        'yaml_file': 'deorbit_plan',
+        'name': 'Deorbit Planning & Execution',
+        'version': '1.0',
+        'description': 'End-of-life disposal procedure including passivation planning, final orbit lowering burns, propellant depletion, and battery safing for controlled reentry.',
+        'tags': ['orbit', 'end-of-life', 'propulsion'],
+    },
+    {
+        'yaml_file': 'antenna_pattern_test',
+        'name': 'Antenna Pattern Test',
+        'version': '2.0',
+        'description': 'Characterize the deployed antenna gain pattern by performing controlled attitude slews while measuring received signal strength at the ground station.',
+        'tags': ['comms', 'calibration', 'commissioning'],
+    },
 ]
 
 
@@ -21,12 +115,24 @@ class Command(BaseCommand):
         for p in PROCEDURES:
             proc, created = Procedure.objects.get_or_create(
                 yaml_file=p['yaml_file'],
-                defaults={'name': p['name'], 'version': p['version']},
+                defaults={
+                    'name': p['name'],
+                    'version': p['version'],
+                    'description': p.get('description', ''),
+                },
             )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created procedure: {proc.name}'))
             else:
-                self.stdout.write(f'Procedure already exists: {proc.name}')
+                updated = False
+                if not proc.description and p.get('description'):
+                    proc.description = p['description']
+                    updated = True
+                if updated:
+                    proc.save()
+                    self.stdout.write(f'Updated procedure: {proc.name}')
+                else:
+                    self.stdout.write(f'Procedure already exists: {proc.name}')
             for tag_name in p.get('tags', []):
                 tag, _ = Tag.objects.get_or_create(name=tag_name)
                 proc.tags.add(tag)
@@ -35,7 +141,6 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
-        # Sample procedure runs (only if no runs exist)
         if ProcedureRun.objects.count() == 0:
             self._create_sample_runs()
 
@@ -48,7 +153,6 @@ class Command(BaseCommand):
         procedures = list(Procedure.objects.all()[:4])
         if not satellites or not procedures:
             return
-        # Run 1: SAT-021, Bus Checkout, completed PASS (2 days ago)
         proc_bus = next((p for p in procedures if p.yaml_file == 'bus_checkout'), procedures[0])
         sat = next((s for s in satellites if s.name == 'SAT-021'), satellites[0])
         start1 = now - timedelta(days=2, hours=4)
@@ -66,7 +170,6 @@ class Command(BaseCommand):
         self._add_step_executions(run1, proc_bus.yaml_file, start1, status='PASS')
         self.stdout.write(self.style.SUCCESS(f'Created run: {sat.name} — {proc_bus.name} (PASS)'))
 
-        # Run 2: SAT-034, Thermal Safehold, completed PASS (1 day ago)
         proc_thermal = next((p for p in procedures if p.yaml_file == 'thermal_safehold'), procedures[1])
         sat2 = next((s for s in satellites if s.name == 'SAT-034'), satellites[1])
         start2 = now - timedelta(days=1, hours=2)
@@ -84,7 +187,6 @@ class Command(BaseCommand):
         self._add_step_executions(run2, proc_thermal.yaml_file, start2, status='PASS')
         self.stdout.write(self.style.SUCCESS(f'Created run: {sat2.name} — {proc_thermal.name} (PASS)'))
 
-        # Run 3: SAT-012, Bus Checkout, completed FAIL (12 hours ago) — one step FAIL
         start3 = now - timedelta(hours=12)
         run3 = ProcedureRun.objects.create(
             satellite=next((s for s in satellites if s.name == 'SAT-012'), satellites[2]),
@@ -100,7 +202,6 @@ class Command(BaseCommand):
         self._add_step_executions(run3, proc_bus.yaml_file, start3, fail_at_step_index=1)
         self.stdout.write(self.style.SUCCESS(f'Created run: SAT-012 — {proc_bus.name} (FAIL)'))
 
-        # Run 4: SAT-021, Payload Init, RUNNING (started 30 min ago)
         proc_payload = next((p for p in procedures if p.yaml_file == 'payload_init'), procedures[0])
         start4 = now - timedelta(minutes=30)
         run4 = ProcedureRun.objects.create(
