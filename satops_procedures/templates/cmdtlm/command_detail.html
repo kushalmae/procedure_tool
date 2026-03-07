@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ command.name }} — Commands{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'cmdtlm_command_list' %}">Commands</a> &rsaquo; {{ command.name }}
+</nav>
+
+<div class="flex items-start justify-between mb-5 gap-4">
+  <h1 class="text-2xl font-semibold text-gray-900">{{ command.name }}</h1>
+  <div class="no-print flex gap-2">
+    <a href="{% url 'cmdtlm_command_list' %}" class="btn btn-secondary">Back to list</a>
+  </div>
+</div>
+
+<!-- Command metadata -->
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
+  <h2 class="text-lg font-semibold text-gray-800 mb-4">Command Details</h2>
+  <dl class="detail-list">
+    <dt>Command Name</dt><dd>{{ command.name }}</dd>
+    {% if command.command_id %}
+    <dt>Command ID / Opcode</dt><dd><code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono">{{ command.command_id }}</code></dd>
+    {% endif %}
+    {% if command.subsystem %}
+    <dt>Subsystem</dt><dd>{{ command.subsystem }}</dd>
+    {% endif %}
+    {% if command.category %}
+    <dt>Category</dt><dd>{{ command.category }}</dd>
+    {% endif %}
+    {% if command.description %}
+    <dt>Description</dt><dd>{{ command.description|linebreaks }}</dd>
+    {% endif %}
+    <dt>Number of Inputs</dt><dd>{{ inputs|length }}</dd>
+    {% if command.notes %}
+    <dt>Notes</dt><dd class="bg-gray-50 rounded p-2">{{ command.notes|linebreaks }}</dd>
+    {% endif %}
+    <dt>Last Updated</dt><dd>{{ command.updated_at|date:"Y-m-d H:i" }}</dd>
+  </dl>
+</div>
+
+<!-- Command inputs -->
+{% if inputs %}
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200">
+    <h2 class="text-lg font-semibold text-gray-800">Command Inputs</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">#</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Input Name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Data Type</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Default</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Description</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Constraints</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for inp in inputs %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 text-gray-400 text-xs">{{ inp.order }}</td>
+          <td class="px-4 py-3 font-medium font-mono text-sm">{{ inp.name }}</td>
+          <td class="px-4 py-3">
+            {% if inp.data_type %}
+            <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ inp.data_type }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ inp.default_value|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ inp.description|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ inp.constraints|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 text-center text-gray-500">
+  This command has no defined inputs.
+</div>
+{% endif %}
+
+{% endblock %}

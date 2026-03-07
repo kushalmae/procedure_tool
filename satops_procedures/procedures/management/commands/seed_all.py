@@ -12,11 +12,12 @@ SEED_COMMANDS = [
     ('seed_handbook', {'alerts': True}, 'Handbook subsystems and sample alerts'),
     ('seed_fdir', {'entries': True}, 'FDIR subsystems and sample entries'),
     ('seed_anomalies', {'anomalies': True}, 'Anomaly tracker sample anomalies'),
+    ('seed_cmdtlm', {}, 'Command & Telemetry reference definitions'),
 ]
 
 
 class Command(BaseCommand):
-    help = 'Run all seed commands (procedures, scribe, handbook, fdir, events) in one go.'
+    help = 'Run all seed commands (procedures, scribe, handbook, fdir, anomalies, cmdtlm) in one go.'
 
     def add_arguments(self, parser):
         parser.add_argument(

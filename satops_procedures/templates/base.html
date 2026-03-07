@@ -75,6 +75,14 @@
             <a href="{% url 'scribe_timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Scribe</a>
             <a href="{% url 'handbook_alert_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Alerts Handbook</a>
             <a href="{% url 'fdir_entry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">FDIR Handbook</a>
+            <a href="{% url 'reference_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Reference Page</a>
+          </div>
+        </div>
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Command &amp; Telemetry</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'cmdtlm_command_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Commands</a>
+            <a href="{% url 'cmdtlm_telemetry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Telemetry</a>
           </div>
         </div>
       </nav>
@@ -143,6 +151,14 @@
             <a href="{% url 'scribe_timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Scribe</a>
             <a href="{% url 'handbook_alert_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Alerts Handbook</a>
             <a href="{% url 'fdir_entry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">FDIR Handbook</a>
+            <a href="{% url 'reference_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Reference Page</a>
+          </div>
+        </div>
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Command &amp; Telemetry</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'cmdtlm_command_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Commands</a>
+            <a href="{% url 'cmdtlm_telemetry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Telemetry</a>
           </div>
         </div>
       </nav>

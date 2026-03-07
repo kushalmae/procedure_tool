@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ tlm.name }} — Telemetry{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'cmdtlm_telemetry_list' %}">Telemetry</a> &rsaquo; {{ tlm.name }}
+</nav>
+
+<div class="flex items-start justify-between mb-5 gap-4">
+  <h1 class="text-2xl font-semibold text-gray-900">{{ tlm.name }}</h1>
+  <div class="no-print flex gap-2">
+    <a href="{% url 'cmdtlm_telemetry_list' %}" class="btn btn-secondary">Back to list</a>
+  </div>
+</div>
+
+<!-- Telemetry metadata -->
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
+  <h2 class="text-lg font-semibold text-gray-800 mb-4">Telemetry Details</h2>
+  <dl class="detail-list">
+    <dt>Telemetry Name</dt><dd>{{ tlm.name }}</dd>
+    {% if tlm.mnemonic %}
+    <dt>Mnemonic</dt><dd><code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono">{{ tlm.mnemonic }}</code></dd>
+    {% endif %}
+    {% if tlm.subsystem %}
+    <dt>Subsystem</dt><dd>{{ tlm.subsystem }}</dd>
+    {% endif %}
+    {% if tlm.apid %}
+    <dt>APID / Packet</dt><dd class="font-mono text-sm">{{ tlm.apid }}</dd>
+    {% endif %}
+    {% if tlm.data_type %}
+    <dt>Data Type</dt>
+    <dd><span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ tlm.data_type }}</span></dd>
+    {% endif %}
+    {% if tlm.units %}
+    <dt>Units</dt><dd>{{ tlm.units }}</dd>
+    {% endif %}
+    {% if tlm.description %}
+    <dt>Description</dt><dd>{{ tlm.description|linebreaks }}</dd>
+    {% endif %}
+    {% if tlm.notes %}
+    <dt>Notes</dt><dd class="bg-gray-50 rounded p-2">{{ tlm.notes|linebreaks }}</dd>
+    {% endif %}
+    <dt>Last Updated</dt><dd>{{ tlm.updated_at|date:"Y-m-d H:i" }}</dd>
+  </dl>
+</div>
+
+<!-- Enum definitions -->
+{% if enums %}
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-200">
+    <h2 class="text-lg font-semibold text-gray-800">Enum Definitions</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Value</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Label</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Description</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for e in enums %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-mono text-sm font-medium">{{ e.value }}</td>
+          <td class="px-4 py-3 text-gray-800">{{ e.label }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ e.description|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 text-center text-gray-500">
+  No enum definitions for this telemetry point.
+</div>
+{% endif %}
+
+{% endblock %}

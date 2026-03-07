@@ -25,6 +25,8 @@ INSTALLED_APPS = [
     'handbook',
     'fdir',
     'anomalies',
+    'cmdtlm',
+    'references',
 ]
 
 MIDDLEWARE = [
