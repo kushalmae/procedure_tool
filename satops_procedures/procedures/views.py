@@ -214,7 +214,7 @@ def procedure_list(request):
         procedures = procedures.filter(tags__id=filter_tag_id).distinct()
     if q:
         procedures = procedures.filter(
-            Q(name__icontains=q) | Q(version__icontains=q)
+            Q(name__icontains=q) | Q(version__icontains=q) | Q(description__icontains=q)
         )
     # Attach step count where YAML is loadable
     for p in procedures:
@@ -292,6 +292,7 @@ def procedure_create(request):
                 'error': 'Procedure name is required.',
                 'form_name': request.POST.get('name'),
                 'form_version': request.POST.get('version'),
+                'form_description': request.POST.get('description', '').strip(),
                 'form_preconditions': request.POST.get('preconditions', '').strip(),
                 'form_steps': steps,
             })
@@ -300,9 +301,11 @@ def procedure_create(request):
                 'error': 'At least one step (id and description) is required.',
                 'form_name': name,
                 'form_version': version,
+                'form_description': request.POST.get('description', '').strip(),
                 'form_preconditions': request.POST.get('preconditions', '').strip(),
                 'form_steps': [],
             })
+        description = (request.POST.get('description') or '').strip()
         preconditions = (request.POST.get('preconditions') or '').strip()
         proc_dict = {'name': name, 'version': version, 'steps': steps}
         if preconditions:
@@ -315,14 +318,16 @@ def procedure_create(request):
                 'error': f'Could not save procedure file: {e}',
                 'form_name': name,
                 'form_version': version,
+                'form_description': description,
                 'form_preconditions': preconditions,
                 'form_steps': steps,
             })
-        procedure = Procedure.objects.create(name=name, version=version, yaml_file=yaml_stem)
+        procedure = Procedure.objects.create(name=name, version=version, description=description, yaml_file=yaml_stem)
         return redirect(reverse('procedure_review') + f'?procedure={procedure.id}')
     return render(request, 'procedure_create.html', {
         'form_name': '',
         'form_version': '1.0',
+        'form_description': '',
         'form_preconditions': '',
         'form_steps': [{'id': '', 'description': '', 'input': ''}],
     })
@@ -341,6 +346,7 @@ def procedure_edit(request, procedure_id):
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         version = request.POST.get('version', '1.0').strip() or '1.0'
+        description = (request.POST.get('description') or '').strip()
         preconditions = (request.POST.get('preconditions') or '').strip()
         step_ids = request.POST.getlist('step_id')
         step_descriptions = request.POST.getlist('step_description')
@@ -361,6 +367,7 @@ def procedure_edit(request, procedure_id):
                 'error': 'Procedure name is required.',
                 'form_name': request.POST.get('name'),
                 'form_version': request.POST.get('version'),
+                'form_description': description,
                 'form_preconditions': preconditions,
                 'form_steps': [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in (new_steps or [{}])] or [{'id': '', 'description': '', 'input': ''}],
             })
@@ -370,6 +377,7 @@ def procedure_edit(request, procedure_id):
                 'error': 'At least one step (id and description) is required.',
                 'form_name': name,
                 'form_version': version,
+                'form_description': description,
                 'form_preconditions': preconditions,
                 'form_steps': [{'id': '', 'description': '', 'input': ''}],
             })
@@ -384,11 +392,13 @@ def procedure_edit(request, procedure_id):
                 'error': f'Could not save procedure file: {e}',
                 'form_name': name,
                 'form_version': version,
+                'form_description': description,
                 'form_preconditions': preconditions,
                 'form_steps': [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in new_steps] or [{'id': '', 'description': '', 'input': ''}],
             })
         procedure.name = name
         procedure.version = version
+        procedure.description = description
         procedure.save()
         messages.success(request, f'Procedure "{name}" updated.')
         return redirect(reverse('procedure_review') + f'?procedure={procedure.id}')
@@ -396,6 +406,7 @@ def procedure_edit(request, procedure_id):
         'procedure': procedure,
         'form_name': procedure.name,
         'form_version': procedure.version,
+        'form_description': procedure.description,
         'form_preconditions': form_preconditions,
         'form_steps': form_steps or [{'id': '', 'description': '', 'input': ''}],
     })
