@@ -152,19 +152,19 @@
 
                 <div class="hp-tool-card">
                     <div class="hp-tool-number">03</div>
-                    <h3>Fleet Anomaly Tracker</h3>
+                    <h3>Anomaly Tracker</h3>
                     <p>
-                        Capture, track, and manage anomalies across your satellite fleet. Standardized reporting with
-                        satellite, subsystem, severity, and operational impact fields. Track investigation progress from
-                        New through Resolved.
+                        Report, track, and resolve operational anomalies across your satellite fleet. Standardized
+                        lifecycle from detection through investigation, mitigation, and closure with full
+                        resolution documentation.
                     </p>
                     <ul class="hp-tool-highlights">
-                        <li>Structured anomaly reporting with severity classification</li>
-                        <li>Centralized fleet-wide anomaly registry</li>
-                        <li>Status tracking: New &rarr; Investigating &rarr; Mitigated &rarr; Resolved</li>
-                        <li>Notes and updates with author attribution</li>
+                        <li>Structured anomaly reporting with L1–L5 severity levels</li>
+                        <li>Full lifecycle: New &rarr; Investigating &rarr; Mitigated &rarr; Resolved &rarr; Closed</li>
+                        <li>Timeline with investigation notes, actions, and status changes</li>
+                        <li>Resolution documentation with root cause and recommendations</li>
                     </ul>
-                    <a href="{% url 'anomalies_registry' %}" class="hp-tool-link">View Anomaly Tracker &rarr;</a>
+                    <a href="{% url 'anomalies_list' %}" class="hp-tool-link">View Anomaly Tracker &rarr;</a>
                 </div>
 
                 <div class="hp-tool-card">
@@ -306,7 +306,7 @@ python manage.py seed_all</code></pre>
             <a href="{% url 'dashboard' %}">Dashboard</a>
             <a href="{% url 'procedure_list' %}">Procedures</a>
             <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
-            <a href="{% url 'anomalies_registry' %}">Anomaly Tracker</a>
+            <a href="{% url 'anomalies_list' %}">Anomaly Tracker</a>
             <a href="{% url 'handbook_alert_list' %}">Alerts Handbook</a>
             <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
         </div>

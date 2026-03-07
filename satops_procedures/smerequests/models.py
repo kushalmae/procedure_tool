@@ -54,7 +54,7 @@ class SMERequest(models.Model):
         related_name='sme_requests',
     )
     subsystem = models.ForeignKey(
-        'anomalies.Subsystem',
+        'procedures.Subsystem',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

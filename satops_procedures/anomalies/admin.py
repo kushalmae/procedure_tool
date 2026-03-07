@@ -1,31 +1,26 @@
 from django.contrib import admin
 
-from .models import Anomaly, AnomalyNote, AnomalyType, Subsystem
+from .models import Anomaly, AnomalyTimelineEntry
 
 
-@admin.register(Subsystem)
-class SubsystemAdmin(admin.ModelAdmin):
-    list_display = ['name']
-    search_fields = ['name']
-
-
-@admin.register(AnomalyType)
-class AnomalyTypeAdmin(admin.ModelAdmin):
-    list_display = ['name']
-    search_fields = ['name']
+class AnomalyTimelineEntryInline(admin.TabularInline):
+    model = AnomalyTimelineEntry
+    extra = 0
+    readonly_fields = ['created_at']
 
 
 @admin.register(Anomaly)
 class AnomalyAdmin(admin.ModelAdmin):
-    list_display = ['id', 'satellite', 'subsystem', 'anomaly_type', 'severity', 'status', 'detection_time', 'reported_by']
+    list_display = ['id', 'title', 'satellite', 'subsystem', 'severity', 'status', 'detected_time', 'created_by']
     list_filter = ['satellite', 'subsystem', 'severity', 'status']
-    search_fields = ['description', 'satellite__name', 'subsystem__name']
-    date_hierarchy = 'detection_time'
+    search_fields = ['title', 'description', 'satellite__name']
+    date_hierarchy = 'detected_time'
+    inlines = [AnomalyTimelineEntryInline]
 
 
-@admin.register(AnomalyNote)
-class AnomalyNoteAdmin(admin.ModelAdmin):
-    list_display = ['id', 'anomaly', 'created_at', 'created_by']
-    list_filter = ['created_at']
+@admin.register(AnomalyTimelineEntry)
+class AnomalyTimelineEntryAdmin(admin.ModelAdmin):
+    list_display = ['id', 'anomaly', 'entry_type', 'created_at', 'created_by']
+    list_filter = ['entry_type', 'created_at']
     search_fields = ['body']
     date_hierarchy = 'created_at'

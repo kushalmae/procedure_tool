@@ -3,140 +3,167 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from anomalies.models import Anomaly, AnomalyNote, AnomalyType, Subsystem
-from procedures.models import Satellite
+from anomalies.models import Anomaly, AnomalyTimelineEntry
+from procedures.models import Satellite, Subsystem
 
-DEFAULT_SUBSYSTEMS = [
-    'Power',
-    'Thermal',
-    'C&DH',
-    'Comm',
-    'GNC',
-    'Payload',
-    'Ground',
-]
-
-DEFAULT_ANOMALY_TYPES = [
-    'Fault',
-    'Performance Degradation',
-    'Unexpected Behavior',
-]
-
-# Sample anomalies: (satellite_name, subsystem_name, type_name, severity, impact, status, description, notes_list)
 SAMPLE_ANOMALIES = [
-    ('SAT-021', 'Power', 'Fault', Anomaly.SEVERITY_HIGH, Anomaly.IMPACT_MODERATE, Anomaly.STATUS_INVESTIGATING,
-     'Bus voltage dip during eclipse exit. Voltage recovered to nominal within 2 minutes. Logging for trend analysis.',
-     ['Checked battery state of charge; within limits.', 'Requesting telemetry dump for next pass.']),
-    ('SAT-034', 'Thermal', 'Performance Degradation', Anomaly.SEVERITY_MEDIUM, Anomaly.IMPACT_MINOR, Anomaly.STATUS_NEW,
-     'Panel temp sensor T4 reading 3°C above predicted. Other sensors nominal. May be sun angle / seasonal.',
-     []),
-    ('SAT-021', 'Comm', 'Fault', Anomaly.SEVERITY_CRITICAL, Anomaly.IMPACT_MAJOR, Anomaly.STATUS_MITIGATED,
-     'UHF beacon lost for 8 minutes during pass 2847. Reacquired on next AOS. Ground station reported no local issues.',
-     ['Switched to backup TX per procedure.', 'Monitoring next 3 passes.']),
-    ('SAT-012', 'GNC', 'Unexpected Behavior', Anomaly.SEVERITY_LOW, Anomaly.IMPACT_NONE, Anomaly.STATUS_RESOLVED,
-     'Single momentum wheel speed spike during maneuver. Auto recovery nominal. No recurrence over 5 days.',
-     ['Closed as nominal variant; no procedure change.']),
-    ('SAT-034', 'Payload', 'Performance Degradation', Anomaly.SEVERITY_MEDIUM, Anomaly.IMPACT_MINOR, Anomaly.STATUS_INVESTIGATING,
-     'Elevated dark current on detector channel 2. Within spec but trending up. Calibration still valid.',
-     []),
-    ('SAT-012', 'C&DH', 'Fault', Anomaly.SEVERITY_MEDIUM, Anomaly.IMPACT_MODERATE, Anomaly.STATUS_NEW,
-     'Memory scrub reported single-bit error in sector 0x1A. ECC corrected. No impact to operations.',
-     []),
-    # 10 more sample anomalies
-    ('SAT-034', 'Ground', 'Fault', Anomaly.SEVERITY_LOW, Anomaly.IMPACT_NONE, Anomaly.STATUS_RESOLVED,
-     'Pass 2901: antenna pointing error 0.2 deg for 30 sec. Autotrack reacquired. No data loss.',
-     ['Verified ground config; no repeat on next pass.']),
-    ('SAT-021', 'Thermal', 'Performance Degradation', Anomaly.SEVERITY_MEDIUM, Anomaly.IMPACT_MINOR, Anomaly.STATUS_INVESTIGATING,
-     'Heater H3 duty cycle 12% above baseline for 24h. Box temps nominal. Possible sensor drift.',
-     []),
-    ('SAT-012', 'Power', 'Fault', Anomaly.SEVERITY_HIGH, Anomaly.IMPACT_MODERATE, Anomaly.STATUS_NEW,
-     'Solar array current drop on string B during sunrise. String A nominal. Monitoring next eclipse.',
-     ['Will compare with SAT-034 string B telemetry.']),
-    ('SAT-034', 'Comm', 'Unexpected Behavior', Anomaly.SEVERITY_LOW, Anomaly.IMPACT_NONE, Anomaly.STATUS_RESOLVED,
-     'One duplicate frame in downlink session. CRC ok. Attributed to ground retry; closed.',
-     []),
-    ('SAT-021', 'Payload', 'Fault', Anomaly.SEVERITY_CRITICAL, Anomaly.IMPACT_MAJOR, Anomaly.STATUS_MITIGATED,
-     'Imager safe mode at T+120s into pass. Auto-recovery at T+180s. Science loss for that pass only.',
-     ['Root cause under review.', 'Updated watchdog threshold per vendor note.']),
-    ('SAT-012', 'Thermal', 'Performance Degradation', Anomaly.SEVERITY_LOW, Anomaly.IMPACT_NONE, Anomaly.STATUS_NEW,
-     'Radiator temp 1C below prediction. All other zones nominal. Seasonal; no action.',
-     []),
-    ('SAT-034', 'GNC', 'Fault', Anomaly.SEVERITY_MEDIUM, Anomaly.IMPACT_MINOR, Anomaly.STATUS_INVESTIGATING,
-     'Star tracker lost lock for 5s during terminator. Coarse sun sensor kept attitude. No maneuver.',
-     []),
-    ('SAT-021', 'C&DH', 'Unexpected Behavior', Anomaly.SEVERITY_LOW, Anomaly.IMPACT_NONE, Anomaly.STATUS_RESOLVED,
-     'Time tag jump +1s in one HK packet. Subsequent packets correct. Likely ground timestamp; closed.',
-     []),
-    ('SAT-012', 'Payload', 'Performance Degradation', Anomaly.SEVERITY_MEDIUM, Anomaly.IMPACT_MODERATE, Anomaly.STATUS_NEW,
-     'Detector bias voltage 2% high on channel 4. Calibration run scheduled. Data still usable with correction.',
-     []),
-    ('SAT-034', 'Power', 'Fault', Anomaly.SEVERITY_HIGH, Anomaly.IMPACT_MODERATE, Anomaly.STATUS_MITIGATED,
-     'Battery cell 2 voltage spread 45 mV. Balancing commanded; next pass to verify.',
-     ['Balancing cycle completed.', 'Spread reduced to 12 mV.']),
+    {
+        'satellite': 'SAT-021',
+        'title': 'Bus voltage dip during eclipse exit',
+        'subsystem': 'Power',
+        'severity': Anomaly.SEVERITY_L4,
+        'status': Anomaly.STATUS_INVESTIGATING,
+        'description': 'Bus voltage dropped to 26.1V during eclipse exit cycle. Recovery to nominal 28V within 2 minutes. Logging for trend analysis across upcoming eclipses.',
+        'timeline': [
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Battery SOC checked — within limits at 82%.'),
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Requesting telemetry dump for next three passes.'),
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from New to Investigating'),
+        ],
+    },
+    {
+        'satellite': 'SAT-034',
+        'title': 'Panel temp sensor T4 elevated reading',
+        'subsystem': 'Thermal',
+        'severity': Anomaly.SEVERITY_L2,
+        'status': Anomaly.STATUS_NEW,
+        'description': 'Panel temperature sensor T4 reading 3°C above predicted model. All other sensors nominal. May be sun angle or seasonal effect.',
+        'timeline': [],
+    },
+    {
+        'satellite': 'SAT-021',
+        'title': 'UHF beacon loss during pass 2847',
+        'subsystem': 'Comm',
+        'severity': Anomaly.SEVERITY_L5,
+        'status': Anomaly.STATUS_MITIGATED,
+        'description': 'UHF beacon lost for 8 minutes during pass 2847. Reacquired on next AOS. Ground station confirmed no local issues.',
+        'timeline': [
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from New to Investigating'),
+            (AnomalyTimelineEntry.ENTRY_ACTION, 'Switched to backup TX per emergency comm procedure.'),
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Monitoring next 3 passes for recurrence.'),
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from Investigating to Mitigated'),
+        ],
+    },
+    {
+        'satellite': 'SAT-012',
+        'title': 'Momentum wheel speed spike during maneuver',
+        'subsystem': 'GNC',
+        'severity': Anomaly.SEVERITY_L1,
+        'status': Anomaly.STATUS_CLOSED,
+        'description': 'Single momentum wheel speed spike during planned maneuver. Auto-recovery nominal. No recurrence over 5 days.',
+        'root_cause': 'Transient torque disturbance during maneuver initiation. Within design envelope.',
+        'resolution_actions': 'Monitored for 5 days with no recurrence. No procedure change required.',
+        'recommendations': 'Continue standard monitoring. No design change needed.',
+        'timeline': [
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from New to Investigating'),
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Wheel telemetry review complete — single transient spike.'),
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from Investigating to Resolved'),
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Anomaly closed. Root cause: transient torque disturbance.'),
+        ],
+    },
+    {
+        'satellite': 'SAT-034',
+        'title': 'Elevated dark current on detector channel 2',
+        'subsystem': 'Payload',
+        'severity': Anomaly.SEVERITY_L3,
+        'status': Anomaly.STATUS_INVESTIGATING,
+        'description': 'Dark current on detector channel 2 trending upward. Currently within spec but approaching upper limit. Calibration still valid.',
+        'timeline': [
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from New to Investigating'),
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Scheduled calibration run for next payload activation window.'),
+        ],
+    },
+    {
+        'satellite': 'SAT-012',
+        'title': 'Memory scrub single-bit error in sector 0x1A',
+        'subsystem': 'C&DH',
+        'severity': Anomaly.SEVERITY_L2,
+        'status': Anomaly.STATUS_NEW,
+        'description': 'Routine memory scrub reported single-bit error in sector 0x1A. ECC corrected. No impact to current operations.',
+        'timeline': [],
+    },
+    {
+        'satellite': 'SAT-021',
+        'title': 'Imager safe mode during pass',
+        'subsystem': 'Payload',
+        'severity': Anomaly.SEVERITY_L5,
+        'status': Anomaly.STATUS_INVESTIGATING,
+        'description': 'Imager entered safe mode at T+120s into imaging pass. Auto-recovery at T+180s. Science data lost for that pass only.',
+        'timeline': [
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from New to Investigating'),
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Root cause under review with vendor.'),
+            (AnomalyTimelineEntry.ENTRY_ACTION, 'Updated watchdog threshold per vendor technical note TN-2026-003.'),
+        ],
+    },
+    {
+        'satellite': 'SAT-034',
+        'title': 'Star tracker lost lock at terminator',
+        'subsystem': 'GNC',
+        'severity': Anomaly.SEVERITY_L3,
+        'status': Anomaly.STATUS_MITIGATED,
+        'description': 'Star tracker lost lock for 5 seconds during terminator crossing. Coarse sun sensor maintained attitude knowledge. No maneuver impact.',
+        'timeline': [
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from New to Investigating'),
+            (AnomalyTimelineEntry.ENTRY_NOTE, 'Known behavior near terminator — reviewing exclusion zone parameters.'),
+            (AnomalyTimelineEntry.ENTRY_ACTION, 'Updated star tracker exclusion zone from 15° to 20° around Earth limb.'),
+            (AnomalyTimelineEntry.ENTRY_STATUS_CHANGE, 'Status changed from Investigating to Mitigated'),
+        ],
+    },
 ]
 
 
 class Command(BaseCommand):
-    help = 'Seed Fleet Anomaly Tracker: Subsystems, AnomalyTypes, and optionally sample anomalies (--anomalies).'
+    help = 'Seed Anomaly Tracker with sample anomalies and timeline entries.'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--anomalies',
             action='store_true',
-            help='Also create sample anomalies (and notes). Ensures sample satellites exist.',
+            help='Create sample anomalies with timeline entries. Ensures sample satellites exist.',
         )
 
     def handle(self, *args, **options):
-        for name in DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(name=name, defaults={'name': name})
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
-        for name in DEFAULT_ANOMALY_TYPES:
-            _, created = AnomalyType.objects.get_or_create(name=name, defaults={'name': name})
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created anomaly type: {name}'))
+        if not options.get('anomalies'):
+            self.stdout.write('Use --anomalies to create sample data.')
+            return
 
-        if options['anomalies']:
-            self._seed_anomalies()
-
-        self.stdout.write(self.style.SUCCESS('Anomalies seed complete.'))
-
-    def _seed_anomalies(self):
         now = timezone.now()
-        # Ensure we have satellites (match seed_procedures names)
+
         for name in ['SAT-021', 'SAT-034', 'SAT-012']:
-            sat, created = Satellite.objects.get_or_create(name=name, defaults={'name': name})
+            sat, created = Satellite.objects.get_or_create(name=name)
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
         subs = {s.name: s for s in Subsystem.objects.all()}
-        types = {t.name: t for t in AnomalyType.objects.all()}
 
-        for i, row in enumerate(SAMPLE_ANOMALIES):
-            sat_name, sub_name, type_name, severity, impact, status, description, notes_list = row
-            satellite = Satellite.objects.get(name=sat_name)
-            subsystem = subs.get(sub_name)
-            anomaly_type = types.get(type_name)
-            # Stagger detection_time: most recent first
-            detection_time = now - timedelta(hours=2 * i, minutes=15 * i)
+        for i, data in enumerate(SAMPLE_ANOMALIES):
+            satellite = Satellite.objects.get(name=data['satellite'])
+            detected_time = now - timedelta(hours=3 * i, minutes=20 * i)
 
             anomaly, created = Anomaly.objects.get_or_create(
+                title=data['title'],
                 satellite=satellite,
-                detection_time=detection_time,
                 defaults={
-                    'subsystem': subsystem,
-                    'anomaly_type': anomaly_type,
-                    'severity': severity,
-                    'operational_impact': impact,
-                    'status': status,
-                    'description': description,
-                    'reported_by': None,
+                    'subsystem': subs.get(data['subsystem']),
+                    'severity': data['severity'],
+                    'status': data['status'],
+                    'description': data['description'],
+                    'detected_time': detected_time,
+                    'root_cause': data.get('root_cause', ''),
+                    'resolution_actions': data.get('resolution_actions', ''),
+                    'recommendations': data.get('recommendations', ''),
                 },
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f'Created anomaly: {satellite.name} — {description[:50]}…'))
-                for note_body in notes_list:
-                    AnomalyNote.objects.create(anomaly=anomaly, body=note_body, created_by=None)
-                    self.stdout.write(f'  Added note: {note_body[:40]}…')
+                self.stdout.write(self.style.SUCCESS(f'Created anomaly: {anomaly.title}'))
+                for j, (entry_type, body) in enumerate(data['timeline']):
+                    AnomalyTimelineEntry.objects.create(
+                        anomaly=anomaly,
+                        entry_type=entry_type,
+                        body=body,
+                        created_at=detected_time + timedelta(minutes=30 * (j + 1)),
+                    )
+                    self.stdout.write(f'  Added timeline entry: {body[:50]}…')
             else:
-                self.stdout.write(f'Sample anomaly already exists (e.g. {satellite.name} @ {detection_time})')
+                self.stdout.write(f'Anomaly already exists: {data["title"]}')
+
+        self.stdout.write(self.style.SUCCESS('Anomalies seed complete.'))

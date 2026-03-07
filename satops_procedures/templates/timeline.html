@@ -81,8 +81,10 @@
             {% elif ev.type == 'scribe' %}
             <strong>{{ ev.role_name }}</strong> — {{ ev.category_name }}{% if ev.description %}: <span class="text-gray-600">{{ ev.description|truncatewords:15 }}</span>{% endif %}
             {% elif ev.type == 'anomaly' %}
-            <span class="badge badge-{{ ev.severity|lower }}">{{ ev.severity }}</span>
-            {{ ev.status }}{% if ev.description %} — <span class="text-gray-600">{{ ev.description|truncatewords:12 }}</span>{% endif %}
+            <span class="font-medium">{{ ev.anomaly_title }}</span>
+            <span class="badge badge-severity-{{ ev.severity|lower }} ml-1">{{ ev.severity }}</span>
+            <span class="badge badge-{{ ev.status|lower }} ml-1">{{ ev.status }}</span>
+            {% if ev.description %}<span class="text-gray-600 block text-xs mt-0.5">{{ ev.description|truncatewords:12 }}</span>{% endif %}
             {% endif %}
           </td>
           <td class="px-4 py-3 no-print">
@@ -91,7 +93,7 @@
             {% elif ev.type == 'scribe' %}
             <a href="{% url 'scribe_timeline' %}" class="text-brand hover:underline">Timeline</a>
             {% elif ev.type == 'anomaly' %}
-            <a href="{% url 'anomalies_detail' ev.anomaly_id %}" class="text-brand hover:underline">View</a>
+            <a href="{% url 'anomalies_detail' anomaly_id=ev.anomaly_id %}" class="text-brand hover:underline">View</a>
             {% endif %}
           </td>
         </tr>

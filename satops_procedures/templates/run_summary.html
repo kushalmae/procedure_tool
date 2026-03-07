@@ -53,20 +53,6 @@
     </div>
     {% endif %}
 
-    {% if run.linked_anomalies.all %}
-    <div class="no-print bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-      <h3 class="text-sm font-semibold text-red-800 mb-2">Anomalies reported during this run</h3>
-      <ul class="space-y-1">
-        {% for a in run.linked_anomalies.all %}
-        <li class="text-sm">
-          <a href="{% url 'anomalies_detail' a.id %}" class="text-brand hover:underline">Anomaly {{ a.id }}</a>
-          — {{ a.satellite.name }} · <span class="badge badge-{{ a.severity|lower }}">{{ a.get_severity_display }}</span> {{ a.get_status_display }}{% if a.description %} — {{ a.description|truncatewords:12 }}{% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-
     <!-- Steps -->
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">

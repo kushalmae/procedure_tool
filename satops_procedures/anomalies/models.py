@@ -2,92 +2,50 @@ from django.conf import settings
 from django.db import models
 
 
-class Subsystem(models.Model):
-    name = models.CharField(max_length=80)
-
-    class Meta:
-        ordering = ['name']
-
-    def __str__(self):
-        return self.name
-
-
-class AnomalyType(models.Model):
-    name = models.CharField(max_length=80)
-
-    class Meta:
-        ordering = ['name']
-        verbose_name_plural = 'anomaly types'
-
-    def __str__(self):
-        return self.name
-
-
 class Anomaly(models.Model):
     STATUS_NEW = 'NEW'
     STATUS_INVESTIGATING = 'INVESTIGATING'
     STATUS_MITIGATED = 'MITIGATED'
     STATUS_RESOLVED = 'RESOLVED'
+    STATUS_CLOSED = 'CLOSED'
     STATUS_CHOICES = [
         (STATUS_NEW, 'New'),
         (STATUS_INVESTIGATING, 'Investigating'),
         (STATUS_MITIGATED, 'Mitigated'),
         (STATUS_RESOLVED, 'Resolved'),
+        (STATUS_CLOSED, 'Closed'),
     ]
 
-    SEVERITY_LOW = 'LOW'
-    SEVERITY_MEDIUM = 'MEDIUM'
-    SEVERITY_HIGH = 'HIGH'
-    SEVERITY_CRITICAL = 'CRITICAL'
+    SEVERITY_L1 = 'L1'
+    SEVERITY_L2 = 'L2'
+    SEVERITY_L3 = 'L3'
+    SEVERITY_L4 = 'L4'
+    SEVERITY_L5 = 'L5'
     SEVERITY_CHOICES = [
-        (SEVERITY_LOW, 'Low'),
-        (SEVERITY_MEDIUM, 'Medium'),
-        (SEVERITY_HIGH, 'High'),
-        (SEVERITY_CRITICAL, 'Critical'),
+        (SEVERITY_L1, 'L1 — Informational'),
+        (SEVERITY_L2, 'L2 — Minor'),
+        (SEVERITY_L3, 'L3 — Operational'),
+        (SEVERITY_L4, 'L4 — Major'),
+        (SEVERITY_L5, 'L5 — Critical'),
     ]
 
-    IMPACT_NONE = 'NONE'
-    IMPACT_MINOR = 'MINOR'
-    IMPACT_MODERATE = 'MODERATE'
-    IMPACT_MAJOR = 'MAJOR'
-    IMPACT_MISSION_CRITICAL = 'MISSION_CRITICAL'
-    IMPACT_CHOICES = [
-        (IMPACT_NONE, 'None'),
-        (IMPACT_MINOR, 'Minor'),
-        (IMPACT_MODERATE, 'Moderate'),
-        (IMPACT_MAJOR, 'Major'),
-        (IMPACT_MISSION_CRITICAL, 'Mission-Critical'),
-    ]
-
+    title = models.CharField(max_length=200)
     satellite = models.ForeignKey(
         'procedures.Satellite',
         on_delete=models.PROTECT,
         related_name='anomalies',
     )
     subsystem = models.ForeignKey(
-        Subsystem,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='anomalies',
-    )
-    anomaly_type = models.ForeignKey(
-        AnomalyType,
+        'procedures.Subsystem',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='anomalies',
     )
     severity = models.CharField(
-        max_length=20,
+        max_length=5,
         choices=SEVERITY_CHOICES,
-        default=SEVERITY_MEDIUM,
-    )
-    detection_time = models.DateTimeField()
-    operational_impact = models.CharField(
-        max_length=20,
-        choices=IMPACT_CHOICES,
-        default=IMPACT_NONE,
+        default=SEVERITY_L2,
     )
     status = models.CharField(
         max_length=20,
@@ -95,58 +53,87 @@ class Anomaly(models.Model):
         default=STATUS_NEW,
     )
     description = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    reported_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
+    detected_time = models.DateTimeField()
+
+    root_cause = models.TextField(
         blank=True,
-        related_name='reported_anomalies',
+        help_text='Root cause summary documented at resolution.',
     )
-    procedure_run = models.ForeignKey(
-        'procedures.ProcedureRun',
-        on_delete=models.SET_NULL,
-        null=True,
+    resolution_actions = models.TextField(
         blank=True,
-        related_name='linked_anomalies',
-        help_text='If this anomaly was observed during a procedure run, link it here.',
+        help_text='Actions taken to resolve the issue.',
     )
-    resolution_procedure = models.ForeignKey(
-        'procedures.Procedure',
-        on_delete=models.SET_NULL,
-        null=True,
+    recommendations = models.TextField(
         blank=True,
-        related_name='resolution_for_anomalies',
-        help_text='Procedure used or recommended to resolve this anomaly (optional).',
+        help_text='Follow-up recommendations or lessons learned.',
     )
 
-    class Meta:
-        ordering = ['-detection_time']
-        verbose_name_plural = 'anomalies'
-
-    def __str__(self):
-        return f"{self.satellite} – {self.detection_time} ({self.status})"
-
-
-class AnomalyNote(models.Model):
-    anomaly = models.ForeignKey(
-        Anomaly,
-        on_delete=models.CASCADE,
-        related_name='notes',
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='anomaly_notes',
+        related_name='created_anomalies',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-detected_time']
+        verbose_name_plural = 'anomalies'
+
+    def __str__(self):
+        return f"ANOM-{self.pk} {self.title}"
+
+    @property
+    def is_open(self):
+        return self.status not in (self.STATUS_RESOLVED, self.STATUS_CLOSED)
+
+    @property
+    def severity_rank(self):
+        """Numeric rank for sorting: higher = more severe."""
+        return {'L1': 1, 'L2': 2, 'L3': 3, 'L4': 4, 'L5': 5}.get(self.severity, 0)
+
+
+class AnomalyTimelineEntry(models.Model):
+    ENTRY_NOTE = 'NOTE'
+    ENTRY_STATUS_CHANGE = 'STATUS_CHANGE'
+    ENTRY_SEVERITY_CHANGE = 'SEVERITY_CHANGE'
+    ENTRY_ACTION = 'ACTION'
+    ENTRY_PROCEDURE = 'PROCEDURE'
+    ENTRY_TYPE_CHOICES = [
+        (ENTRY_NOTE, 'Note'),
+        (ENTRY_STATUS_CHANGE, 'Status Change'),
+        (ENTRY_SEVERITY_CHANGE, 'Severity Change'),
+        (ENTRY_ACTION, 'Action Taken'),
+        (ENTRY_PROCEDURE, 'Procedure Run'),
+    ]
+
+    anomaly = models.ForeignKey(
+        Anomaly,
+        on_delete=models.CASCADE,
+        related_name='timeline_entries',
+    )
+    entry_type = models.CharField(
+        max_length=20,
+        choices=ENTRY_TYPE_CHOICES,
+        default=ENTRY_NOTE,
     )
     body = models.TextField()
+    old_value = models.CharField(max_length=50, blank=True)
+    new_value = models.CharField(max_length=50, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='anomaly_timeline_entries',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
+        verbose_name_plural = 'anomaly timeline entries'
 
     def __str__(self):
-        return f"{self.anomaly_id} – {self.created_at}"
+        return f"{self.anomaly_id} — {self.get_entry_type_display()} — {self.created_at}"

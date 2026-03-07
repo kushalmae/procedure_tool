@@ -5,7 +5,7 @@
 
 <div class="flex items-center justify-between mb-2">
   <h1 class="text-2xl font-semibold text-gray-900">Fleet Overview</h1>
-  <span class="badge badge-health-{{ fleet_health }} text-sm" title="Green: nominal; Yellow: open medium/low anomalies or recent fail; Red: open critical/high anomaly">
+  <span class="badge badge-health-{{ fleet_health }} text-sm" title="Green: nominal; Yellow: open anomalies or recent fail; Red: L4/L5 critical anomalies">
     Fleet: {{ fleet_health|upper }}
   </span>
 </div>
@@ -48,7 +48,7 @@
           </td>
           <td class="px-4 py-3">
             {% if row.open_anomalies_count %}
-            <a href="{% url 'anomalies_registry' %}?satellite={{ row.satellite.id }}" class="text-brand font-semibold hover:underline">{{ row.open_anomalies_count }}</a>
+            <a href="{% url 'anomalies_list' %}?satellite={{ row.satellite.id }}" class="text-brand font-semibold hover:underline">{{ row.open_anomalies_count }}</a>
             {% else %}
             <span class="text-gray-400">0</span>
             {% endif %}
@@ -64,7 +64,7 @@
           <td class="px-4 py-3 no-print">
             <a href="{% url 'start' %}" class="btn btn-secondary">Start</a>
             {% if row.open_anomalies_count %}
-            <a href="{% url 'anomalies_registry' %}?satellite={{ row.satellite.id }}" class="btn btn-secondary">Anomalies</a>
+            <a href="{% url 'anomalies_list' %}?satellite={{ row.satellite.id }}" class="btn btn-secondary">Anomalies</a>
             {% endif %}
           </td>
         </tr>

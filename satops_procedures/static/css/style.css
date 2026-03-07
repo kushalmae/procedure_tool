@@ -63,6 +63,14 @@
 .badge-run     { background: #EDE9FE; color: #5B21B6; }
 .badge-scribe  { background: #DBEAFE; color: #1D4ED8; }
 .badge-anomaly { background: #FEE2E2; color: #991B1B; }
+.badge-event   { background: #FDF4FF; color: #7E22CE; }
+.badge-event-closed { background: #F1F5F9; color: #334155; }
+.badge-closed  { background: #F1F5F9; color: #334155; }
+.badge-severity-l1 { background: #F0F9FF; color: #0369A1; }
+.badge-severity-l2 { background: #D1FAE5; color: #065F46; }
+.badge-severity-l3 { background: #FEF9C3; color: #854D0E; }
+.badge-severity-l4 { background: #FECACA; color: #B91C1C; }
+.badge-severity-l5 { background: #FEE2E2; color: #991B1B; font-weight: 800; }
 
 /* SME Request status badges */
 .badge-sme-submitted          { background: #E0E7FF; color: #3730A3; }

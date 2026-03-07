@@ -1,20 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Anomaly {{ anomaly.id }} — Satops{% endblock %}
+{% block title %}ANOM-{{ anomaly.id }} — {{ anomaly.title }} — Satops{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
   <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'anomalies_registry' %}">Fleet Anomaly Tracker</a> &rsaquo; Anomaly {{ anomaly.id }}
+  <a href="{% url 'anomalies_list' %}">Anomaly Tracker</a> &rsaquo; ANOM-{{ anomaly.id }}
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
   <div>
-    <h1 class="text-2xl font-semibold text-gray-900">Anomaly #{{ anomaly.id }} — {{ anomaly.satellite.name }}</h1>
-    <div class="flex items-center gap-2 mt-2">
-      <span class="badge badge-{{ anomaly.severity|lower }}">{{ anomaly.get_severity_display }}</span>
-      <span class="text-sm font-medium text-gray-700">{{ anomaly.get_status_display }}</span>
-      <span class="text-sm text-gray-500">· Impact: {{ anomaly.get_operational_impact_display }}</span>
+    <h1 class="text-2xl font-semibold text-gray-900">ANOM-{{ anomaly.id }} — {{ anomaly.title }}</h1>
+    <div class="flex items-center gap-2 mt-2 flex-wrap">
+      <span class="badge badge-severity-{{ anomaly.severity|lower }}">{{ anomaly.get_severity_display }}</span>
+      <span class="badge badge-{{ anomaly.status|lower }}">{{ anomaly.get_status_display }}</span>
+      <span class="text-sm text-gray-500">· {{ anomaly.satellite.name }} · {{ anomaly.subsystem.name|default:"—" }}</span>
     </div>
+  </div>
+</div>
+
+<!-- Lifecycle progress -->
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-5">
+  <p class="text-xs text-gray-500 mb-3 font-semibold uppercase tracking-wider">Lifecycle Progress</p>
+  <div class="flex items-center gap-1 flex-wrap">
+    {% if anomaly.status == 'NEW' %}
+      <span class="badge badge-new">New</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Investigating</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Mitigated</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Resolved</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Closed</span>
+    {% elif anomaly.status == 'INVESTIGATING' %}
+      <span class="text-gray-400 text-xs">New</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="badge badge-investigating">Investigating</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Mitigated</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Resolved</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Closed</span>
+    {% elif anomaly.status == 'MITIGATED' %}
+      <span class="text-gray-400 text-xs">New</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-400 text-xs">Investigating</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="badge badge-mitigated">Mitigated</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Resolved</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Closed</span>
+    {% elif anomaly.status == 'RESOLVED' %}
+      <span class="text-gray-400 text-xs">New</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-400 text-xs">Investigating</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-400 text-xs">Mitigated</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="badge badge-resolved">Resolved</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-300 text-xs">Closed</span>
+    {% elif anomaly.status == 'CLOSED' %}
+      <span class="text-gray-400 text-xs">New</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-400 text-xs">Investigating</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-400 text-xs">Mitigated</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="text-gray-400 text-xs">Resolved</span><span class="text-gray-300 mx-1">&rarr;</span>
+      <span class="badge badge-event-closed">Closed</span>
+    {% endif %}
   </div>
 </div>
 
@@ -25,22 +63,13 @@
   </div>
   <div class="p-5">
     <dl class="detail-list">
+      <dt>Title</dt><dd>{{ anomaly.title }}</dd>
       <dt>Satellite</dt><dd>{{ anomaly.satellite.name }}</dd>
       <dt>Subsystem</dt><dd>{{ anomaly.subsystem.name|default:"—" }}</dd>
-      <dt>Type</dt><dd>{{ anomaly.anomaly_type.name|default:"—" }}</dd>
-      <dt>Severity</dt><dd><span class="badge badge-{{ anomaly.severity|lower }}">{{ anomaly.get_severity_display }}</span></dd>
-      <dt>Status</dt><dd>{{ anomaly.get_status_display }}</dd>
-      <dt>Detection time</dt><dd>{{ anomaly.detection_time|date:"Y-m-d H:i" }}</dd>
-      <dt>Operational impact</dt><dd>{{ anomaly.get_operational_impact_display }}</dd>
-      <dt>Reported by</dt><dd>{{ anomaly.reported_by.get_username|default:"—" }}</dd>
-      {% if anomaly.procedure_run %}
-      <dt>Observed during run</dt>
-      <dd><a href="{% url 'run_summary' anomaly.procedure_run.id %}" class="text-brand hover:underline">{{ anomaly.procedure_run.procedure.name }} — {{ anomaly.procedure_run.satellite.name }} ({{ anomaly.procedure_run.start_time|date:"Y-m-d H:i" }})</a></dd>
-      {% endif %}
-      {% if anomaly.resolution_procedure %}
-      <dt>Resolution procedure</dt>
-      <dd><a href="{% url 'procedure_review' %}?procedure={{ anomaly.resolution_procedure.id }}" class="text-brand hover:underline">{{ anomaly.resolution_procedure.name }} (v{{ anomaly.resolution_procedure.version }})</a></dd>
-      {% endif %}
+      <dt>Severity</dt><dd><span class="badge badge-severity-{{ anomaly.severity|lower }}">{{ anomaly.get_severity_display }}</span></dd>
+      <dt>Status</dt><dd><span class="badge badge-{{ anomaly.status|lower }}">{{ anomaly.get_status_display }}</span></dd>
+      <dt>Detected</dt><dd>{{ anomaly.detected_time|date:"Y-m-d H:i" }}</dd>
+      <dt>Reported by</dt><dd>{{ anomaly.created_by.get_username|default:"—" }}</dd>
       <dt>Created</dt><dd>{{ anomaly.created_at|date:"Y-m-d H:i" }}</dd>
       <dt>Updated</dt><dd>{{ anomaly.updated_at|date:"Y-m-d H:i" }}</dd>
       {% if anomaly.description %}
@@ -50,84 +79,114 @@
   </div>
 </div>
 
-{% if suggested_procedures %}
-<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
-  <h3 class="text-sm font-semibold text-blue-900 mb-2">Suggested Procedures</h3>
-  <p class="text-xs text-blue-700 mb-3">From FDIR, Handbook, or past resolutions.</p>
-  <ul class="space-y-1">
-    {% for proc, source in suggested_procedures %}
-    <li class="text-sm">
-      <a href="{% url 'procedure_review' %}?procedure={{ proc.id }}" class="text-brand hover:underline font-medium">{{ proc.name }} (v{{ proc.version }})</a>
-      <span class="badge badge-info ml-1">{{ source }}</span>
-    </li>
-    {% endfor %}
-  </ul>
+{% if anomaly.status == 'CLOSED' and anomaly.root_cause or anomaly.resolution_actions or anomaly.recommendations %}
+<!-- Resolution documentation -->
+<div class="bg-green-50 border border-green-200 rounded-lg p-5 mb-5">
+  <h3 class="text-sm font-semibold text-green-900 mb-3">Resolution Documentation</h3>
+  {% if anomaly.root_cause %}
+  <div class="mb-3">
+    <p class="text-xs font-semibold text-green-800 uppercase tracking-wider mb-1">Root Cause</p>
+    <p class="text-sm text-green-900 scribe-description">{{ anomaly.root_cause }}</p>
+  </div>
+  {% endif %}
+  {% if anomaly.resolution_actions %}
+  <div class="mb-3">
+    <p class="text-xs font-semibold text-green-800 uppercase tracking-wider mb-1">Actions Taken</p>
+    <p class="text-sm text-green-900 scribe-description">{{ anomaly.resolution_actions }}</p>
+  </div>
+  {% endif %}
+  {% if anomaly.recommendations %}
+  <div>
+    <p class="text-xs font-semibold text-green-800 uppercase tracking-wider mb-1">Recommendations</p>
+    <p class="text-sm text-green-900 scribe-description">{{ anomaly.recommendations }}</p>
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
-{% if user.is_authenticated %}
+{% if user.is_authenticated and anomaly.status != 'CLOSED' %}
+<!-- Update form -->
 <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-5 mb-5">
-  <h3 class="text-sm font-semibold text-gray-900 mb-4">Update Status or Add Note</h3>
-  <form method="post">{% csrf_token %}
-    <label class="first" for="status">Status</label>
-    <select id="status" name="status">
-      {% for val, label in status_choices %}
-      <option value="{{ val }}" {% if anomaly.status == val %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
+  <h3 class="text-sm font-semibold text-gray-900 mb-4">Update Anomaly</h3>
+  <form method="post" action="{% url 'anomalies_update' anomaly_id=anomaly.id %}">{% csrf_token %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="first" for="upd-status">Status</label>
+        <select id="upd-status" name="status">
+          {% for val, label in status_choices %}
+          {% if val != 'CLOSED' %}
+          <option value="{{ val }}" {% if anomaly.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="first" for="upd-severity">Severity</label>
+        <select id="upd-severity" name="severity">
+          {% for val, label in severity_choices %}
+          <option value="{{ val }}" {% if anomaly.severity == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
 
-    <label for="resolution_procedure">Resolution procedure <span class="text-gray-400 font-normal">(optional)</span></label>
-    <select id="resolution_procedure" name="resolution_procedure">
-      <option value="">— None —</option>
-      {% for proc in all_procedures %}
-      <option value="{{ proc.id }}" {% if anomaly.resolution_procedure_id == proc.id %}selected{% endif %}>{{ proc.name }} (v{{ proc.version }})</option>
-      {% endfor %}
-    </select>
+    <label for="note_body">Investigation Note</label>
+    <textarea id="note_body" name="note_body" rows="3" placeholder="Add investigation notes…"></textarea>
 
-    <label for="note_body">Note</label>
-    <textarea id="note_body" name="note_body" rows="3" placeholder="Operational update…"></textarea>
+    <label for="action_body">Action Taken</label>
+    <textarea id="action_body" name="action_body" rows="2" placeholder="Document operational actions…"></textarea>
 
-    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="submit" class="btn btn-primary">Save Update</button>
   </form>
+
+  <div class="mt-4 pt-4 border-t border-gray-200">
+    <a href="{% url 'anomalies_close' anomaly_id=anomaly.id %}" class="btn btn-secondary">Close Anomaly with Resolution…</a>
+  </div>
 </div>
-{% else %}
+{% elif not user.is_authenticated %}
 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-5">
-  <p class="text-sm text-gray-600"><a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="text-brand hover:underline">Log in</a> to add notes or update status.</p>
+  <p class="text-sm text-gray-600"><a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="text-brand hover:underline">Log in</a> to update this anomaly.</p>
 </div>
 {% endif %}
 
-<!-- Notes timeline -->
+<!-- Anomaly Timeline -->
 <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-5">
   <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
-    <h3 class="text-sm font-semibold text-gray-900">Notes &amp; Updates</h3>
+    <h3 class="text-sm font-semibold text-gray-900">Anomaly Timeline</h3>
   </div>
-  <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200 text-sm">
-      <thead class="bg-gray-900">
-        <tr>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Time</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">By</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Note</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-100">
-        {% for n in notes %}
-        <tr class="hover:bg-gray-50">
-          <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ n.created_at|date:"Y-m-d H:i" }}</td>
-          <td class="px-4 py-3 font-medium text-gray-700">{{ n.created_by.get_username|default:"—" }}</td>
-          <td class="px-4 py-3 text-gray-700 scribe-description">{{ n.body }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">No notes yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% if timeline %}
+  <div class="divide-y divide-gray-100">
+    {% for entry in timeline %}
+    <div class="px-5 py-4 {% if entry.entry_type == 'STATUS_CHANGE' %}bg-blue-50{% elif entry.entry_type == 'SEVERITY_CHANGE' %}bg-amber-50{% elif entry.entry_type == 'ACTION' %}bg-green-50{% else %}bg-white{% endif %}">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-xs text-gray-500 font-mono">{{ entry.created_at|date:"Y-m-d H:i:s" }}</span>
+        {% if entry.entry_type == 'STATUS_CHANGE' %}
+        <span class="badge badge-info">Status Change</span>
+        {% elif entry.entry_type == 'SEVERITY_CHANGE' %}
+        <span class="badge badge-warning">Severity Change</span>
+        {% elif entry.entry_type == 'ACTION' %}
+        <span class="badge badge-pass">Action</span>
+        {% elif entry.entry_type == 'PROCEDURE' %}
+        <span class="badge badge-run">Procedure</span>
+        {% else %}
+        <span class="badge badge-scribe">Note</span>
+        {% endif %}
+        {% if entry.created_by %}
+        <span class="text-xs text-gray-500">by {{ entry.created_by.get_username }}</span>
+        {% endif %}
+      </div>
+      <p class="text-sm text-gray-800 scribe-description">{{ entry.body }}</p>
+    </div>
+    {% endfor %}
   </div>
+  {% else %}
+  <div class="px-5 py-6 text-center text-gray-500 text-sm">No timeline entries yet.</div>
+  {% endif %}
 </div>
 
 <div class="flex gap-2">
-  <a href="{% url 'anomalies_registry' %}" class="btn btn-secondary">Back to registry</a>
-  {% if user.is_authenticated %}<a href="{% url 'anomalies_add' %}" class="btn btn-secondary">Report another</a>{% endif %}
+  <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">Back to tracker</a>
+  {% if user.is_authenticated %}<a href="{% url 'anomalies_create' %}" class="btn btn-secondary">Report another</a>{% endif %}
 </div>
 
 {% endblock %}

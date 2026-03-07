@@ -5,8 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 
-from anomalies.models import Subsystem
-from procedures.models import Satellite
+from procedures.models import Satellite, Subsystem
 from scribe.models import MissionLogEntry
 
 from .models import RequestNote, RequestType, SMERequest

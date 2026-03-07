@@ -5,9 +5,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from procedures.models import Procedure, ProcedureRun, Satellite
+from procedures.models import Satellite, Subsystem
 
-from .models import Anomaly, AnomalyNote, AnomalyType, Subsystem
+from .models import Anomaly, AnomalyTimelineEntry
 
 
 def _int_or_none(val):
@@ -17,71 +17,15 @@ def _int_or_none(val):
         return None
 
 
-def get_suggested_procedures(subsystem_id=None, subsystem_name=None, anomaly_type_id=None):
-    """Return list of (Procedure, source_label) for anomaly resolution suggestions.
-    Uses FDIR (by subsystem name), Handbook (by subsystem name), and past anomalies (by type/subsystem).
-    """
-    seen_ids = set()
-    result = []
-    subs_name = subsystem_name
-    if not subs_name and subsystem_id:
-        sub = Subsystem.objects.filter(pk=subsystem_id).first()
-        if sub:
-            subs_name = sub.name
-
-    # FDIR: procedures linked from FDIR entries whose subsystem name matches
-    if subs_name:
-        try:
-            __import__('fdir.models', fromlist=['FDIREntry'])
-            for proc in Procedure.objects.filter(
-                fdir_entries__subsystem__name__iexact=subs_name
-            ).distinct():
-                if proc.id not in seen_ids:
-                    seen_ids.add(proc.id)
-                    result.append((proc, 'FDIR'))
-        except Exception:
-            pass
-
-    # Handbook: procedures linked from alert definitions whose subsystem name matches
-    if subs_name:
-        try:
-            __import__('handbook.models', fromlist=['AlertDefinition'])
-            for proc in Procedure.objects.filter(
-                handbook_alerts__subsystem__name__iexact=subs_name
-            ).filter(handbook_alerts__procedure__isnull=False).distinct():
-                if proc.id not in seen_ids:
-                    seen_ids.add(proc.id)
-                    result.append((proc, 'Handbook'))
-        except Exception:
-            pass
-
-    # Past anomalies: procedures from runs that were linked to similar anomalies
-    past = Anomaly.objects.filter(procedure_run__isnull=False).exclude(procedure_run__procedure_id__isnull=True)
-    if anomaly_type_id:
-        past = past.filter(anomaly_type_id=anomaly_type_id)
-    if subsystem_id:
-        past = past.filter(subsystem_id=subsystem_id)
-    if not anomaly_type_id and not subsystem_id:
-        past = past.none()
-    for proc in Procedure.objects.filter(
-        procedurerun__linked_anomalies__in=past
-    ).distinct()[:10]:
-        if proc.id not in seen_ids:
-            seen_ids.add(proc.id)
-            result.append((proc, 'Past resolution'))
-
-    return result
-
-
-def registry(request):
+def anomaly_list(request):
     if request.GET.get('clear'):
         if 'anomaly_filters' in request.session:
             del request.session['anomaly_filters']
-        return redirect('anomalies_registry')
+        return redirect('anomalies_list')
 
-    ANOMALY_SORT_OPTIONS = [
-        '-detection_time',
-        'detection_time',
+    SORT_OPTIONS = [
+        '-detected_time',
+        'detected_time',
         'satellite__name',
         '-satellite__name',
         'severity',
@@ -95,12 +39,12 @@ def registry(request):
     severity = request.GET.get('severity', saved.get('severity', ''))
     status = request.GET.get('status', saved.get('status', ''))
     q = (request.GET.get('q') or saved.get('q') or '').strip()
-    sort = request.GET.get('sort', saved.get('sort', '-detection_time'))
-    if sort not in ANOMALY_SORT_OPTIONS:
-        sort = '-detection_time'
+    sort = request.GET.get('sort', saved.get('sort', '-detected_time'))
+    if sort not in SORT_OPTIONS:
+        sort = '-detected_time'
 
     has_filters = any([satellite_id, subsystem_id, severity, status, q])
-    if has_filters or sort != '-detection_time':
+    if has_filters or sort != '-detected_time':
         request.session['anomaly_filters'] = {
             'satellite': satellite_id or '',
             'subsystem': subsystem_id or '',
@@ -110,30 +54,31 @@ def registry(request):
             'sort': sort,
         }
 
-    anomalies = (
+    qs = (
         Anomaly.objects
-        .select_related('satellite', 'subsystem', 'anomaly_type', 'reported_by')
+        .select_related('satellite', 'subsystem', 'created_by')
         .order_by(sort)
     )
 
     if satellite_id:
         try:
-            anomalies = anomalies.filter(satellite_id=int(satellite_id))
+            qs = qs.filter(satellite_id=int(satellite_id))
         except ValueError:
             pass
     if subsystem_id:
         try:
-            anomalies = anomalies.filter(subsystem_id=int(subsystem_id))
+            qs = qs.filter(subsystem_id=int(subsystem_id))
         except ValueError:
             pass
     if severity:
-        anomalies = anomalies.filter(severity=severity)
+        qs = qs.filter(severity=severity)
     if status:
-        anomalies = anomalies.filter(status=status)
+        qs = qs.filter(status=status)
     if q:
-        anomalies = anomalies.filter(description__icontains=q)
+        from django.db.models import Q
+        qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
 
-    anomalies = anomalies[:200]
+    anomalies = qs[:200]
 
     context = {
         'anomalies': anomalies,
@@ -148,156 +93,197 @@ def registry(request):
         'severity_choices': Anomaly.SEVERITY_CHOICES,
         'status_choices': Anomaly.STATUS_CHOICES,
     }
-    return render(request, 'anomalies/registry.html', context)
+    return render(request, 'anomalies/anomaly_list.html', context)
 
 
 @login_required
-def add_anomaly(request):
+def anomaly_create(request):
     if request.method == 'POST':
+        title = (request.POST.get('title') or '').strip()
         satellite_id = request.POST.get('satellite')
-        if not satellite_id:
-            messages.error(request, 'Satellite is required.')
-            ctx = _add_anomaly_get_context(request)
-            ctx['form_satellite_id'] = _int_or_none(satellite_id)
-            ctx['form_subsystem_id'] = _int_or_none(request.POST.get('subsystem'))
-            ctx['form_anomaly_type_id'] = _int_or_none(request.POST.get('anomaly_type'))
-            ctx['form_severity'] = request.POST.get('severity') or Anomaly.SEVERITY_MEDIUM
-            ctx['form_detection_time'] = request.POST.get('detection_time') or ''
-            ctx['form_impact'] = request.POST.get('operational_impact') or Anomaly.IMPACT_NONE
-            ctx['form_description'] = request.POST.get('description', '')
-            ctx['form_procedure_run_id'] = _int_or_none(request.POST.get('procedure_run'))
-            ctx['suggested_procedures'] = get_suggested_procedures(
-                subsystem_id=ctx['form_subsystem_id'],
-                anomaly_type_id=ctx['form_anomaly_type_id'],
-            )
+
+        if not title or not satellite_id:
+            messages.error(request, 'Title and satellite are required.')
+            ctx = _create_context(request)
+            ctx.update({
+                'form_title': title,
+                'form_satellite_id': _int_or_none(satellite_id),
+                'form_subsystem_id': _int_or_none(request.POST.get('subsystem')),
+                'form_severity': request.POST.get('severity', Anomaly.SEVERITY_L2),
+                'form_detected_time': request.POST.get('detected_time', ''),
+                'form_description': request.POST.get('description', ''),
+            })
             return render(request, 'anomalies/anomaly_form.html', ctx)
 
         satellite = get_object_or_404(Satellite, pk=satellite_id)
         subsystem_id = request.POST.get('subsystem') or None
         subsystem = get_object_or_404(Subsystem, pk=subsystem_id) if subsystem_id else None
-        anomaly_type_id = request.POST.get('anomaly_type') or None
-        anomaly_type = get_object_or_404(AnomalyType, pk=anomaly_type_id) if anomaly_type_id else None
-        severity = request.POST.get('severity') or Anomaly.SEVERITY_MEDIUM
-        ts_str = (request.POST.get('detection_time') or '').strip()
-        detection_time = parse_datetime(ts_str) if ts_str else timezone.now()
-        if not detection_time:
-            detection_time = timezone.now()
-        operational_impact = request.POST.get('operational_impact') or Anomaly.IMPACT_NONE
+        severity = request.POST.get('severity') or Anomaly.SEVERITY_L2
+        ts_str = (request.POST.get('detected_time') or '').strip()
+        detected_time = parse_datetime(ts_str) if ts_str else timezone.now()
+        if not detected_time:
+            detected_time = timezone.now()
         description = (request.POST.get('description') or '').strip()
-        procedure_run_id = _int_or_none(request.POST.get('procedure_run'))
-        procedure_run = None
-        if procedure_run_id:
-            procedure_run = ProcedureRun.objects.filter(pk=procedure_run_id).first()
 
         anomaly = Anomaly.objects.create(
+            title=title,
             satellite=satellite,
             subsystem=subsystem,
-            anomaly_type=anomaly_type,
             severity=severity,
-            detection_time=detection_time,
-            operational_impact=operational_impact,
             status=Anomaly.STATUS_NEW,
             description=description,
-            reported_by=request.user,
-            procedure_run=procedure_run,
+            detected_time=detected_time,
+            created_by=request.user,
         )
-        messages.success(request, 'Anomaly reported.')
-        if request.POST.get('add_another'):
-            return redirect(reverse('anomalies_add'))
+
+        sub_display = subsystem.name if subsystem else '—'
+        AnomalyTimelineEntry.objects.create(
+            anomaly=anomaly,
+            entry_type=AnomalyTimelineEntry.ENTRY_NOTE,
+            body=f'Anomaly created with severity {anomaly.get_severity_display()} — {sub_display}',
+            created_by=request.user,
+        )
+
+        messages.success(request, f'Anomaly ANOM-{anomaly.pk} created.')
         return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
 
-    return render(request, 'anomalies/anomaly_form.html', _add_anomaly_get_context(request))
+    return render(request, 'anomalies/anomaly_form.html', _create_context(request))
 
 
-def _add_anomaly_get_context(request):
+def _create_context(request):
     now = timezone.now()
-    last = (
-        Anomaly.objects.filter(reported_by=request.user)
-        .order_by('-created_at')
-        .first()
-    ) if request.user.is_authenticated else None
-    default_satellite_id = last.satellite_id if last else None
-    default_subsystem_id = last.subsystem_id if last else None
-    default_anomaly_type_id = last.anomaly_type_id if last else None
-    default_severity = last.severity if last else Anomaly.SEVERITY_MEDIUM
-    default_impact = last.operational_impact if last else Anomaly.IMPACT_NONE
-    default_procedure_run_id = last.procedure_run_id if last else None
-    recent_runs = (
-        ProcedureRun.objects.select_related('satellite', 'procedure')
-        .order_by('-start_time')[:30]
-    )
-    suggested = get_suggested_procedures(
-        subsystem_id=default_subsystem_id,
-        anomaly_type_id=default_anomaly_type_id,
-    )
     return {
         'satellites': Satellite.objects.all(),
         'subsystems': Subsystem.objects.all(),
-        'anomaly_types': AnomalyType.objects.all(),
-        'recent_runs': recent_runs,
-        'suggested_procedures': suggested,
-        'detection_time_default': now.strftime('%Y-%m-%dT%H:%M'),
         'severity_choices': Anomaly.SEVERITY_CHOICES,
-        'impact_choices': Anomaly.IMPACT_CHOICES,
-        'form_satellite_id': default_satellite_id,
-        'form_subsystem_id': default_subsystem_id,
-        'form_anomaly_type_id': default_anomaly_type_id,
-        'form_severity': default_severity,
-        'form_detection_time': now.strftime('%Y-%m-%dT%H:%M'),
-        'form_impact': default_impact,
+        'form_title': '',
+        'form_satellite_id': None,
+        'form_subsystem_id': None,
+        'form_severity': Anomaly.SEVERITY_L2,
+        'form_detected_time': now.strftime('%Y-%m-%dT%H:%M'),
         'form_description': '',
-        'form_procedure_run_id': default_procedure_run_id,
     }
 
 
 def anomaly_detail(request, anomaly_id):
     anomaly = get_object_or_404(
-        Anomaly.objects.select_related(
-            'satellite', 'subsystem', 'anomaly_type', 'reported_by', 'procedure_run',
-            'resolution_procedure',
-        ).select_related('procedure_run__satellite', 'procedure_run__procedure'),
+        Anomaly.objects.select_related('satellite', 'subsystem', 'created_by'),
         pk=anomaly_id,
     )
-    notes = anomaly.notes.select_related('created_by').order_by('-created_at')
-    suggested_procedures = get_suggested_procedures(
-        subsystem_id=anomaly.subsystem_id,
-        subsystem_name=anomaly.subsystem.name if anomaly.subsystem else None,
-        anomaly_type_id=anomaly.anomaly_type_id,
-    )
-    all_procedures = list(Procedure.objects.order_by('name'))
+    timeline = anomaly.timeline_entries.select_related('created_by').order_by('created_at')
 
-    if request.method == 'POST' and request.user.is_authenticated:
+    context = {
+        'anomaly': anomaly,
+        'timeline': timeline,
+        'status_choices': Anomaly.STATUS_CHOICES,
+        'severity_choices': Anomaly.SEVERITY_CHOICES,
+    }
+    return render(request, 'anomalies/anomaly_detail.html', context)
+
+
+@login_required
+def anomaly_update(request, anomaly_id):
+    anomaly = get_object_or_404(Anomaly, pk=anomaly_id)
+
+    if request.method == 'POST':
         new_status = request.POST.get('status')
+        new_severity = request.POST.get('severity')
         note_body = (request.POST.get('note_body') or '').strip()
-        resolution_procedure_id = _int_or_none(request.POST.get('resolution_procedure'))
-        if new_status and new_status in dict(Anomaly.STATUS_CHOICES):
+        action_body = (request.POST.get('action_body') or '').strip()
+
+        if new_status and new_status in dict(Anomaly.STATUS_CHOICES) and new_status != anomaly.status:
+            old_status = anomaly.get_status_display()
             anomaly.status = new_status
             anomaly.save(update_fields=['status', 'updated_at'])
-            messages.success(request, 'Status updated.')
-        if note_body:
-            AnomalyNote.objects.create(
+            new_display = anomaly.get_status_display()
+            AnomalyTimelineEntry.objects.create(
                 anomaly=anomaly,
+                entry_type=AnomalyTimelineEntry.ENTRY_STATUS_CHANGE,
+                body=f'Status changed from {old_status} to {new_display}',
+                old_value=old_status,
+                new_value=new_display,
+                created_by=request.user,
+            )
+            messages.success(request, f'Status updated to {new_display}.')
+
+        if new_severity and new_severity in dict(Anomaly.SEVERITY_CHOICES) and new_severity != anomaly.severity:
+            old_severity = anomaly.get_severity_display()
+            anomaly.severity = new_severity
+            anomaly.save(update_fields=['severity', 'updated_at'])
+            new_sev_display = anomaly.get_severity_display()
+            AnomalyTimelineEntry.objects.create(
+                anomaly=anomaly,
+                entry_type=AnomalyTimelineEntry.ENTRY_SEVERITY_CHANGE,
+                body=f'Severity changed from {old_severity} to {new_sev_display}',
+                old_value=old_severity,
+                new_value=new_sev_display,
+                created_by=request.user,
+            )
+            messages.success(request, f'Severity updated to {new_sev_display}.')
+
+        if note_body:
+            AnomalyTimelineEntry.objects.create(
+                anomaly=anomaly,
+                entry_type=AnomalyTimelineEntry.ENTRY_NOTE,
                 body=note_body,
                 created_by=request.user,
             )
-            messages.success(request, 'Note added.')
-        if resolution_procedure_id is not None:
-            if resolution_procedure_id:
-                procedure = Procedure.objects.filter(pk=resolution_procedure_id).first()
-                if procedure:
-                    anomaly.resolution_procedure = procedure
-                    anomaly.save(update_fields=['resolution_procedure', 'updated_at'])
-                    messages.success(request, 'Resolution procedure recorded.')
-            else:
-                anomaly.resolution_procedure = None
-                anomaly.save(update_fields=['resolution_procedure', 'updated_at'])
+            messages.success(request, 'Investigation note added.')
+
+        if action_body:
+            AnomalyTimelineEntry.objects.create(
+                anomaly=anomaly,
+                entry_type=AnomalyTimelineEntry.ENTRY_ACTION,
+                body=action_body,
+                created_by=request.user,
+            )
+            messages.success(request, 'Action documented.')
+
+        return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+
+    return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+
+
+@login_required
+def anomaly_close(request, anomaly_id):
+    anomaly = get_object_or_404(Anomaly, pk=anomaly_id)
+
+    if request.method == 'POST':
+        root_cause = (request.POST.get('root_cause') or '').strip()
+        resolution_actions = (request.POST.get('resolution_actions') or '').strip()
+        recommendations = (request.POST.get('recommendations') or '').strip()
+
+        anomaly.root_cause = root_cause
+        anomaly.resolution_actions = resolution_actions
+        anomaly.recommendations = recommendations
+        anomaly.status = Anomaly.STATUS_CLOSED
+        anomaly.save(update_fields=[
+            'root_cause', 'resolution_actions', 'recommendations',
+            'status', 'updated_at',
+        ])
+
+        resolution_summary_parts = []
+        if root_cause:
+            resolution_summary_parts.append(f'Root cause: {root_cause}')
+        if resolution_actions:
+            resolution_summary_parts.append(f'Actions: {resolution_actions}')
+        if recommendations:
+            resolution_summary_parts.append(f'Recommendations: {recommendations}')
+        summary = '\n'.join(resolution_summary_parts) or 'Anomaly closed.'
+
+        AnomalyTimelineEntry.objects.create(
+            anomaly=anomaly,
+            entry_type=AnomalyTimelineEntry.ENTRY_STATUS_CHANGE,
+            body=summary,
+            old_value=anomaly.get_status_display(),
+            new_value='Closed',
+            created_by=request.user,
+        )
+
+        messages.success(request, f'Anomaly ANOM-{anomaly.pk} closed.')
         return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
 
     context = {
         'anomaly': anomaly,
-        'notes': notes,
-        'status_choices': Anomaly.STATUS_CHOICES,
-        'suggested_procedures': suggested_procedures,
-        'all_procedures': all_procedures,
     }
-    return render(request, 'anomalies/anomaly_detail.html', context)
+    return render(request, 'anomalies/anomaly_close.html', context)
