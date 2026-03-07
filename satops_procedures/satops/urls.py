@@ -12,4 +12,5 @@ urlpatterns = [
     path('handbook/', include('handbook.urls')),
     path('fdir/', include('fdir.urls')),
     path('cmdtlm/', include('cmdtlm.urls')),
+    path('references/', include('references.urls')),
 ]
