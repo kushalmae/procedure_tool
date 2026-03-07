@@ -7,11 +7,15 @@ Quick reference for the satops procedure runner (Django app).
 | Layer | Choice |
 |-------|--------|
 | Framework | Django (ORM, auth, templates) |
-| Database | SQLite (`ops.db`) |
+| Database | SQLite (local dev) / PostgreSQL (production via Fly.io) |
 | Procedures | YAML files in `procedures_yaml/` (PyYAML) |
 | Front end | Server-rendered HTML + CSS (no JS framework) |
+| Static files | WhiteNoise (compressed, cache-friendly serving) |
+| App server | Gunicorn (WSGI) |
+| Container | Docker |
+| Hosting | Fly.io |
 
-Runs offline; optional gunicorn for production.
+Local development uses SQLite; production runs on Fly.io with PostgreSQL.
 
 ---
 
@@ -68,7 +72,7 @@ procedure_tool/
 - **ProcedureRun** — satellite, procedure, operator (FK User), start/end time, status (RUNNING/PASS/FAIL/CANCELLED), **run_notes** (handover/anomaly).
 - **StepExecution** — run, step_id, description, status, input_value, notes, timestamp.
 
-Procedure *definition* lives in YAML; runs and step results live in SQLite.
+Procedure *definition* lives in YAML; runs and step results live in the database (SQLite locally, PostgreSQL in production).
 
 - **Handbook:** `Subsystem` (name); `AlertDefinition` — parameter, subsystem FK, description, alert_conditions, warning/critical threshold (text), recommended_response, optional procedure FK, severity (Warning/Critical), version, created_at, updated_at.
 - **FDIR:** `fdir.Subsystem` (name, slug); `FDIREntry` — name, fault_code, subsystem FK, severity (Info/Warning/Critical), fault_type, triggering_conditions, detection_thresholds, onboard_automated_response, M2M to `procedures.Procedure` (operator_procedures), version, created_at, updated_at.
@@ -168,6 +172,74 @@ Procedure *definition* lives in YAML; runs and step results live in SQLite.
 - `@login_required` on start and run; operator = `request.user`.
 - Logout via POST form only (no GET logout).
 - Admin is separate (staff/superuser).
+
+---
+
+## Deployment (Fly.io + Docker + PostgreSQL)
+
+### Architecture
+
+The application runs inside a Docker container on Fly.io as a lightweight Fly Machine.
+Gunicorn serves the Django application; WhiteNoise handles static files.
+A Fly.io-managed PostgreSQL instance provides the production database, connected via `DATABASE_URL`.
+
+### Deployment files
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Builds the container: Python 3.12-slim, installs deps, collects static |
+| `.dockerignore` | Excludes dev-only files from the image |
+| `fly.toml` | Fly.io app config: region, VM size, env vars, HTTP service |
+| `entrypoint.sh` | Runs migrations, collectstatic, then starts Gunicorn |
+
+### Environment variables
+
+| Variable | Where set | Purpose |
+|----------|-----------|---------|
+| `DATABASE_URL` | Fly.io secret (auto-set by `fly postgres attach`) | PostgreSQL connection string |
+| `DJANGO_SECRET_KEY` | Fly.io secret (`fly secrets set`) | Production secret key |
+| `DJANGO_DEBUG` | `fly.toml` env | `False` in production |
+| `DJANGO_ALLOWED_HOSTS` | `fly.toml` env | `.fly.dev` (comma-separated) |
+| `CSRF_TRUSTED_ORIGINS` | `fly.toml` env | `https://<app>.fly.dev` |
+
+### First deployment
+
+```bash
+cd satops_procedures/
+
+# Create the Fly.io app
+fly launch --no-deploy
+
+# Create and attach a PostgreSQL database
+fly postgres create --name satops-db
+fly postgres attach satops-db
+
+# Set the Django secret key
+fly secrets set DJANGO_SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')"
+
+# Deploy
+fly deploy
+
+# (Optional) Create a Django superuser
+fly ssh console -C "python manage.py createsuperuser"
+
+# (Optional) Seed initial data
+fly ssh console -C "python manage.py seed_all"
+```
+
+### Subsequent deployments
+
+```bash
+cd satops_procedures/
+fly deploy
+```
+
+The entrypoint script automatically runs migrations on every deployment.
+
+### VM sizing
+
+For ~10 users the app runs on `shared-cpu-1x` with 256 MB RAM.
+Scale up via `fly scale vm` or add machines with `fly scale count` if traffic grows.
 
 ---
 
