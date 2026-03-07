@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{% if entry %}Edit: {{ entry.title }}{% else %}Add reference{% endif %} — Central Reference Page{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'reference_list' %}">Central Reference Page</a> &rsaquo;
+  {% if entry %}Edit{% else %}Add reference{% endif %}
+</nav>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">{% if entry %}Edit Reference{% else %}Add Reference{% endif %}</h1>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 max-w-2xl">
+  <form method="post">{% csrf_token %}
+    <label class="first" for="title">Title <span class="text-brand">*</span></label>
+    <input id="title" name="title" type="text" value="{{ form.title }}" required maxlength="200" placeholder="e.g. ADCS ICD">
+
+    <label for="document_type">Document type</label>
+    <select id="document_type" name="document_type">
+      {% for val, label in type_choices %}
+      <option value="{{ val }}" {% if form.document_type == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="subsystem">Subsystem <span class="text-brand">*</span></label>
+    <select id="subsystem" name="subsystem" required>
+      <option value="">—</option>
+      {% for s in subsystems %}
+      <option value="{{ s.id }}" {% if form.subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="section">Section / Topic <span class="text-gray-400 font-normal">(optional)</span></label>
+    <input id="section" name="section" type="text" value="{{ form.section }}" maxlength="200" placeholder="e.g. Command Interface">
+
+    <label for="version">Version <span class="text-gray-400 font-normal">(optional)</span></label>
+    <input id="version" name="version" type="text" value="{{ form.version }}" maxlength="40" placeholder="e.g. v2.1">
+
+    <label for="location">Location / Link <span class="text-brand">*</span></label>
+    <input id="location" name="location" type="text" value="{{ form.location }}" required maxlength="500" placeholder="e.g. https://sharepoint.example.com/docs/adcs-icd">
+
+    <label for="user_notes">User notes <span class="text-gray-400 font-normal">(optional)</span></label>
+    <textarea id="user_notes" name="user_notes" rows="3" placeholder="Operational context, tips, or reminders">{{ form.user_notes }}</textarea>
+
+    <div class="flex gap-2 mt-4">
+      <button type="submit" class="btn btn-primary">{% if entry %}Save changes{% else %}Create reference{% endif %}</button>
+      {% if entry %}
+      <a href="{% url 'reference_detail' entry.id %}" class="btn btn-secondary">Cancel</a>
+      {% else %}
+      <a href="{% url 'reference_list' %}" class="btn btn-secondary">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% endblock %}
