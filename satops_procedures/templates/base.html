@@ -26,18 +26,23 @@
                 <a href="{% url 'dashboard' %}">Dashboard</a>
                 <a href="{% url 'start' %}">Start Procedure</a>
                 <a href="{% url 'procedure_list' %}">Procedures</a>
-                <a href="{% url 'procedure_create' %}">Create Procedure</a>
                 <a href="{% url 'history' %}">History</a>
             </div>
             <div class="sidebar-section">
-                <span class="sidebar-section-label">Operations & reference</span>
+                <span class="sidebar-section-label">Situational Awareness</span>
                 <a href="{% url 'fleet' %}">Fleet</a>
-                <a href="{% url 'handover' %}">Handover pack</a>
-                <a href="{% url 'metrics' %}">Metrics</a>
                 <a href="{% url 'timeline' %}">Mission Timeline</a>
+                <a href="{% url 'metrics' %}">Metrics</a>
+                <a href="{% url 'handover' %}">Handover Pack</a>
+            </div>
+            <div class="sidebar-section">
+                <span class="sidebar-section-label">Logging</span>
                 <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
-                <a href="{% url 'anomalies_registry' %}">Fleet Anomaly Tracker</a>
-                <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a>
+                <a href="{% url 'anomalies_registry' %}">Anomaly Tracker</a>
+            </div>
+            <div class="sidebar-section">
+                <span class="sidebar-section-label">Reference</span>
+                <a href="{% url 'handbook_alert_list' %}">Alerts & Limits</a>
                 <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
             </div>
         </div>

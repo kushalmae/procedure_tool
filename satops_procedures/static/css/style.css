@@ -145,7 +145,7 @@ nav a:hover { color: var(--accent-hover); }
 .skip-link:focus { top: 0; }
 
 /* Messages (Django messages) */
-.messages { max-width: 900px; margin: 0 auto; padding: 0.5rem 1.5rem; padding-left: 1.5rem; }
+.messages { max-width: none; margin: 0; padding: 0.5rem 1.5rem 0.5rem 1.25rem; }
 .message { margin: 0.25rem 0; padding: 0.5rem 0.75rem; border-radius: 4px; background: var(--pass-bg); color: var(--pass); }
 .message-error { background: var(--fail-bg); color: var(--fail); }
 
@@ -168,10 +168,10 @@ nav .nav-link-btn:hover { color: var(--accent-hover); text-decoration: underline
 /* Main */
 main {
   flex: 1;
-  max-width: 900px;
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
-  padding: 1.5rem;
+  margin: 0;
+  padding: 1.5rem 1.5rem 1.5rem 1.25rem;
 }
 main.main-full-width {
   max-width: none;
@@ -289,10 +289,15 @@ main.dashboard-page {
   color: var(--text-on-light);
 }
 
-.detail-list { margin: 0 0 1rem 0; }
-.detail-list dt { font-weight: 600; margin-top: 0.75rem; color: var(--text-muted-on-light); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
-.detail-list dt:first-child { margin-top: 0; }
-.detail-list dd { margin: 0.25rem 0 0 0; }
+.detail-list {
+  margin: 0 0 1rem 0;
+  display: grid;
+  grid-template-columns: minmax(160px, auto) 1fr;
+  gap: 0.35rem 1.25rem;
+  align-items: baseline;
+}
+.detail-list dt { font-weight: 600; color: var(--text-muted-on-light); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; margin: 0; padding-top: 0.4rem; }
+.detail-list dd { margin: 0; padding-top: 0.4rem; }
 .detail-list dd.user-notes {
   padding: 0.75rem;
   background: rgba(0, 0, 0, 0.06);
@@ -337,10 +342,12 @@ a:hover { text-decoration: underline; }
 label { display: block; margin-bottom: 0.35rem; font-weight: 500; color: var(--text-on-light); font-size: 0.9rem; }
 input[type="text"],
 input[type="number"],
+input[type="datetime-local"],
+input[type="password"],
 select,
 textarea {
   width: 100%;
-  max-width: 400px;
+  max-width: 600px;
   padding: 0.5rem 0.75rem;
   background: var(--bg-input);
   border: 1px solid var(--border);
@@ -349,7 +356,7 @@ textarea {
   font: inherit;
   margin-bottom: 1rem;
 }
-textarea { min-height: 80px; resize: vertical; }
+textarea { min-height: 80px; resize: vertical; max-width: 800px; }
 select { cursor: pointer; }
 input:focus, select:focus, textarea:focus {
   outline: none;
@@ -389,14 +396,15 @@ input:focus, select:focus, textarea:focus {
 .search-input {
   flex: 1;
   min-width: 180px;
-  max-width: 320px;
+  max-width: 400px;
   margin-bottom: 0;
 }
-.search-form select { width: auto; max-width: 160px; margin-bottom: 0; }
+.search-form select { width: auto; max-width: 200px; margin-bottom: 0; }
+.search-form label { margin-bottom: 0; }
 
 /* Procedure select + Review button */
 .procedure-select-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
-.procedure-select-row select { flex: 1; min-width: 200px; max-width: 400px; margin-bottom: 0; }
+.procedure-select-row select { flex: 1; min-width: 200px; max-width: 600px; margin-bottom: 0; }
 .tag-checkboxes { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 1rem; }
 .tag-checkboxes label { margin-bottom: 0; font-weight: normal; }
 
@@ -463,14 +471,14 @@ td.scribe-description {
 /* Create procedure – step rows */
 .step-row {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr auto;
+  grid-template-columns: 1fr 3fr 1fr auto;
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.5rem;
 }
-.step-row .step-id { max-width: 140px; margin-bottom: 0; }
+.step-row .step-id { max-width: 200px; margin-bottom: 0; }
 .step-row .step-desc { max-width: none; margin-bottom: 0; }
-.step-row .step-input { max-width: 140px; margin-bottom: 0; }
+.step-row .step-input { max-width: 200px; margin-bottom: 0; }
 @media (max-width: 640px) {
   .step-row { grid-template-columns: 1fr 1fr auto; }
   .step-row .step-input { grid-column: 1 / -1; }
@@ -496,9 +504,9 @@ td.scribe-description {
 .card .tag-label { color: var(--text-muted-on-light); }
 
 /* Run page: step list + content */
-.run-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+.run-layout { display: flex; gap: 1.5rem; align-items: flex-start; width: 100%; }
 .step-list {
-  flex: 0 0 200px;
+  flex: 0 0 220px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);

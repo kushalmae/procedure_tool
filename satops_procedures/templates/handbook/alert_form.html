@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{% if alert %}Edit: {{ alert.parameter }}{% else %}Add alert{% endif %} — Alerts & Limits Handbook{% endblock %}
+{% block main_class %}main-full-width{% endblock %}
 {% block content %}
 <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / {% if alert %}Edit{% else %}Add alert{% endif %}
