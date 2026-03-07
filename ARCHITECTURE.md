@@ -1,6 +1,8 @@
 # Procedure Tool — Architecture
 
-Quick reference for the satops procedure runner (Django app).
+Technical reference for the satops procedure runner: Django app, YAML procedures, SQLite/PostgreSQL, multi-app structure.
+
+---
 
 ## Tech stack
 
@@ -58,16 +60,31 @@ procedure_tool/
       views.py, urls.py, admin.py
       management/commands/seed_fdir.py
     templates/fdir/             # entry_list, entry_detail, entry_form
+    cmdtlm/                     # Commands & Telemetry app
+      models.py                 # CommandDefinition, CommandInput, TelemetryDefinition, TelemetryEnum
+      views.py, urls.py, admin.py
+      management/commands/seed_cmdtlm.py
+    references/                 # Central Reference Page app
+      models.py                 # Subsystem, ReferenceEntry
+      views.py, urls.py, admin.py
+      management/commands/seed_references.py
+    smerequests/                # SME Request Workflow app
+      models.py                 # RequestType, SMERequest, RequestNote
+      views.py, urls.py, admin.py
+      management/commands/seed_smerequests.py
     tests/                      # Centralized test suite
       test_procedures.py        # Procedures app tests
       test_scribe.py            # Mission Scribe tests
       test_anomalies.py         # Fleet Anomaly Tracker tests
       test_handbook.py          # Alerts & Limits Handbook tests
       test_fdir.py              # FDIR Handbook tests
+      test_cmdtlm.py            # Commands & Telemetry tests
+      test_references.py        # Central Reference Page tests
+      test_smerequests.py       # SME Request tests
   .github/workflows/           # CI/CD pipelines
     ci.yml                     # Lint + test on push/PR
     deploy.yml                 # Auto-deploy to Fly.io on main
-  ARCHITECTURE.md               # This file
+  README.md, ARCHITECTURE.md, PRODUCT.md   # Docs (root)
 ```
 
 ---
@@ -104,6 +121,10 @@ Procedure *definition* lives in YAML; runs and step results live in the database
 | `/run/<id>/` | Execute steps; run notes form (save without advancing step) |
 | `/run/<id>/summary/` | All steps + run notes; print-friendly |
 | `/history/` | Past runs, search, tag filter |
+| `/fleet/` | Fleet overview (satellites) |
+| `/handover/` | Handover pack summary |
+| `/metrics/` | Operations metrics |
+| `/timeline/` | Mission timeline view |
 | `/login/`, `/logout/` | App auth (logout via POST) |
 | `/scribe/` | Mission Scribe timeline (filters, search) |
 | `/scribe/add/` | Add log entry (login required) |
@@ -122,6 +143,19 @@ Procedure *definition* lives in YAML; runs and step results live in the database
 | `/fdir/<id>/` | FDIR entry detail (read-only); links to operator procedures (procedure review) |
 | `/fdir/add/` | Add FDIR entry (login required) |
 | `/fdir/<id>/edit/` | Edit FDIR entry (login required) |
+| `/cmdtlm/commands/` | Command definitions list (filters, search, CSV import/export) |
+| `/cmdtlm/commands/<id>/` | Command detail |
+| `/cmdtlm/telemetry/` | Telemetry definitions list (filters, search) |
+| `/cmdtlm/telemetry/<id>/` | Telemetry detail |
+| `/references/` | Central Reference Page: list references (subsystem, doc type filters) |
+| `/references/<id>/` | Reference detail |
+| `/references/add/` | Add reference (login required) |
+| `/references/<id>/edit/` | Edit reference (login required) |
+| `/references/<id>/delete/` | Delete reference (login required) |
+| `/requests/` | SME Request list (filters: satellite, type, status, priority) |
+| `/requests/queue/` | Ops queue (approved / queued / in-progress) |
+| `/requests/new/` | Create SME request (login required) |
+| `/requests/<id>/` | Request detail (view, add note, update status, approve/reject) |
 
 ---
 
@@ -162,6 +196,35 @@ Procedure *definition* lives in YAML; runs and step results live in the database
 - **Detail** — Full FDIR definition; operator procedures listed with links to procedure review; Edit when logged in.
 - **Create/Edit** — Form for all fields; operator procedures as multi-select (checkboxes). Cross-link: FDIR entries reference Procedure; procedure review can later show “Referenced by FDIR” as an enhancement.
 - **Seed:** `python manage.py seed_fdir` creates default subsystems (ADCS, Power, Thermal, Communications, Payload, Other); `seed_fdir --entries` adds sample FDIR entries.
+
+---
+
+## Commands & Telemetry (cmdtlm app)
+
+- **Models:** `CommandDefinition` (name, command_id, subsystem, description, category), `CommandInput` (command FK, name, order, data_type, description), `TelemetryDefinition` (name, mnemonic, apid, subsystem, data_type, units), `TelemetryEnum` (telemetry FK, value, label).
+- **Command list** — Filter by subsystem, category; search on name, command_id, description; session-persist filters; CSV import/export (login required for import).
+- **Telemetry list** — Filter by subsystem, data_type; search on name, mnemonic, description; session-persist filters.
+- **Seed:** `python manage.py seed_cmdtlm` creates sample command and telemetry definitions.
+
+---
+
+## Central Reference Page (references app)
+
+- **Models:** `Subsystem` (name); `ReferenceEntry` — title, document_type (ICD, Manual, Guide, etc.), subsystem FK, section, version, location (URL), user_notes.
+- **List** — Filter by subsystem, document_type; search on title; session-persist filters.
+- **Create/Edit/Delete** — Login required; CSV import/export for adaptation.
+- **Seed:** `python manage.py seed_references` creates subsystems and sample entries.
+
+---
+
+## SME Request Workflow (smerequests app)
+
+- **Models:** `RequestType` (name); `SMERequest` — title, satellite, subsystem, request_type, priority, status, description, time_range_start/end, requested_by, assigned_to, approved_by, linked_event, result_notes, rejection_reason; `RequestNote` — request FK, body, created_by.
+- **List** — Filter by satellite, request type, status, priority; search on title; session-persist filters.
+- **Ops queue** — Active requests (approved, queued, in-progress) ordered by priority.
+- **Create** — Login required; optionally link to Mission Scribe event.
+- **Detail** — View, add note, update status, approve/reject, claim, assign, complete, close; CSV import/export.
+- **Seed:** `python manage.py seed_smerequests` creates default request types (Backorbit Data, Telemetry Export, etc.).
 
 ---
 
@@ -500,6 +563,9 @@ All tests live in one place: `satops_procedures/tests/`. One file per app:
 | `test_anomalies.py` | `anomalies` | Models (Subsystem, AnomalyType, Anomaly, AnomalyNote), views (registry, add), seed command |
 | `test_handbook.py` | `handbook` | Models (Subsystem, AlertDefinition + version auto-increment), views (alert list, create), seed command |
 | `test_fdir.py` | `fdir` | Models (Subsystem + slug, FDIREntry), views (entry list, create), seed command |
+| `test_cmdtlm.py` | `cmdtlm` | Models (CommandDefinition, CommandInput, TelemetryDefinition, TelemetryEnum), views (command/telemetry list, detail, CSV import), seed command |
+| `test_references.py` | `references` | Models (Subsystem, ReferenceEntry), views (list, detail, create, edit, delete, CSV import/export), seed command |
+| `test_smerequests.py` | `smerequests` | Models (RequestType, SMERequest, RequestNote), views (list, queue, create, detail), seed command |
 
 ```bash
 make test                                  # run all 56 tests
