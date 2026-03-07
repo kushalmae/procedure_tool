@@ -10,7 +10,7 @@
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">Alerts &amp; Limits Handbook</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'handbook_alert_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary">Export CSV</a>
+    <a href="{% url 'handbook_alert_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="handbook_alerts.csv">Export CSV</a>
     {% if user.is_authenticated %}
     <button type="button" onclick="document.getElementById('hbCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
     <a href="{% url 'handbook_alert_create' %}" class="btn btn-primary">

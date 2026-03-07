@@ -10,7 +10,7 @@
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">FDIR Handbook</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'fdir_entry_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary">Export CSV</a>
+    <a href="{% url 'fdir_entry_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="fdir_entries.csv">Export CSV</a>
     {% if user.is_authenticated %}
     <button type="button" onclick="document.getElementById('fdirCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
     <a href="{% url 'fdir_entry_create' %}" class="btn btn-primary">

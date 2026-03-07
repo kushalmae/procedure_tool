@@ -11,7 +11,7 @@
   <h1 class="text-2xl font-semibold text-gray-900">SME Requests</h1>
   <div class="no-print flex gap-2">
     <a href="{% url 'sme_ops_queue' %}" class="btn btn-secondary">Ops Queue</a>
-    <a href="{% url 'sme_request_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary">Export CSV</a>
+    <a href="{% url 'sme_request_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="sme_requests.csv">Export CSV</a>
     {% if user.is_authenticated %}
     <button type="button" onclick="document.getElementById('smeCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
     <a href="{% url 'sme_request_create' %}" class="btn btn-primary">
