@@ -12,6 +12,7 @@ SEED_COMMANDS = [
     ('seed_handbook', {'alerts': True}, 'Handbook subsystems and sample alerts'),
     ('seed_fdir', {'entries': True}, 'FDIR subsystems and sample entries'),
     ('seed_anomalies', {'anomalies': True}, 'Anomaly subsystems, types, and sample anomalies'),
+    ('seed_cmdtlm', {}, 'Command & Telemetry reference definitions'),
 ]
 
 
