@@ -40,6 +40,10 @@ def _search_runs(queryset, q, tag_id):
     return queryset
 
 
+def homepage(request):
+    return render(request, 'homepage.html')
+
+
 def dashboard(request):
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
