@@ -39,6 +39,18 @@ run: ## Start the Django dev server on http://localhost:8000
 collectstatic: ## Collect static files into staticfiles/
 	python manage.py collectstatic --noinput
 
+.PHONY: lint
+lint: ## Run ruff linter
+	ruff check .
+
+.PHONY: lint-fix
+lint-fix: ## Auto-fix ruff linting issues
+	ruff check . --fix
+
+.PHONY: test
+test: ## Run the full test suite
+	python manage.py test --verbosity=2
+
 .PHONY: check
 check: ## Run Django system checks
 	python manage.py check
@@ -46,6 +58,9 @@ check: ## Run Django system checks
 .PHONY: check-deploy
 check-deploy: ## Run Django deployment checks (expects production env vars)
 	python manage.py check --deploy
+
+.PHONY: ci
+ci: lint check test ## Run the full CI pipeline locally (lint + check + test)
 
 # ---------------------------------------------------------------------------
 # Docker Compose (local Docker + PostgreSQL — mirrors production)
