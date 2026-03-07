@@ -1,63 +1,181 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Satops Procedures{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Satops{% endblock %}</title>
+  <script src="{% static 'js/tailwind.js' %}"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand': '#E10600',
+            'brand-dark': '#C40500',
+          }
+        }
+      }
+    }
+  </script>
+  <script defer src="{% static 'js/alpine.min.js' %}"></script>
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body>
-    <a href="#main" class="skip-link">Skip to main content</a>
-    <nav class="sidebar no-print" aria-label="Main navigation">
-        <div class="sidebar-auth">
-            {% if user.is_authenticated %}
-            <span class="sidebar-username">{{ user.get_username }}</span>
-            <form method="post" action="{% url 'logout' %}">{% csrf_token %}
-                <button type="submit" class="nav-link-btn">Log out</button>
-            </form>
-            {% else %}
-            <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>
-            {% endif %}
+<body class="h-full bg-gray-50" x-data="{ sidebarOpen: false }" hx-boost="true">
+
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <div class="flex h-full">
+
+    <!-- ── Desktop sidebar ── -->
+    <aside id="satops-sidebar" class="no-print hidden lg:flex lg:flex-col w-56 bg-zinc-900 fixed inset-y-0 left-0 z-40 flex-shrink-0" aria-label="Main navigation">
+      <!-- Brand -->
+      <div class="flex items-center h-14 px-5 border-b border-zinc-700 flex-shrink-0">
+        <span class="text-brand font-bold text-xl tracking-widest">SAT</span><span class="text-white font-bold text-xl tracking-widest">OPS</span>
+      </div>
+      <!-- Auth -->
+      <div class="px-4 py-3 border-b border-zinc-700 flex-shrink-0">
+        {% if user.is_authenticated %}
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-zinc-300 text-sm truncate">{{ user.get_username }}</span>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+            <button type="submit" class="text-zinc-400 hover:text-white text-xs transition-colors">Log out</button>
+          </form>
         </div>
-        <div class="sidebar-links">
-            <div class="sidebar-section">
-                <span class="sidebar-section-label">Procedures</span>
-                <a href="{% url 'dashboard' %}">Dashboard</a>
-                <a href="{% url 'start' %}">Start Procedure</a>
-                <a href="{% url 'procedure_list' %}">Procedures</a>
-                <a href="{% url 'history' %}">History</a>
-            </div>
-            <div class="sidebar-section">
-                <span class="sidebar-section-label">Situational Awareness</span>
-                <a href="{% url 'fleet' %}">Fleet</a>
-                <a href="{% url 'timeline' %}">Mission Timeline</a>
-                <a href="{% url 'metrics' %}">Metrics</a>
-                <a href="{% url 'handover' %}">Handover Pack</a>
-            </div>
-            <div class="sidebar-section">
-                <span class="sidebar-section-label">Logging</span>
-                <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
-                <a href="{% url 'anomalies_registry' %}">Anomaly Tracker</a>
-            </div>
-            <div class="sidebar-section">
-                <span class="sidebar-section-label">Reference</span>
-                <a href="{% url 'handbook_alert_list' %}">Alerts & Limits</a>
-                <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
-            </div>
-        </div>
-    </nav>
-    <div class="page-content">
-        {% if messages %}
-        <div class="messages no-print" aria-live="polite">
-            {% for message in messages %}
-            <p class="message message-{{ message.tags }}">{{ message }}</p>
-            {% endfor %}
-        </div>
+        {% else %}
+        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="text-zinc-300 hover:text-white text-sm transition-colors">Log in</a>
         {% endif %}
-        <main id="main" class="{% block main_class %}{% endblock %}">
-            {% block content %}{% endblock %}
-        </main>
+      </div>
+      <!-- Nav links -->
+      <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Procedures</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'dashboard' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Dashboard</a>
+            <a href="{% url 'start' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Start Procedure</a>
+            <a href="{% url 'procedure_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Procedures</a>
+            <a href="{% url 'procedure_create' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Create Procedure</a>
+            <a href="{% url 'history' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">History</a>
+          </div>
+        </div>
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Operations</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'fleet' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Fleet</a>
+            <a href="{% url 'handover' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Handover Pack</a>
+            <a href="{% url 'metrics' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Metrics</a>
+            <a href="{% url 'timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Timeline</a>
+          </div>
+        </div>
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Reference</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'scribe_timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Scribe</a>
+            <a href="{% url 'anomalies_registry' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Anomaly Tracker</a>
+            <a href="{% url 'handbook_alert_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Alerts Handbook</a>
+            <a href="{% url 'fdir_entry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">FDIR Handbook</a>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ── Mobile sidebar overlay ── -->
+    <div x-show="sidebarOpen"
+         x-transition:enter="transition-opacity ease-linear duration-200"
+         x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-linear duration-200"
+         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         class="no-print fixed inset-0 bg-zinc-900/75 z-30 lg:hidden"
+         @click="sidebarOpen = false"
+         style="display:none;"></div>
+
+    <!-- ── Mobile sidebar drawer ── -->
+    <aside x-show="sidebarOpen"
+           x-transition:enter="transition ease-in-out duration-250 transform"
+           x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+           x-transition:leave="transition ease-in-out duration-250 transform"
+           x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full"
+           class="no-print fixed inset-y-0 left-0 z-40 w-56 bg-zinc-900 flex flex-col lg:hidden"
+           style="display:none;">
+      <div class="flex items-center h-14 px-5 border-b border-zinc-700 flex-shrink-0">
+        <span class="text-brand font-bold text-xl tracking-widest">SAT</span><span class="text-white font-bold text-xl tracking-widest">OPS</span>
+        <button @click="sidebarOpen = false" class="ml-auto text-zinc-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="px-4 py-3 border-b border-zinc-700">
+        {% if user.is_authenticated %}
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-zinc-300 text-sm truncate">{{ user.get_username }}</span>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+            <button type="submit" class="text-zinc-400 hover:text-white text-xs">Log out</button>
+          </form>
+        </div>
+        {% else %}
+        <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="text-zinc-300 text-sm">Log in</a>
+        {% endif %}
+      </div>
+      <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Procedures</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'dashboard' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Dashboard</a>
+            <a href="{% url 'start' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Start Procedure</a>
+            <a href="{% url 'procedure_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Procedures</a>
+            <a href="{% url 'procedure_create' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Create Procedure</a>
+            <a href="{% url 'history' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">History</a>
+          </div>
+        </div>
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Operations</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'fleet' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Fleet</a>
+            <a href="{% url 'handover' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Handover Pack</a>
+            <a href="{% url 'metrics' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Metrics</a>
+            <a href="{% url 'timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Timeline</a>
+          </div>
+        </div>
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Reference</p>
+          <div class="space-y-0.5">
+            <a href="{% url 'scribe_timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Scribe</a>
+            <a href="{% url 'anomalies_registry' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Anomaly Tracker</a>
+            <a href="{% url 'handbook_alert_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Alerts Handbook</a>
+            <a href="{% url 'fdir_entry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">FDIR Handbook</a>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- ── Main content area ── -->
+    <div class="flex-1 lg:pl-56 flex flex-col min-h-full">
+
+      <!-- Mobile top bar -->
+      <div class="no-print lg:hidden sticky top-0 z-30 flex items-center h-14 px-4 bg-zinc-900 border-b border-zinc-700 flex-shrink-0">
+        <button @click="sidebarOpen = !sidebarOpen" class="text-zinc-300 hover:text-white transition-colors" aria-label="Open navigation">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <span class="ml-3 text-white font-bold tracking-widest"><span class="text-brand">SAT</span>OPS</span>
+      </div>
+
+      <!-- Flash messages -->
+      {% if messages %}
+      <div class="no-print px-6 pt-4 space-y-2" aria-live="polite">
+        {% for message in messages %}
+        <div class="message message-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Page content -->
+      <main id="main" class="page-main flex-1 px-4 py-6 lg:px-8 {% block main_class %}max-w-4xl{% endblock %}">
+        {% block content %}{% endblock %}
+      </main>
     </div>
+
+  </div>
 </body>
 </html>

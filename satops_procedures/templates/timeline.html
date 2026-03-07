@@ -1,90 +1,114 @@
 {% extends "base.html" %}
-{% block title %}Mission Timeline{% endblock %}
-{% block main_class %}main-full-width{% endblock %}
+{% block title %}Mission Timeline — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
-<h2>Mission Timeline</h2>
-<p class="tagline no-print">Fused chronological view: procedure runs, mission log entries, and anomalies. Filter by satellite or type; export as CSV.</p>
 
-<div class="no-print card" style="margin-bottom: 1rem;">
-    <form method="get" class="search-form">
-        <label for="tl-satellite">Satellite</label>
-        <select id="tl-satellite" name="satellite">
-            <option value="">All</option>
-            {% for s in satellites %}
-            <option value="{{ s.id }}" {% if filter_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
-            {% endfor %}
-        </select>
-        <label for="tl-type">Type</label>
-        <select id="tl-type" name="type">
-            <option value="" {% if not filter_type %}selected{% endif %}>All</option>
-            <option value="run" {% if filter_type == 'run' %}selected{% endif %}>Procedure runs</option>
-            <option value="scribe" {% if filter_type == 'scribe' %}selected{% endif %}>Mission log</option>
-            <option value="anomaly" {% if filter_type == 'anomaly' %}selected{% endif %}>Anomalies</option>
-        </select>
-        <label for="tl-from">From (date)</label>
-        <input type="date" id="tl-from" name="from" value="{{ filter_from }}">
-        <label for="tl-to">To (date)</label>
-        <input type="date" id="tl-to" name="to" value="{{ filter_to }}">
-        <button type="submit" class="btn btn-primary">Filter</button>
-        <a href="{% url 'timeline' %}" class="btn btn-secondary">Clear</a>
-        <a href="{% url 'timeline' %}?satellite={{ filter_satellite_id|default:'' }}&type={{ filter_type }}&from={{ filter_from }}&to={{ filter_to }}&export=csv" class="btn btn-secondary">Export CSV</a>
-    </form>
+<div class="flex items-center justify-between mb-2">
+  <h1 class="text-2xl font-semibold text-gray-900">Mission Timeline</h1>
 </div>
+<p class="text-sm text-gray-500 mb-5 no-print">Fused chronological view: procedure runs, mission log entries, and anomalies.</p>
 
-<div class="card">
-    <div class="dashboard-table-wrap">
-        <table class="timeline-table">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Type</th>
-                    <th>Satellite</th>
-                    <th>Detail</th>
-                    <th class="no-print">Link</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ev in events %}
-                <tr class="timeline-row timeline-{{ ev.type }}">
-                    <td>{{ ev.timestamp|date:"Y-m-d H:i:s" }}</td>
-                    <td>
-                        {% if ev.type == 'run' or ev.type == 'run_end' %}
-                        <span class="badge badge-run">Run {% if ev.type == 'run_end' %}end{% else %}start{% endif %}</span>
-                        {% elif ev.type == 'scribe' %}
-                        <span class="badge badge-scribe">Log</span>
-                        {% elif ev.type == 'anomaly' %}
-                        <span class="badge badge-anomaly">Anomaly</span>
-                        {% else %}
-                        {{ ev.type }}
-                        {% endif %}
-                    </td>
-                    <td>{{ ev.satellite_name|default:"—" }}</td>
-                    <td>
-                        {% if ev.type == 'run' or ev.type == 'run_end' %}
-                        {{ ev.procedure_name }} — <span class="badge badge-{{ ev.status|lower }}">{{ ev.status }}</span> ({{ ev.operator_name }})
-                        {% elif ev.type == 'scribe' %}
-                        <strong>{{ ev.role_name }}</strong> — {{ ev.category_name }}{% if ev.description %}: {{ ev.description|truncatewords:15 }}{% endif %}
-                        {% elif ev.type == 'anomaly' %}
-                        <span class="badge badge-{{ ev.severity|lower }}">{{ ev.severity }}</span> {{ ev.status }}{% if ev.description %} — {{ ev.description|truncatewords:12 }}{% endif %}
-                        {% endif %}
-                    </td>
-                    <td class="no-print">
-                        {% if ev.type == 'run' or ev.type == 'run_end' %}
-                        <a href="{% url 'run_summary' ev.run_id %}">View run</a>
-                        {% elif ev.type == 'scribe' %}
-                        <a href="{% url 'scribe_timeline' %}">Timeline</a>
-                        {% elif ev.type == 'anomaly' %}
-                        <a href="{% url 'anomalies_detail' ev.anomaly_id %}">View</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5">No events match the filters. Adjust dates or clear filters.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Filter bar -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div>
+      <label class="first" for="tl-satellite">Satellite</label>
+      <select id="tl-satellite" name="satellite">
+        <option value="">All</option>
+        {% for s in satellites %}
+        <option value="{{ s.id }}" {% if filter_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
     </div>
+    <div>
+      <label for="tl-type">Type</label>
+      <select id="tl-type" name="type">
+        <option value="" {% if not filter_type %}selected{% endif %}>All</option>
+        <option value="run" {% if filter_type == 'run' %}selected{% endif %}>Procedure runs</option>
+        <option value="scribe" {% if filter_type == 'scribe' %}selected{% endif %}>Mission log</option>
+        <option value="anomaly" {% if filter_type == 'anomaly' %}selected{% endif %}>Anomalies</option>
+      </select>
+    </div>
+    <div>
+      <label for="tl-from">From</label>
+      <input type="date" id="tl-from" name="from" value="{{ filter_from }}">
+    </div>
+    <div>
+      <label for="tl-to">To</label>
+      <input type="date" id="tl-to" name="to" value="{{ filter_to }}">
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      <a href="{% url 'timeline' %}" class="btn btn-secondary">Clear</a>
+      <a href="{% url 'timeline' %}?satellite={{ filter_satellite_id|default:'' }}&type={{ filter_type }}&from={{ filter_from }}&to={{ filter_to }}&export=csv" class="btn btn-secondary">Export CSV</a>
+    </div>
+  </form>
 </div>
 
-<p class="no-print" style="margin-top: 1rem;"><a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a> <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a> <a href="{% url 'handover' %}" class="btn btn-secondary">Handover</a></p>
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Time</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Type</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Satellite</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Detail</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider no-print"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for ev in events %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 text-gray-500 whitespace-nowrap font-mono text-xs">{{ ev.timestamp|date:"Y-m-d H:i:s" }}</td>
+          <td class="px-4 py-3">
+            {% if ev.type == 'run' or ev.type == 'run_end' %}
+            <span class="badge badge-run">Run {% if ev.type == 'run_end' %}end{% else %}start{% endif %}</span>
+            {% elif ev.type == 'scribe' %}
+            <span class="badge badge-scribe">Log</span>
+            {% elif ev.type == 'anomaly' %}
+            <span class="badge badge-anomaly">Anomaly</span>
+            {% else %}
+            <span class="badge badge-cancelled">{{ ev.type }}</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 font-medium text-gray-900">{{ ev.satellite_name|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-700 max-w-lg">
+            {% if ev.type == 'run' or ev.type == 'run_end' %}
+            <span class="font-medium">{{ ev.procedure_name }}</span>
+            — <span class="badge badge-{{ ev.status|lower }}">{{ ev.status }}</span>
+            <span class="text-gray-500">({{ ev.operator_name }})</span>
+            {% elif ev.type == 'scribe' %}
+            <strong>{{ ev.role_name }}</strong> — {{ ev.category_name }}{% if ev.description %}: <span class="text-gray-600">{{ ev.description|truncatewords:15 }}</span>{% endif %}
+            {% elif ev.type == 'anomaly' %}
+            <span class="badge badge-{{ ev.severity|lower }}">{{ ev.severity }}</span>
+            {{ ev.status }}{% if ev.description %} — <span class="text-gray-600">{{ ev.description|truncatewords:12 }}</span>{% endif %}
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 no-print">
+            {% if ev.type == 'run' or ev.type == 'run_end' %}
+            <a href="{% url 'run_summary' ev.run_id %}" class="text-brand hover:underline">View run</a>
+            {% elif ev.type == 'scribe' %}
+            <a href="{% url 'scribe_timeline' %}" class="text-brand hover:underline">Timeline</a>
+            {% elif ev.type == 'anomaly' %}
+            <a href="{% url 'anomalies_detail' ev.anomaly_id %}" class="text-brand hover:underline">View</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="px-4 py-8 text-center text-gray-500">No events match the filters. Adjust dates or <a href="{% url 'timeline' %}" class="text-brand hover:underline">clear filters</a>.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="no-print mt-4 flex gap-2">
+  <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+  <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a>
+  <a href="{% url 'handover' %}" class="btn btn-secondary">Handover</a>
+</div>
+
 {% endblock %}

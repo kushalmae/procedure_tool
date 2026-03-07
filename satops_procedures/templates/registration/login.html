@@ -1,29 +1,56 @@
-{% extends "base.html" %}
 {% load static %}
-{% block title %}Log in{% endblock %}
-{% block main_class %}main-full-width{% endblock %}
-{% block content %}
-<h2>Log in</h2>
-{% if form.non_field_errors %}
-<p class="card" style="color: var(--fail);">{{ form.non_field_errors }}</p>
-{% endif %}
-<div class="card">
-    <form method="post" action="{% url 'login' %}">
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in — Satops</title>
+  <script src="{% static 'js/tailwind.js' %}"></script>
+  <script>tailwind.config = { theme: { extend: { colors: { brand: '#E10600', 'brand-dark': '#C40500' } } } }</script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="h-full bg-zinc-950 flex items-center justify-center">
+
+  <div class="w-full max-w-sm px-4">
+    <!-- Brand -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold tracking-widest">
+        <span class="text-brand">SAT</span><span class="text-white">OPS</span>
+      </h1>
+      <p class="text-zinc-400 text-sm mt-2">Satellite Operations Suite</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-2xl p-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-6">Sign in to your account</h2>
+
+      {% if form.non_field_errors %}
+      <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
         {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-        <label for="id_username">Username</label>
+
+        <label class="first" for="id_username">Username</label>
         <input type="text" name="username" id="id_username" required maxlength="150" autofocus
-               value="{{ form.username.value|default:'' }}" placeholder="Username">
+               value="{{ form.username.value|default:'' }}" placeholder="Username" style="max-width:none;">
         {% if form.username.errors %}<p class="form-error">{{ form.username.errors }}</p>{% endif %}
+
         <label for="id_password">Password</label>
-        <input type="password" name="password" id="id_password" required placeholder="Password">
+        <input type="password" name="password" id="id_password" required placeholder="Password" style="max-width:none;">
         {% if form.password.errors %}<p class="form-error">{{ form.password.errors }}</p>{% endif %}
-        <p style="margin-top: 1rem;">
-            <button type="submit" class="btn btn-primary">Log in</button>
-        </p>
-    </form>
-</div>
-<p style="color: var(--text-muted); font-size: 0.9rem;">
-    No account? Create one in <a href="/admin/">Django Admin</a> (admin user can add users), or use <code>python manage.py createsuperuser</code>.
-</p>
-{% endblock %}
+
+        <button type="submit" class="btn btn-primary w-full justify-center mt-2" style="width:100%;">Sign in</button>
+      </form>
+    </div>
+
+    <p class="text-center text-zinc-500 text-xs mt-6">
+      No account? Create one in <a href="/admin/" class="text-zinc-300 hover:text-white underline">Django Admin</a>
+      or via <code class="bg-zinc-800 px-1 rounded text-zinc-300">python manage.py createsuperuser</code>.
+    </p>
+  </div>
+
+</body>
+</html>

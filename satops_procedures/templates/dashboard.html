@@ -1,129 +1,188 @@
 {% extends "base.html" %}
-{% block title %}Fleet Procedures{% endblock %}
-{% block main_class %}main-full-width dashboard-page{% endblock %}
+{% block title %}Fleet Procedures — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
-<h2>Fleet Procedures</h2>
 
-<div class="dashboard-summary no-print">
-    <div class="summary-cards">
-        <div class="summary-card summary-card-health" title="Fleet health: Green = nominal, Yellow = anomalies or recent fail, Red = critical/high anomaly">
-            <span class="summary-value"><span class="badge badge-health-{{ fleet_health }}">{{ fleet_health|upper }}</span></span>
-            <span class="summary-label">Fleet health</span>
-        </div>
-        <div class="summary-card">
-            <span class="summary-value">{{ running_count }}</span>
-            <span class="summary-label">Running now</span>
-        </div>
-        <div class="summary-card">
-            <span class="summary-value">{{ procedures_count }}</span>
-            <span class="summary-label">Procedures</span>
-        </div>
-        <div class="summary-card">
-            <span class="summary-value">{{ satellites_count }}</span>
-            <span class="summary-label">Satellites</span>
-        </div>
-        <div class="summary-card">
-            <span class="summary-value">{{ runs_last_7_days }}</span>
-            <span class="summary-label">Runs (7 days)</span>
-        </div>
-        <div class="summary-card">
-            <span class="summary-value">{{ scribe_entries_24h }}</span>
-            <span class="summary-label">Scribe entries (24h)</span>
-        </div>
-        <div class="summary-card">
-            <span class="summary-value">{{ active_anomalies_count }}</span>
-            <span class="summary-label">Active anomalies</span>
-        </div>
-    </div>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Fleet Procedures</h1>
+  <a href="{% url 'start' %}" class="btn btn-primary no-print">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    Start Procedure
+  </a>
 </div>
 
-<div class="dashboard-body no-print">
-    <div class="dashboard-primary">
-        <div class="search-bar card">
-            <form method="get" class="search-form">
-                <input type="text" name="q" value="{{ search_query }}" placeholder="Search satellite, procedure, operator..." class="search-input">
-                <label for="filter-tag">Tag</label>
-                <select id="filter-tag" name="tag">
-                    <option value="">All tags</option>
-                    {% for t in tags %}
-                    <option value="{{ t.id }}" {% if tag_id == t.id %}selected{% endif %}>{{ t.name }}</option>
-                    {% endfor %}
-                </select>
-                <label for="sort-dashboard">Sort</label>
-                <select id="sort-dashboard" name="sort">
-                    <option value="-start_time" {% if sort == '-start_time' %}selected{% endif %}>Newest first</option>
-                    <option value="start_time" {% if sort == 'start_time' %}selected{% endif %}>Oldest first</option>
-                    <option value="satellite__name" {% if sort == 'satellite__name' %}selected{% endif %}>Satellite A–Z</option>
-                    <option value="-satellite__name" {% if sort == '-satellite__name' %}selected{% endif %}>Satellite Z–A</option>
-                    <option value="procedure__name" {% if sort == 'procedure__name' %}selected{% endif %}>Procedure A–Z</option>
-                    <option value="-procedure__name" {% if sort == '-procedure__name' %}selected{% endif %}>Procedure Z–A</option>
-                    <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
-                    <option value="-status" {% if sort == '-status' %}selected{% endif %}>Status (desc)</option>
-                </select>
-                <button type="submit" class="btn btn-primary">Filter / Sort</button>
-                {% if search_query or tag_id %}<a href="{% url 'dashboard' %}?sort={{ sort }}" class="btn btn-secondary">Clear filters</a>{% endif %}
-            </form>
-        </div>
-        <p><a href="{% url 'start' %}" class="btn btn-primary">Start Procedure</a></p>
-        <div class="card dashboard-runs-card">
-            <div class="dashboard-table-wrap">
-                <table class="dashboard-runs-table">
-                    <thead>
-                        <tr><th>Satellite</th><th>Procedure</th><th>Status</th><th>Started</th><th>Action</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for run in runs %}
-                        <tr>
-                            <td>{{ run.satellite.name }}</td>
-                            <td>{{ run.procedure.name }}{% if run.procedure.tags.exists %} <span class="tag-list">{% for t in run.procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}</span>{% endif %}</td>
-                            <td>
-                                <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
-                            </td>
-                            <td>{{ run.start_time|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                {% if run.status == 'RUNNING' %}
-                                <a href="{% url 'run' run.id %}?step={{ run.step_executions.count }}">Resume</a>
-                                {% else %}
-                                <a href="{% url 'run_summary' run.id %}">View / Print</a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5">No runs found. {% if search_query or tag_id %}<a href="{% url 'dashboard' %}">Clear filters</a>{% else %}<a href="{% url 'start' %}">Start a procedure</a>{% endif %}.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <div class="dashboard-sidebar">
-        {% if recent_anomalies %}
-        <div class="dashboard-widget card">
-            <h3 style="margin-top: 0;">Recent anomalies</h3>
-            <ul class="widget-list">
-                {% for a in recent_anomalies %}
-                <li><a href="{% url 'anomalies_detail' a.id %}">{{ a.satellite.name }}</a> — <span class="badge badge-{{ a.severity|lower }}">{{ a.get_severity_display }}</span> {{ a.get_status_display }}{% if a.description %} · {{ a.description|truncatewords:8 }}{% endif %}</li>
-                {% endfor %}
-            </ul>
-            <p><a href="{% url 'anomalies_registry' %}" class="btn btn-secondary">View all</a> {% if user.is_authenticated %}<a href="{% url 'anomalies_add' %}" class="btn btn-secondary">Report</a>{% endif %}</p>
-        </div>
-        {% endif %}
-        {% if recent_scribe_entries %}
-        <div class="dashboard-widget card">
-            <h3 style="margin-top: 0;">Recent mission log</h3>
-            <ul class="widget-list">
-                {% for e in recent_scribe_entries %}
-                <li><strong>{{ e.timestamp|date:"m-d H:i" }}</strong> {{ e.role.name }} — {{ e.category.name }}{% if e.satellite %} ({{ e.satellite.name }}){% endif %}: {{ e.description|truncatewords:10 }}</li>
-                {% endfor %}
-            </ul>
-            <p><a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Mission Scribe</a></p>
-        </div>
-        {% endif %}
-        {% if not recent_anomalies and not recent_scribe_entries %}
-        <div class="dashboard-widget card">
-            <p style="margin: 0; color: var(--text-muted);">No recent anomalies or mission log entries. <a href="{% url 'anomalies_registry' %}">Anomalies</a> · <a href="{% url 'scribe_timeline' %}">Mission Scribe</a></p>
-        </div>
-        {% endif %}
-    </div>
+<!-- Summary cards -->
+<div class="no-print grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-lg font-bold"><span class="badge badge-health-{{ fleet_health }}">{{ fleet_health|upper }}</span></div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Fleet health</div>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-gray-900">{{ running_count }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Running now</div>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-gray-900">{{ procedures_count }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Procedures</div>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-gray-900">{{ satellites_count }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Satellites</div>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-gray-900">{{ runs_last_7_days }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Runs (7d)</div>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold text-gray-900">{{ scribe_entries_24h }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Log (24h)</div>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
+    <div class="text-2xl font-bold {% if active_anomalies_count > 0 %}text-red-600{% else %}text-gray-900{% endif %}">{{ active_anomalies_count }}</div>
+    <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Anomalies</div>
+  </div>
 </div>
+
+<div class="flex flex-col lg:flex-row gap-6">
+  <!-- Primary: runs table -->
+  <div class="flex-1 min-w-0">
+    <!-- Filter bar -->
+    <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+      <form method="get" class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[160px]">
+          <label class="first" for="dash-q">Search</label>
+          <input type="text" id="dash-q" name="q" value="{{ search_query }}" placeholder="Satellite, procedure, operator…">
+        </div>
+        <div>
+          <label for="dash-tag">Tag</label>
+          <select id="dash-tag" name="tag">
+            <option value="">All tags</option>
+            {% for t in tags %}
+            <option value="{{ t.id }}" {% if tag_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="dash-sort">Sort</label>
+          <select id="dash-sort" name="sort">
+            <option value="-start_time" {% if sort == '-start_time' %}selected{% endif %}>Newest first</option>
+            <option value="start_time" {% if sort == 'start_time' %}selected{% endif %}>Oldest first</option>
+            <option value="satellite__name" {% if sort == 'satellite__name' %}selected{% endif %}>Satellite A–Z</option>
+            <option value="-satellite__name" {% if sort == '-satellite__name' %}selected{% endif %}>Satellite Z–A</option>
+            <option value="procedure__name" {% if sort == 'procedure__name' %}selected{% endif %}>Procedure A–Z</option>
+            <option value="-procedure__name" {% if sort == '-procedure__name' %}selected{% endif %}>Procedure Z–A</option>
+            <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
+          </select>
+        </div>
+        <div class="flex items-end gap-2">
+          <button type="submit" class="btn btn-primary">Filter</button>
+          {% if search_query or tag_id %}<a href="{% url 'dashboard' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
+        </div>
+      </form>
+    </div>
+
+    <!-- Runs table -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-900">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Satellite</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Procedure</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Started</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider no-print">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for run in runs %}
+            <tr class="hover:bg-gray-50 transition-colors">
+              <td class="px-4 py-3 font-medium text-gray-900">{{ run.satellite.name }}</td>
+              <td class="px-4 py-3 text-gray-700">
+                {{ run.procedure.name }}
+                {% if run.procedure.tags.exists %}
+                <span class="ml-1">{% for t in run.procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3"><span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span></td>
+              <td class="px-4 py-3 text-gray-500">{{ run.start_time|date:"Y-m-d H:i" }}</td>
+              <td class="px-4 py-3 no-print">
+                {% if run.status == 'RUNNING' %}
+                <a href="{% url 'run' run.id %}?step={{ run.step_executions.count }}" class="text-brand hover:text-brand-dark font-medium">Resume →</a>
+                {% else %}
+                <a href="{% url 'run_summary' run.id %}" class="text-gray-600 hover:text-gray-900">View</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                No runs found.
+                {% if search_query or tag_id %}
+                <a href="{% url 'dashboard' %}" class="text-brand hover:underline">Clear filters</a>
+                {% else %}
+                <a href="{% url 'start' %}" class="text-brand hover:underline">Start a procedure</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar widgets -->
+  <div class="w-full lg:w-72 flex-shrink-0 space-y-4 no-print">
+    {% if recent_anomalies %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Anomalies</h3>
+      <ul class="space-y-2">
+        {% for a in recent_anomalies %}
+        <li class="text-sm">
+          <a href="{% url 'anomalies_detail' a.id %}" class="font-medium text-gray-900 hover:text-brand">{{ a.satellite.name }}</a>
+          <span class="mx-1">—</span><span class="badge badge-{{ a.severity|lower }}">{{ a.get_severity_display }}</span>
+          <span class="text-gray-500">{{ a.get_status_display }}</span>
+          {% if a.description %}<p class="text-gray-400 text-xs mt-0.5 truncate">{{ a.description|truncatewords:8 }}</p>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="mt-3 flex gap-2">
+        <a href="{% url 'anomalies_registry' %}" class="btn btn-secondary">View all</a>
+        {% if user.is_authenticated %}<a href="{% url 'anomalies_add' %}" class="btn btn-secondary">Report</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if recent_scribe_entries %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-3">Recent Mission Log</h3>
+      <ul class="space-y-2">
+        {% for e in recent_scribe_entries %}
+        <li class="text-sm">
+          <span class="font-medium text-gray-700">{{ e.timestamp|date:"m-d H:i" }}</span>
+          <span class="text-gray-500">{{ e.role.name }} — {{ e.category.name }}</span>
+          {% if e.satellite %}<span class="text-gray-400">({{ e.satellite.name }})</span>{% endif %}
+          <p class="text-gray-500 text-xs mt-0.5">{{ e.description|truncatewords:10 }}</p>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="mt-3">
+        <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Mission Scribe</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not recent_anomalies and not recent_scribe_entries %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+      <p class="text-sm text-gray-500">No recent anomalies or mission log entries.</p>
+      <div class="mt-3 flex gap-2">
+        <a href="{% url 'anomalies_registry' %}" class="btn btn-secondary">Anomalies</a>
+        <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Scribe</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
 {% endblock %}

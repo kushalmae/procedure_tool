@@ -2,28 +2,51 @@
 {% block title %}Mission Scribe — Shifts{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / Shifts
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> &rsaquo; Shifts
 </nav>
-<h2>Shifts</h2>
-<p><a href="{% url 'scribe_shift_create' %}" class="btn btn-primary">Add shift</a> <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Back to timeline</a></p>
-<div class="card">
-    <table>
-        <thead>
-            <tr><th>Start</th><th>End</th><th>Handoff notes</th><th></th></tr>
-        </thead>
-        <tbody>
-            {% for sh in shifts %}
-            <tr>
-                <td>{{ sh.start_time|date:"Y-m-d H:i" }}</td>
-                <td>{{ sh.end_time|date:"Y-m-d H:i" }}</td>
-                <td>{{ sh.handoff_notes|truncatewords:10|default:"—" }}</td>
-                <td><a href="{% url 'scribe_shift_detail' sh.id %}">View</a></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4">No shifts. <a href="{% url 'scribe_shift_create' %}">Add a shift</a>.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Shifts</h1>
+  <div class="flex gap-2">
+    <a href="{% url 'scribe_shift_create' %}" class="btn btn-primary">Add shift</a>
+    <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Back to timeline</a>
+  </div>
 </div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Start</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">End</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Handoff Notes</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for sh in shifts %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ sh.start_time|date:"Y-m-d H:i" }}</td>
+          <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ sh.end_time|date:"Y-m-d H:i" }}</td>
+          <td class="px-4 py-3 text-gray-500 max-w-sm truncate">{{ sh.handoff_notes|truncatewords:10|default:"—" }}</td>
+          <td class="px-4 py-3">
+            <a href="{% url 'scribe_shift_detail' sh.id %}" class="text-brand hover:underline">View</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+            No shifts. <a href="{% url 'scribe_shift_create' %}" class="text-brand hover:underline">Add a shift</a>.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}

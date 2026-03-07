@@ -1,67 +1,60 @@
 {% extends "base.html" %}
-{% block title %}{{ alert.parameter }} — Alerts & Limits Handbook{% endblock %}
-{% block main_class %}main-full-width{% endblock %}
+{% block title %}{{ alert.parameter }} — Alerts Handbook{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / {{ alert.parameter }}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'handbook_alert_list' %}">Alerts &amp; Limits Handbook</a> &rsaquo; {{ alert.parameter }}
 </nav>
-<h2>{{ alert.parameter }}</h2>
-<div class="card">
-    <dl class="detail-list">
-        <dt>Subsystem</dt>
-        <dd>{{ alert.subsystem.name }}</dd>
-        {% if alert.mnemonic %}
-        <dt>Mnemonic</dt>
-        <dd><code>{{ alert.mnemonic }}</code></dd>
-        {% if alert.mnemonic_description %}
-        <dt>What this mnemonic is</dt>
-        <dd>{{ alert.mnemonic_description|linebreaks }}</dd>
-        {% endif %}
-        {% endif %}
-        {% if alert.apids %}
-        <dt>APID(s)</dt>
-        <dd>{{ alert.apids }}</dd>
-        {% endif %}
-        <dt>Severity</dt>
-        <dd>{{ alert.get_severity_display }}</dd>
-        <dt>Description</dt>
-        <dd>{{ alert.description|linebreaks }}</dd>
-        {% if alert.alert_conditions %}
-        <dt>Alert conditions</dt>
-        <dd>{{ alert.alert_conditions|linebreaks }}</dd>
-        {% endif %}
-        <dt>Warning threshold</dt>
-        <dd>{{ alert.warning_threshold|default:"—" }}</dd>
-        <dt>Critical threshold</dt>
-        <dd>{{ alert.critical_threshold|default:"—" }}</dd>
-        {% if alert.recommended_response %}
-        <dt>Recommended response</dt>
-        <dd>{{ alert.recommended_response|linebreaks }}</dd>
-        {% endif %}
-        {% if alert.procedure %}
-        <dt>Procedure</dt>
-        <dd>
-            <a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a>
-            {% if user.is_authenticated %}
-            <a href="{% url 'start' %}?procedure={{ alert.procedure.id }}" class="btn btn-primary" style="margin-left: 0.5rem;">Start this procedure</a>
-            {% endif %}
-        </dd>
-        {% endif %}
-        {% if alert.user_notes %}
-        <dt>User notes</dt>
-        <dd class="user-notes">{{ alert.user_notes|linebreaks }}</dd>
-        {% endif %}
-        <dt>Version</dt>
-        <dd>{{ alert.version }}</dd>
-        <dt>Last updated</dt>
-        <dd>{{ alert.updated_at|date:"Y-m-d H:i" }}</dd>
-    </dl>
-    <p class="no-print">
-        {% if user.is_authenticated %}
-        <a href="{% url 'handbook_alert_edit' alert.id %}" class="btn btn-primary">Edit</a>
-        <a href="{% url 'handbook_alert_delete' alert.id %}" class="btn btn-secondary" style="color: var(--fail);">Delete</a>
-        {% endif %}
-        <a href="{% url 'handbook_alert_list' %}" class="btn btn-secondary">Back to list</a>
-    </p>
+
+<div class="flex items-start justify-between mb-5 gap-4">
+  <h1 class="text-2xl font-semibold text-gray-900">{{ alert.parameter }}</h1>
+  <div class="no-print flex gap-2">
+    {% if user.is_authenticated %}
+    <a href="{% url 'handbook_alert_edit' alert.id %}" class="btn btn-primary">Edit</a>
+    <a href="{% url 'handbook_alert_delete' alert.id %}" class="btn btn-secondary abort-btn">Delete</a>
+    {% endif %}
+    <a href="{% url 'handbook_alert_list' %}" class="btn btn-secondary">Back to list</a>
+  </div>
 </div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+  <dl class="detail-list">
+    <dt>Subsystem</dt><dd>{{ alert.subsystem.name }}</dd>
+    {% if alert.mnemonic %}
+    <dt>Mnemonic</dt><dd><code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono">{{ alert.mnemonic }}</code></dd>
+    {% if alert.mnemonic_description %}
+    <dt>Mnemonic description</dt><dd>{{ alert.mnemonic_description|linebreaks }}</dd>
+    {% endif %}
+    {% endif %}
+    {% if alert.apids %}
+    <dt>APID(s)</dt><dd class="font-mono text-sm">{{ alert.apids }}</dd>
+    {% endif %}
+    <dt>Severity</dt><dd><span class="badge badge-{{ alert.severity|lower }}">{{ alert.get_severity_display }}</span></dd>
+    <dt>Description</dt><dd>{{ alert.description|linebreaks }}</dd>
+    {% if alert.alert_conditions %}
+    <dt>Alert conditions</dt><dd>{{ alert.alert_conditions|linebreaks }}</dd>
+    {% endif %}
+    <dt>Warning threshold</dt><dd>{{ alert.warning_threshold|default:"—" }}</dd>
+    <dt>Critical threshold</dt><dd>{{ alert.critical_threshold|default:"—" }}</dd>
+    {% if alert.recommended_response %}
+    <dt>Recommended response</dt><dd>{{ alert.recommended_response|linebreaks }}</dd>
+    {% endif %}
+    {% if alert.procedure %}
+    <dt>Procedure</dt>
+    <dd>
+      <a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}" class="text-brand hover:underline">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a>
+      {% if user.is_authenticated %}
+      <a href="{% url 'start' %}?procedure={{ alert.procedure.id }}" class="btn btn-primary ml-2">Start this procedure</a>
+      {% endif %}
+    </dd>
+    {% endif %}
+    {% if alert.user_notes %}
+    <dt>User notes</dt><dd class="bg-gray-50 rounded p-2">{{ alert.user_notes|linebreaks }}</dd>
+    {% endif %}
+    <dt>Version</dt><dd>{{ alert.version }}</dd>
+    <dt>Last updated</dt><dd>{{ alert.updated_at|date:"Y-m-d H:i" }}</dd>
+  </dl>
+</div>
+
 {% endblock %}

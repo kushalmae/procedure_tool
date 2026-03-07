@@ -1,98 +1,128 @@
 {% extends "base.html" %}
-{% block title %}FDIR Handbook{% endblock %}
-{% block main_class %}main-full-width{% endblock %}
+{% block title %}FDIR Handbook — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / FDIR Handbook
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; FDIR Handbook
 </nav>
-<h2>FDIR Handbook</h2>
-<p class="no-print">
+
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-2xl font-semibold text-gray-900">FDIR Handbook</h1>
+  <div class="no-print">
     {% if user.is_authenticated %}
-    <a href="{% url 'fdir_entry_create' %}" class="btn btn-primary">Add FDIR entry</a>
+    <a href="{% url 'fdir_entry_create' %}" class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Add FDIR entry
+    </a>
     {% else %}
-    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a> to add or edit FDIR entries.
+    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary">Log in to edit</a>
     {% endif %}
-</p>
-<div class="search-bar card no-print">
-    <form method="get" class="search-form">
-        <input type="text" name="q" value="{{ search_query }}" placeholder="Search fault name, conditions, response..." class="search-input">
-        <label for="filter-subsystem">Subsystem</label>
-        <select id="filter-subsystem" name="subsystem">
-            <option value="">All</option>
-            {% for s in subsystems %}
-            <option value="{{ s.id }}" {% if filter_subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
-            {% endfor %}
-        </select>
-        <label for="filter-severity">Severity</label>
-        <select id="filter-severity" name="severity">
-            <option value="">All</option>
-            {% for val, label in severity_choices %}
-            <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        {% if fault_type_choices %}
-        <label for="filter-fault_type">Fault type</label>
-        <select id="filter-fault_type" name="fault_type">
-            <option value="">All</option>
-            {% for ft in fault_type_choices %}
-            <option value="{{ ft }}" {% if filter_fault_type == ft %}selected{% endif %}>{{ ft }}</option>
-            {% endfor %}
-        </select>
-        {% endif %}
-        <label for="sort-fdir">Sort</label>
-        <select id="sort-fdir" name="sort">
-            <option value="subsystem__name" {% if sort == 'subsystem__name' %}selected{% endif %}>Subsystem, name</option>
-            <option value="name" {% if sort == 'name' %}selected{% endif %}>Name A–Z</option>
-            <option value="-name" {% if sort == '-name' %}selected{% endif %}>Name Z–A</option>
-            <option value="-updated_at" {% if sort == '-updated_at' %}selected{% endif %}>Updated (newest)</option>
-            <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
-            <option value="-severity" {% if sort == '-severity' %}selected{% endif %}>Severity (desc)</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Filter / Sort</button>
-        {% if search_query or filter_subsystem_id or filter_severity or filter_fault_type %}
-        <a href="{% url 'fdir_entry_list' %}?clear=1" class="btn btn-secondary">Clear filters</a>
-        {% endif %}
-    </form>
+  </div>
 </div>
-<div class="card">
-    <table>
-        <thead>
-            <tr>
-                <th>Fault name</th>
-                <th>Subsystem</th>
-                <th>Severity</th>
-                <th>Fault type</th>
-                <th>Triggering conditions</th>
-                <th>Thresholds / persistence</th>
-                <th>Onboard response</th>
-                <th>Updated</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for e in entries %}
-            <tr>
-                <td><a href="{% url 'fdir_entry_detail' e.id %}">{{ e.name }}</a>{% if e.fault_code %} <span class="text-muted">({{ e.fault_code }})</span>{% endif %}</td>
-                <td>{{ e.subsystem.name }}</td>
-                <td>{{ e.get_severity_display }}</td>
-                <td>{{ e.fault_type|default:"—" }}</td>
-                <td>{{ e.triggering_conditions|truncatewords:30|default:"—" }}</td>
-                <td>{{ e.detection_thresholds|truncatewords:30|default:"—" }}</td>
-                <td>{{ e.onboard_automated_response|truncatewords:30|default:"—" }}</td>
-                <td>{{ e.updated_at|date:"Y-m-d" }}</td>
-                <td>
-                    <a href="{% url 'fdir_entry_detail' e.id %}" class="btn btn-secondary">View</a>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'fdir_entry_edit' e.id %}" class="btn btn-secondary">Edit</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="9">No FDIR entries. {% if user.is_authenticated %}<a href="{% url 'fdir_entry_create' %}">Add one</a> or run <code>python manage.py seed_fdir --entries</code>.{% else %}Run <code>python manage.py seed_fdir --entries</code> for samples.{% endif %} Or clear filters.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+
+<!-- Filter bar -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[180px]">
+      <label class="first" for="fdir-q">Search</label>
+      <input type="text" id="fdir-q" name="q" value="{{ search_query }}" placeholder="Fault name, conditions, response…">
+    </div>
+    <div>
+      <label for="fdir-subsystem">Subsystem</label>
+      <select id="fdir-subsystem" name="subsystem">
+        <option value="">All</option>
+        {% for s in subsystems %}
+        <option value="{{ s.id }}" {% if filter_subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="fdir-severity">Severity</label>
+      <select id="fdir-severity" name="severity">
+        <option value="">All</option>
+        {% for val, label in severity_choices %}
+        <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if fault_type_choices %}
+    <div>
+      <label for="fdir-fault_type">Fault type</label>
+      <select id="fdir-fault_type" name="fault_type">
+        <option value="">All</option>
+        {% for ft in fault_type_choices %}
+        <option value="{{ ft }}" {% if filter_fault_type == ft %}selected{% endif %}>{{ ft }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div>
+      <label for="fdir-sort">Sort</label>
+      <select id="fdir-sort" name="sort">
+        <option value="subsystem__name" {% if sort == 'subsystem__name' %}selected{% endif %}>Subsystem, name</option>
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>Name A–Z</option>
+        <option value="-name" {% if sort == '-name' %}selected{% endif %}>Name Z–A</option>
+        <option value="-updated_at" {% if sort == '-updated_at' %}selected{% endif %}>Updated (newest)</option>
+        <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if search_query or filter_subsystem_id or filter_severity or filter_fault_type %}
+      <a href="{% url 'fdir_entry_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Fault name</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Subsystem</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Severity</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Type</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Triggering conditions</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Onboard response</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Updated</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider no-print"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for e in entries %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-medium">
+            <a href="{% url 'fdir_entry_detail' e.id %}" class="text-brand hover:underline">{{ e.name }}</a>
+            {% if e.fault_code %}<span class="text-gray-400 text-xs ml-1 font-mono">({{ e.fault_code }})</span>{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ e.subsystem.name }}</td>
+          <td class="px-4 py-3"><span class="badge badge-{{ e.severity|lower }}">{{ e.get_severity_display }}</span></td>
+          <td class="px-4 py-3 text-gray-500">{{ e.fault_type|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600 max-w-xs">{{ e.triggering_conditions|truncatewords:20|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600 max-w-xs">{{ e.onboard_automated_response|truncatewords:20|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ e.updated_at|date:"Y-m-d" }}</td>
+          <td class="px-4 py-3 no-print">
+            <a href="{% url 'fdir_entry_detail' e.id %}" class="btn btn-secondary">View</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'fdir_entry_edit' e.id %}" class="btn btn-secondary">Edit</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+            No FDIR entries.
+            {% if user.is_authenticated %}<a href="{% url 'fdir_entry_create' %}" class="text-brand hover:underline">Add one</a>.{% endif %}
+            Or clear filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 </div>
+
 {% endblock %}

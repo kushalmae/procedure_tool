@@ -1,127 +1,151 @@
 {% extends "base.html" %}
-{% block title %}Ops Metrics{% endblock %}
-{% block main_class %}main-full-width metrics-page{% endblock %}
+{% block title %}Ops Metrics — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
-<h2>Ops Metrics</h2>
-<p class="tagline no-print">Procedure performance, anomaly metrics, fleet utilization, and operator workload (last 7 and 30 days).</p>
 
-<div class="no-print" style="margin-bottom: 1rem;">
+<div class="flex items-center justify-between mb-2">
+  <h1 class="text-2xl font-semibold text-gray-900">Ops Metrics</h1>
+  <div class="no-print flex gap-2">
     <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
     <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a>
-    <a href="{% url 'handover' %}" class="btn btn-secondary">Handover pack</a>
+    <a href="{% url 'handover' %}" class="btn btn-secondary">Handover</a>
+  </div>
+</div>
+<p class="text-sm text-gray-500 mb-6 no-print">Procedure performance, anomaly metrics, fleet utilization, and operator workload.</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+  <!-- Procedure performance -->
+  <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-900">Procedure Performance (last 30 days)</h2>
+      <p class="text-xs text-gray-500">Pass / Fail / Cancelled by procedure</p>
+    </div>
+    {% if procedure_stats %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-900">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Procedure</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Total</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Pass</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Fail</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Cancelled</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for s in procedure_stats %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-gray-700">{{ s.procedure__name|default:"—" }}</td>
+            <td class="px-4 py-2 font-medium text-gray-900">{{ s.total }}</td>
+            <td class="px-4 py-2 text-green-700">{{ s.pass_count }}</td>
+            <td class="px-4 py-2 text-red-600">{{ s.fail_count }}</td>
+            <td class="px-4 py-2 text-gray-500">{{ s.cancelled_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-gray-500">No completed runs in the last 30 days.</p>
+    {% endif %}
+  </section>
+
+  <!-- Anomaly metrics -->
+  <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-900">Anomaly Metrics</h2>
+      <p class="text-xs text-gray-500">Open anomalies by severity; resolved in last 30 days</p>
+    </div>
+    <div class="p-5">
+      {% if open_by_severity %}
+      <div class="overflow-x-auto mb-4">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-900">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Severity</th>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Open</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for row in open_by_severity %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2"><span class="badge badge-{{ row.severity|lower }}">{{ row.severity }}</span></td>
+              <td class="px-4 py-2 font-medium text-gray-900">{{ row.cnt }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 mb-3">No open anomalies.</p>
+      {% endif %}
+      <p class="text-sm text-gray-700"><strong>Resolved (last 30 days):</strong> {{ resolved_30 }}</p>
+    </div>
+  </section>
+
+  <!-- Fleet utilization 7 days -->
+  <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-900">Fleet Utilization — Last 7 Days</h2>
+      <p class="text-xs text-gray-500">Runs per satellite</p>
+    </div>
+    {% if runs_per_satellite_7 %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-900">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Satellite</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Runs</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in runs_per_satellite_7 %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-gray-700">{{ row.satellite__name|default:"—" }}</td>
+            <td class="px-4 py-2 font-medium text-gray-900">{{ row.run_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-gray-500">No runs in the last 7 days.</p>
+    {% endif %}
+  </section>
+
+  <!-- Operator workload -->
+  <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
+      <h2 class="text-sm font-semibold text-gray-900">Operator Workload (last 30 days)</h2>
+      <p class="text-xs text-gray-500">Runs per operator</p>
+    </div>
+    {% if runs_per_operator %}
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-900">
+          <tr>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Operator</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase tracking-wider">Runs</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          {% for row in runs_per_operator %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2 text-gray-700">{{ row.operator_name|default:"—" }}</td>
+            <td class="px-4 py-2 font-medium text-gray-900">{{ row.run_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-5 py-4 text-sm text-gray-500">No runs in the last 30 days.</p>
+    {% endif %}
+  </section>
+
 </div>
 
-<div class="metrics-grid">
-    <section class="card metrics-section">
-        <h3>Procedure performance (last 30 days)</h3>
-        <p class="text-muted">Pass / Fail / Cancelled by procedure.</p>
-        {% if procedure_stats %}
-        <table class="metrics-table">
-            <thead>
-                <tr><th>Procedure</th><th>Total</th><th>Pass</th><th>Fail</th><th>Cancelled</th></tr>
-            </thead>
-            <tbody>
-                {% for s in procedure_stats %}
-                <tr>
-                    <td>{{ s.procedure__name|default:"—" }}</td>
-                    <td>{{ s.total }}</td>
-                    <td>{{ s.pass_count }}</td>
-                    <td>{{ s.fail_count }}</td>
-                    <td>{{ s.cancelled_count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">No completed runs in the last 30 days.</p>
-        {% endif %}
-    </section>
+<p class="no-print text-xs text-gray-400 mt-5">Metrics as of {{ now|date:"Y-m-d H:i" }}. 7-day period from {{ period_7|date:"Y-m-d" }}; 30-day period from {{ period_30|date:"Y-m-d" }}.</p>
 
-    <section class="card metrics-section">
-        <h3>Anomaly metrics</h3>
-        <p class="text-muted">Open anomalies by severity; resolved in last 30 days.</p>
-        {% if open_by_severity %}
-        <table class="metrics-table">
-            <thead>
-                <tr><th>Severity</th><th>Open count</th></tr>
-            </thead>
-            <tbody>
-                {% for row in open_by_severity %}
-                <tr>
-                    <td><span class="badge badge-{{ row.severity|lower }}">{{ row.severity }}</span></td>
-                    <td>{{ row.cnt }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">No open anomalies.</p>
-        {% endif %}
-        <p><strong>Resolved (last 30 days):</strong> {{ resolved_30 }}</p>
-    </section>
-
-    <section class="card metrics-section">
-        <h3>Fleet utilization — runs per satellite</h3>
-        <p class="text-muted">Last 7 days.</p>
-        {% if runs_per_satellite_7 %}
-        <table class="metrics-table">
-            <thead>
-                <tr><th>Satellite</th><th>Runs</th></tr>
-            </thead>
-            <tbody>
-                {% for row in runs_per_satellite_7 %}
-                <tr>
-                    <td>{{ row.satellite__name|default:"—" }}</td>
-                    <td>{{ row.run_count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">No runs in the last 7 days.</p>
-        {% endif %}
-        <p class="text-muted" style="margin-top: 1rem;">Last 30 days:</p>
-        {% if runs_per_satellite_30 %}
-        <table class="metrics-table">
-            <thead>
-                <tr><th>Satellite</th><th>Runs</th></tr>
-            </thead>
-            <tbody>
-                {% for row in runs_per_satellite_30 %}
-                <tr>
-                    <td>{{ row.satellite__name|default:"—" }}</td>
-                    <td>{{ row.run_count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">No runs in the last 30 days.</p>
-        {% endif %}
-    </section>
-
-    <section class="card metrics-section">
-        <h3>Operator workload (last 30 days)</h3>
-        <p class="text-muted">Runs per operator.</p>
-        {% if runs_per_operator %}
-        <table class="metrics-table">
-            <thead>
-                <tr><th>Operator</th><th>Runs</th></tr>
-            </thead>
-            <tbody>
-                {% for row in runs_per_operator %}
-                <tr>
-                    <td>{{ row.operator_name|default:"—" }}</td>
-                    <td>{{ row.run_count }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p class="text-muted">No runs in the last 30 days.</p>
-        {% endif %}
-    </section>
-</div>
-
-<p class="no-print text-muted" style="margin-top: 1rem;">Metrics as of {{ now|date:"Y-m-d H:i" }}. Period 7 days from {{ period_7|date:"Y-m-d" }}; 30 days from {{ period_30|date:"Y-m-d" }}.</p>
 {% endblock %}

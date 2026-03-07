@@ -2,22 +2,33 @@
 {% block title %}Mission Scribe — Add shift{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> / <a href="{% url 'scribe_shift_list' %}">Shifts</a> / Add shift
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> &rsaquo;
+  <a href="{% url 'scribe_shift_list' %}">Shifts</a> &rsaquo; Add shift
 </nav>
-<h2>Add shift</h2>
-<div class="card">
-    <form method="post">{% csrf_token %}
-        <label for="start_time">Start time</label>
-        <input type="datetime-local" id="start_time" name="start_time" value="{{ start_time_default }}" required>
-        <label for="end_time">End time</label>
-        <input type="datetime-local" id="end_time" name="end_time" value="{{ end_time_default }}" required>
-        <label for="handoff_notes">Handoff notes</label>
-        <textarea id="handoff_notes" name="handoff_notes" rows="4" placeholder="Summary for next shift...">{{ handoff_notes }}</textarea>
-        <p>
-            <button type="submit" class="btn btn-primary">Create shift</button>
-            <a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Cancel</a>
-        </p>
-    </form>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Add Shift</h1>
 </div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 max-w-lg">
+  <form method="post">{% csrf_token %}
+    <label class="first" for="start_time">Start time</label>
+    <input type="datetime-local" id="start_time" name="start_time" value="{{ start_time_default }}" required>
+
+    <label for="end_time">End time</label>
+    <input type="datetime-local" id="end_time" name="end_time" value="{{ end_time_default }}" required>
+
+    <label for="handoff_notes">Handoff notes</label>
+    <textarea id="handoff_notes" name="handoff_notes" rows="4" placeholder="Summary for next shift…">{{ handoff_notes }}</textarea>
+
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primary">Create shift</button>
+      <a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
 {% endblock %}

@@ -1,19 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Delete: {{ alert.parameter }}{% endblock %}
-{% block main_class %}main-full-width{% endblock %}
+{% block title %}Delete: {{ alert.parameter }} — Alerts Handbook{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'handbook_alert_list' %}">Alerts & Limits Handbook</a> / <a href="{% url 'handbook_alert_detail' alert.id %}">{{ alert.parameter }}</a> / Delete
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'handbook_alert_list' %}">Alerts &amp; Limits Handbook</a> &rsaquo;
+  <a href="{% url 'handbook_alert_detail' alert.id %}">{{ alert.parameter }}</a> &rsaquo; Delete
 </nav>
-<h2>Delete alert</h2>
-<div class="card">
-    <p>Are you sure you want to delete <strong>{{ alert.parameter }}</strong> ({{ alert.subsystem.name }})?</p>
-    <p>This cannot be undone.</p>
-    <form method="post">{% csrf_token %}
-        <p>
-            <button type="submit" class="btn btn-primary" style="background: var(--fail);">Yes, delete alert</button>
-            <a href="{% url 'handbook_alert_detail' alert.id %}" class="btn btn-secondary">Cancel</a>
-        </p>
-    </form>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Delete Alert</h1>
 </div>
+
+<div class="bg-white rounded-lg border border-red-200 shadow-sm p-6 max-w-lg">
+  <div class="flex items-start gap-3 mb-5">
+    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+      <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+    </div>
+    <div>
+      <h2 class="text-base font-semibold text-gray-900">Are you sure?</h2>
+      <p class="text-sm text-gray-600 mt-1">
+        You are about to delete alert <strong>{{ alert.parameter }}</strong> ({{ alert.subsystem.name }}). This cannot be undone.
+      </p>
+    </div>
+  </div>
+  <form method="post">{% csrf_token %}
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-danger">Yes, delete alert</button>
+      <a href="{% url 'handbook_alert_detail' alert.id %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
 {% endblock %}
