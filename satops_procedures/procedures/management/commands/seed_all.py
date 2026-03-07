@@ -5,7 +5,6 @@ Run: python manage.py seed_all
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-
 # Order matters: procedures first (satellites), then others. All use "full" sample data flags.
 SEED_COMMANDS = [
     ('seed_procedures', {}, 'Procedures, tags, satellites'),
@@ -30,11 +29,11 @@ class Command(BaseCommand):
         dry_run = options.get('dry_run', False)
         if dry_run:
             self.stdout.write('Would run:')
-            for cmd_name, cmd_kwargs, desc in SEED_COMMANDS:
+            for cmd_name, _cmd_kwargs, desc in SEED_COMMANDS:
                 self.stdout.write(f'  {cmd_name}  ({desc})')
             return
 
-        for cmd_name, cmd_kwargs, desc in SEED_COMMANDS:
+        for cmd_name, cmd_kwargs, _desc in SEED_COMMANDS:
             try:
                 self.stdout.write(self.style.NOTICE(f'Running {cmd_name}...'))
                 call_command(cmd_name, **cmd_kwargs)

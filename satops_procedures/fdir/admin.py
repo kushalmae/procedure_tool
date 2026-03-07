@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Subsystem, FDIREntry
+
+from .models import FDIREntry, Subsystem
 
 
 @admin.register(Subsystem)

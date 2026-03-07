@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from fdir.models import Subsystem, FDIREntry
 
+from fdir.models import FDIREntry, Subsystem
 
 DEFAULT_SUBSYSTEMS = [
     'ADCS',

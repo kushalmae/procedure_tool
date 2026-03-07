@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Satellite, Tag, Procedure, ProcedureRun, StepExecution
+
+from .models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
 
 
 @admin.register(Satellite)

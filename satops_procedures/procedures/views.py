@@ -1,17 +1,17 @@
-from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Q, Count, Max
-from django.shortcuts import render, redirect, get_object_or_404
-from django.utils import timezone
 from datetime import timedelta
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 
-from .models import Satellite, Tag, Procedure, ProcedureRun, StepExecution
+from .models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
 from .services.procedure_loader import load_procedure, save_procedure
 from .services.runner import get_next_step
-
 
 RUN_SORT_OPTIONS = [
     '-start_time',  # newest first (default)
@@ -38,6 +38,10 @@ def _search_runs(queryset, q, tag_id):
     if tag_id:
         queryset = queryset.filter(procedure__tags__id=tag_id).distinct()
     return queryset
+
+
+def homepage(request):
+    return render(request, 'homepage.html')
 
 
 def dashboard(request):
@@ -960,9 +964,9 @@ def timeline(request):
     events = events[:300]
 
     if export_csv:
-        from django.http import HttpResponse
         import csv
-        from io import StringIO
+
+        from django.http import HttpResponse
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="mission_timeline.csv"'
         w = csv.writer(response)
