@@ -72,6 +72,23 @@
 .badge-severity-l4 { background: #FECACA; color: #B91C1C; }
 .badge-severity-l5 { background: #FEE2E2; color: #991B1B; font-weight: 800; }
 
+/* SME Request status badges */
+.badge-sme-submitted          { background: #E0E7FF; color: #3730A3; }
+.badge-sme-pending_approval   { background: #FEF9C3; color: #854D0E; }
+.badge-sme-approved           { background: #D1FAE5; color: #065F46; }
+.badge-sme-rejected           { background: #FEE2E2; color: #991B1B; }
+.badge-sme-needs_clarification { background: #FFEDD5; color: #9A3412; }
+.badge-sme-queued             { background: #DBEAFE; color: #1D4ED8; }
+.badge-sme-in_progress        { background: #EDE9FE; color: #5B21B6; }
+.badge-sme-completed          { background: #A7F3D0; color: #065F46; }
+.badge-sme-closed             { background: #F1F5F9; color: #475569; }
+
+/* SME Request priority badges */
+.badge-priority-low    { background: #F1F5F9; color: #475569; }
+.badge-priority-normal { background: #DBEAFE; color: #1D4ED8; }
+.badge-priority-high   { background: #FEF9C3; color: #854D0E; }
+.badge-priority-urgent { background: #FEE2E2; color: #991B1B; }
+
 /* ---- Tags ---- */
 .tag-pill {
   display: inline-block;

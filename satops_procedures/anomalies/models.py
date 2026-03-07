@@ -29,39 +29,18 @@ class Anomaly(models.Model):
         (SEVERITY_L5, 'L5 — Critical'),
     ]
 
-    SUBSYSTEM_ADCS = 'ADCS'
-    SUBSYSTEM_POWER = 'POWER'
-    SUBSYSTEM_COMM = 'COMM'
-    SUBSYSTEM_PAYLOAD = 'PAYLOAD'
-    SUBSYSTEM_CDH = 'CDH'
-    SUBSYSTEM_THERMAL = 'THERMAL'
-    SUBSYSTEM_PROPULSION = 'PROPULSION'
-    SUBSYSTEM_GNC = 'GNC'
-    SUBSYSTEM_GROUND = 'GROUND'
-    SUBSYSTEM_OTHER = 'OTHER'
-    SUBSYSTEM_CHOICES = [
-        (SUBSYSTEM_ADCS, 'ADCS'),
-        (SUBSYSTEM_POWER, 'Power'),
-        (SUBSYSTEM_COMM, 'Comm'),
-        (SUBSYSTEM_PAYLOAD, 'Payload'),
-        (SUBSYSTEM_CDH, 'C&DH'),
-        (SUBSYSTEM_THERMAL, 'Thermal'),
-        (SUBSYSTEM_PROPULSION, 'Propulsion'),
-        (SUBSYSTEM_GNC, 'GNC'),
-        (SUBSYSTEM_GROUND, 'Ground'),
-        (SUBSYSTEM_OTHER, 'Other'),
-    ]
-
     title = models.CharField(max_length=200)
     satellite = models.ForeignKey(
         'procedures.Satellite',
         on_delete=models.PROTECT,
         related_name='anomalies',
     )
-    subsystem = models.CharField(
-        max_length=20,
-        choices=SUBSYSTEM_CHOICES,
-        default=SUBSYSTEM_OTHER,
+    subsystem = models.ForeignKey(
+        'procedures.Subsystem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='anomalies',
     )
     severity = models.CharField(
         max_length=5,

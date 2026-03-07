@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}New SME Request — Satops{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'sme_request_list' %}">SME Requests</a> &rsaquo; New Request
+</nav>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">New SME Request</h1>
+  <p class="text-sm text-gray-500 mt-1">Submit a request for operational data or analysis from the mission operations team.</p>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 max-w-2xl">
+  <form method="post">{% csrf_token %}
+    <label class="first" for="title">Request Title <span class="text-brand">*</span></label>
+    <input type="text" id="title" name="title" required placeholder="e.g., Telemetry export for star tracker dropout" value="{{ request.POST.title|default:'' }}">
+
+    <label for="satellite">Satellite / Spacecraft</label>
+    <select id="satellite" name="satellite">
+      <option value="">—</option>
+      {% for s in satellites %}
+      <option value="{{ s.id }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="subsystem">Subsystem <span class="text-gray-400 font-normal">(optional)</span></label>
+    <select id="subsystem" name="subsystem">
+      <option value="">—</option>
+      {% for sub in subsystems %}
+      <option value="{{ sub.id }}">{{ sub.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="request_type">Request Type</label>
+    <select id="request_type" name="request_type">
+      <option value="">—</option>
+      {% for rt in request_types %}
+      <option value="{{ rt.id }}">{{ rt.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="priority">Priority</label>
+    <select id="priority" name="priority">
+      {% for val, label in priority_choices %}
+      <option value="{{ val }}" {% if val == 'NORMAL' %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <div class="flex gap-4">
+      <div class="flex-1">
+        <label for="time_range_start">Time Range Start <span class="text-gray-400 font-normal">(optional)</span></label>
+        <input type="datetime-local" id="time_range_start" name="time_range_start">
+      </div>
+      <div class="flex-1">
+        <label for="time_range_end">Time Range End <span class="text-gray-400 font-normal">(optional)</span></label>
+        <input type="datetime-local" id="time_range_end" name="time_range_end">
+      </div>
+    </div>
+
+    <label for="linked_event">Link to Event <span class="text-gray-400 font-normal">(optional)</span></label>
+    <select id="linked_event" name="linked_event">
+      <option value="">— None —</option>
+      {% for e in recent_events %}
+      <option value="{{ e.id }}">{{ e.timestamp|date:"Y-m-d H:i" }} — {{ e.role.name }} — {{ e.description|truncatewords:10 }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="description">Description <span class="text-brand">*</span></label>
+    <textarea id="description" name="description" rows="5" required placeholder="Describe the data or analysis you need…">{{ request.POST.description|default:'' }}</textarea>
+
+    <div class="flex gap-2 mt-2">
+      <button type="submit" class="btn btn-primary">Submit Request</button>
+      <a href="{% url 'sme_request_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

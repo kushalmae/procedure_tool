@@ -25,10 +25,11 @@
       {% endfor %}
     </select>
 
-    <label for="anom-subsystem">Subsystem</label>
+    <label for="anom-subsystem">Subsystem <span class="text-gray-400 font-normal">(optional)</span></label>
     <select id="anom-subsystem" name="subsystem">
-      {% for val, label in subsystem_choices %}
-      <option value="{{ val }}" {% if form_subsystem == val %}selected{% endif %}>{{ label }}</option>
+      <option value="">—</option>
+      {% for sub in subsystems %}
+      <option value="{{ sub.id }}" {% if form_subsystem_id == sub.id %}selected{% endif %}>{{ sub.name }}</option>
       {% endfor %}
     </select>
 

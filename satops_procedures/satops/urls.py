@@ -13,4 +13,5 @@ urlpatterns = [
     path('anomalies/', include('anomalies.urls')),
     path('cmdtlm/', include('cmdtlm.urls')),
     path('references/', include('references.urls')),
+    path('requests/', include('smerequests.urls')),
 ]

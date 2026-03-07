@@ -4,13 +4,13 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from anomalies.models import Anomaly, AnomalyTimelineEntry
-from procedures.models import Satellite
+from procedures.models import Satellite, Subsystem
 
 SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-021',
         'title': 'Bus voltage dip during eclipse exit',
-        'subsystem': Anomaly.SUBSYSTEM_POWER,
+        'subsystem': 'Power',
         'severity': Anomaly.SEVERITY_L4,
         'status': Anomaly.STATUS_INVESTIGATING,
         'description': 'Bus voltage dropped to 26.1V during eclipse exit cycle. Recovery to nominal 28V within 2 minutes. Logging for trend analysis across upcoming eclipses.',
@@ -23,7 +23,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-034',
         'title': 'Panel temp sensor T4 elevated reading',
-        'subsystem': Anomaly.SUBSYSTEM_THERMAL,
+        'subsystem': 'Thermal',
         'severity': Anomaly.SEVERITY_L2,
         'status': Anomaly.STATUS_NEW,
         'description': 'Panel temperature sensor T4 reading 3°C above predicted model. All other sensors nominal. May be sun angle or seasonal effect.',
@@ -32,7 +32,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-021',
         'title': 'UHF beacon loss during pass 2847',
-        'subsystem': Anomaly.SUBSYSTEM_COMM,
+        'subsystem': 'Comm',
         'severity': Anomaly.SEVERITY_L5,
         'status': Anomaly.STATUS_MITIGATED,
         'description': 'UHF beacon lost for 8 minutes during pass 2847. Reacquired on next AOS. Ground station confirmed no local issues.',
@@ -46,7 +46,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-012',
         'title': 'Momentum wheel speed spike during maneuver',
-        'subsystem': Anomaly.SUBSYSTEM_GNC,
+        'subsystem': 'GNC',
         'severity': Anomaly.SEVERITY_L1,
         'status': Anomaly.STATUS_CLOSED,
         'description': 'Single momentum wheel speed spike during planned maneuver. Auto-recovery nominal. No recurrence over 5 days.',
@@ -63,7 +63,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-034',
         'title': 'Elevated dark current on detector channel 2',
-        'subsystem': Anomaly.SUBSYSTEM_PAYLOAD,
+        'subsystem': 'Payload',
         'severity': Anomaly.SEVERITY_L3,
         'status': Anomaly.STATUS_INVESTIGATING,
         'description': 'Dark current on detector channel 2 trending upward. Currently within spec but approaching upper limit. Calibration still valid.',
@@ -75,7 +75,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-012',
         'title': 'Memory scrub single-bit error in sector 0x1A',
-        'subsystem': Anomaly.SUBSYSTEM_CDH,
+        'subsystem': 'C&DH',
         'severity': Anomaly.SEVERITY_L2,
         'status': Anomaly.STATUS_NEW,
         'description': 'Routine memory scrub reported single-bit error in sector 0x1A. ECC corrected. No impact to current operations.',
@@ -84,7 +84,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-021',
         'title': 'Imager safe mode during pass',
-        'subsystem': Anomaly.SUBSYSTEM_PAYLOAD,
+        'subsystem': 'Payload',
         'severity': Anomaly.SEVERITY_L5,
         'status': Anomaly.STATUS_INVESTIGATING,
         'description': 'Imager entered safe mode at T+120s into imaging pass. Auto-recovery at T+180s. Science data lost for that pass only.',
@@ -97,7 +97,7 @@ SAMPLE_ANOMALIES = [
     {
         'satellite': 'SAT-034',
         'title': 'Star tracker lost lock at terminator',
-        'subsystem': Anomaly.SUBSYSTEM_GNC,
+        'subsystem': 'GNC',
         'severity': Anomaly.SEVERITY_L3,
         'status': Anomaly.STATUS_MITIGATED,
         'description': 'Star tracker lost lock for 5 seconds during terminator crossing. Coarse sun sensor maintained attitude knowledge. No maneuver impact.',
@@ -133,6 +133,8 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
+        subs = {s.name: s for s in Subsystem.objects.all()}
+
         for i, data in enumerate(SAMPLE_ANOMALIES):
             satellite = Satellite.objects.get(name=data['satellite'])
             detected_time = now - timedelta(hours=3 * i, minutes=20 * i)
@@ -141,7 +143,7 @@ class Command(BaseCommand):
                 title=data['title'],
                 satellite=satellite,
                 defaults={
-                    'subsystem': data['subsystem'],
+                    'subsystem': subs.get(data['subsystem']),
                     'severity': data['severity'],
                     'status': data['status'],
                     'description': data['description'],

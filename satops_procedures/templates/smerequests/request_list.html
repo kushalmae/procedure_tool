@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}SME Requests — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; SME Requests
+</nav>
+
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-2xl font-semibold text-gray-900">SME Requests</h1>
+  <div class="no-print flex gap-2">
+    <a href="{% url 'sme_ops_queue' %}" class="btn btn-secondary">Ops Queue</a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'sme_request_create' %}" class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      New Request
+    </a>
+    {% else %}
+    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary">Log in to submit</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[140px]">
+      <label class="first" for="sme-q">Search</label>
+      <input type="text" id="sme-q" name="q" value="{{ search_query }}" placeholder="Search title…">
+    </div>
+    <div>
+      <label for="filter-satellite">Satellite</label>
+      <select id="filter-satellite" name="satellite">
+        <option value="">All</option>
+        {% for s in satellites %}
+        <option value="{{ s.id }}" {% if filter_satellite_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="filter-type">Type</label>
+      <select id="filter-type" name="request_type">
+        <option value="">All</option>
+        {% for rt in request_types %}
+        <option value="{{ rt.id }}" {% if filter_request_type_id == rt.id %}selected{% endif %}>{{ rt.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="filter-priority">Priority</label>
+      <select id="filter-priority" name="priority">
+        <option value="">All</option>
+        {% for val, label in priority_choices %}
+        <option value="{{ val }}" {% if filter_priority == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="filter-status">Status</label>
+      <select id="filter-status" name="status">
+        <option value="">All</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="sort-sme">Sort</label>
+      <select id="sort-sme" name="sort">
+        <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest first</option>
+        <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>Oldest first</option>
+        <option value="-priority" {% if sort == '-priority' %}selected{% endif %}>Priority (high first)</option>
+        <option value="priority" {% if sort == 'priority' %}selected{% endif %}>Priority (low first)</option>
+        <option value="status" {% if sort == 'status' %}selected{% endif %}>Status</option>
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if search_query or filter_satellite_id or filter_request_type_id or filter_priority or filter_status %}
+      <a href="{% url 'sme_request_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-100">
+    <p class="text-xs text-gray-500">
+      Showing {{ requests|length }} request{{ requests|length|pluralize }}
+      {% if search_query or filter_satellite_id or filter_request_type_id or filter_priority or filter_status %}(filtered){% endif %}
+    </p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">ID</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Title</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Satellite</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Type</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Priority</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Requested By</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Assigned To</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Created</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for r in requests %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 text-gray-500 font-mono text-xs">#{{ r.id }}</td>
+          <td class="px-4 py-3 font-medium">
+            <a href="{% url 'sme_request_detail' request_id=r.id %}" class="text-brand hover:underline">{{ r.title|truncatewords:10 }}</a>
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ r.satellite.name|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ r.request_type.name|default:"—" }}</td>
+          <td class="px-4 py-3"><span class="badge badge-priority-{{ r.priority|lower }}">{{ r.get_priority_display }}</span></td>
+          <td class="px-4 py-3"><span class="badge badge-sme-{{ r.status|lower }}">{{ r.get_status_display }}</span></td>
+          <td class="px-4 py-3 text-gray-600">{{ r.requested_by.get_username|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ r.assigned_to.get_username|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-500 whitespace-nowrap">{{ r.created_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+            No requests.
+            {% if user.is_authenticated %}<a href="{% url 'sme_request_create' %}" class="text-brand hover:underline">Submit one</a>.{% else %}Log in to submit.{% endif %}
+            {% if search_query or filter_satellite_id or filter_request_type_id or filter_priority or filter_status %}<a href="{% url 'sme_request_list' %}?clear=1" class="text-brand hover:underline ml-1">Clear filters</a>.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

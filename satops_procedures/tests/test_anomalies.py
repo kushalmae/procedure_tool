@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from anomalies.models import Anomaly, AnomalyTimelineEntry
-from procedures.models import Satellite
+from procedures.models import Satellite, Subsystem
 
 
 class AnomalyModelTest(TestCase):
@@ -141,6 +141,7 @@ class AnomalyCreateViewTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="op1", password="testpass123")
         self.sat = Satellite.objects.create(name="SAT-1")
+        self.subsystem = Subsystem.objects.create(name="Power")
 
     def test_create_requires_login(self):
         response = self.client.get(reverse("anomalies_create"))
@@ -157,7 +158,7 @@ class AnomalyCreateViewTest(TestCase):
         response = self.client.post(reverse("anomalies_create"), {
             'title': 'New voltage issue',
             'satellite': self.sat.id,
-            'subsystem': Anomaly.SUBSYSTEM_POWER,
+            'subsystem': self.subsystem.id,
             'severity': Anomaly.SEVERITY_L3,
             'detected_time': '2026-03-07T10:00',
             'description': 'Bus voltage anomaly observed.',
@@ -166,6 +167,7 @@ class AnomalyCreateViewTest(TestCase):
         anomaly = Anomaly.objects.get(title='New voltage issue')
         self.assertEqual(anomaly.status, Anomaly.STATUS_NEW)
         self.assertEqual(anomaly.satellite, self.sat)
+        self.assertEqual(anomaly.subsystem, self.subsystem)
         self.assertTrue(anomaly.timeline_entries.exists())
 
     def test_create_post_missing_title(self):

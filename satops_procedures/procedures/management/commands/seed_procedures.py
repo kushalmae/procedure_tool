@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from procedures.models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
+from procedures.models import Procedure, ProcedureRun, Satellite, StepExecution, Subsystem, Tag
 from procedures.services.procedure_loader import load_procedure
 
 PROCEDURES = [
@@ -109,9 +109,19 @@ PROCEDURES = [
 
 
 class Command(BaseCommand):
-    help = 'Seed Procedures, Tags, and sample Satellites.'
+    help = 'Seed Procedures, Tags, Subsystems, and sample Satellites.'
+
+    DEFAULT_SUBSYSTEMS = [
+        'ADCS', 'Power', 'Comm', 'Payload', 'C&DH',
+        'Thermal', 'Propulsion', 'GNC', 'Ground', 'Other',
+    ]
 
     def handle(self, *args, **options):
+        for name in self.DEFAULT_SUBSYSTEMS:
+            _, created = Subsystem.objects.get_or_create(name=name)
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
+
         for p in PROCEDURES:
             proc, created = Procedure.objects.get_or_create(
                 yaml_file=p['yaml_file'],

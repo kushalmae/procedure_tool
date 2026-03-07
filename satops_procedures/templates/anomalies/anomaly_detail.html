@@ -13,7 +13,7 @@
     <div class="flex items-center gap-2 mt-2 flex-wrap">
       <span class="badge badge-severity-{{ anomaly.severity|lower }}">{{ anomaly.get_severity_display }}</span>
       <span class="badge badge-{{ anomaly.status|lower }}">{{ anomaly.get_status_display }}</span>
-      <span class="text-sm text-gray-500">· {{ anomaly.satellite.name }} · {{ anomaly.get_subsystem_display }}</span>
+      <span class="text-sm text-gray-500">· {{ anomaly.satellite.name }} · {{ anomaly.subsystem.name|default:"—" }}</span>
     </div>
   </div>
 </div>
@@ -65,7 +65,7 @@
     <dl class="detail-list">
       <dt>Title</dt><dd>{{ anomaly.title }}</dd>
       <dt>Satellite</dt><dd>{{ anomaly.satellite.name }}</dd>
-      <dt>Subsystem</dt><dd>{{ anomaly.get_subsystem_display }}</dd>
+      <dt>Subsystem</dt><dd>{{ anomaly.subsystem.name|default:"—" }}</dd>
       <dt>Severity</dt><dd><span class="badge badge-severity-{{ anomaly.severity|lower }}">{{ anomaly.get_severity_display }}</span></dd>
       <dt>Status</dt><dd><span class="badge badge-{{ anomaly.status|lower }}">{{ anomaly.get_status_display }}</span></dd>
       <dt>Detected</dt><dd>{{ anomaly.detected_time|date:"Y-m-d H:i" }}</dd>

@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from procedures.models import Satellite
+from procedures.models import Satellite, Subsystem
 
 from .models import Anomaly, AnomalyTimelineEntry
 
@@ -35,7 +35,7 @@ def anomaly_list(request):
     ]
     saved = request.session.get('anomaly_filters') or {}
     satellite_id = request.GET.get('satellite', saved.get('satellite', ''))
-    subsystem = request.GET.get('subsystem', saved.get('subsystem', ''))
+    subsystem_id = request.GET.get('subsystem', saved.get('subsystem', ''))
     severity = request.GET.get('severity', saved.get('severity', ''))
     status = request.GET.get('status', saved.get('status', ''))
     q = (request.GET.get('q') or saved.get('q') or '').strip()
@@ -43,11 +43,11 @@ def anomaly_list(request):
     if sort not in SORT_OPTIONS:
         sort = '-detected_time'
 
-    has_filters = any([satellite_id, subsystem, severity, status, q])
+    has_filters = any([satellite_id, subsystem_id, severity, status, q])
     if has_filters or sort != '-detected_time':
         request.session['anomaly_filters'] = {
             'satellite': satellite_id or '',
-            'subsystem': subsystem or '',
+            'subsystem': subsystem_id or '',
             'severity': severity or '',
             'status': status or '',
             'q': q or '',
@@ -56,7 +56,7 @@ def anomaly_list(request):
 
     qs = (
         Anomaly.objects
-        .select_related('satellite', 'created_by')
+        .select_related('satellite', 'subsystem', 'created_by')
         .order_by(sort)
     )
 
@@ -65,8 +65,11 @@ def anomaly_list(request):
             qs = qs.filter(satellite_id=int(satellite_id))
         except ValueError:
             pass
-    if subsystem:
-        qs = qs.filter(subsystem=subsystem)
+    if subsystem_id:
+        try:
+            qs = qs.filter(subsystem_id=int(subsystem_id))
+        except ValueError:
+            pass
     if severity:
         qs = qs.filter(severity=severity)
     if status:
@@ -80,15 +83,15 @@ def anomaly_list(request):
     context = {
         'anomalies': anomalies,
         'satellites': Satellite.objects.all(),
+        'subsystems': Subsystem.objects.all(),
         'filter_satellite_id': _int_or_none(satellite_id),
-        'filter_subsystem': subsystem or None,
+        'filter_subsystem_id': _int_or_none(subsystem_id),
         'filter_severity': severity or None,
         'filter_status': status or None,
         'search_query': q,
         'sort': sort,
         'severity_choices': Anomaly.SEVERITY_CHOICES,
         'status_choices': Anomaly.STATUS_CHOICES,
-        'subsystem_choices': Anomaly.SUBSYSTEM_CHOICES,
     }
     return render(request, 'anomalies/anomaly_list.html', context)
 
@@ -105,7 +108,7 @@ def anomaly_create(request):
             ctx.update({
                 'form_title': title,
                 'form_satellite_id': _int_or_none(satellite_id),
-                'form_subsystem': request.POST.get('subsystem', Anomaly.SUBSYSTEM_OTHER),
+                'form_subsystem_id': _int_or_none(request.POST.get('subsystem')),
                 'form_severity': request.POST.get('severity', Anomaly.SEVERITY_L2),
                 'form_detected_time': request.POST.get('detected_time', ''),
                 'form_description': request.POST.get('description', ''),
@@ -113,7 +116,8 @@ def anomaly_create(request):
             return render(request, 'anomalies/anomaly_form.html', ctx)
 
         satellite = get_object_or_404(Satellite, pk=satellite_id)
-        subsystem = request.POST.get('subsystem') or Anomaly.SUBSYSTEM_OTHER
+        subsystem_id = request.POST.get('subsystem') or None
+        subsystem = get_object_or_404(Subsystem, pk=subsystem_id) if subsystem_id else None
         severity = request.POST.get('severity') or Anomaly.SEVERITY_L2
         ts_str = (request.POST.get('detected_time') or '').strip()
         detected_time = parse_datetime(ts_str) if ts_str else timezone.now()
@@ -132,10 +136,11 @@ def anomaly_create(request):
             created_by=request.user,
         )
 
+        sub_display = subsystem.name if subsystem else '—'
         AnomalyTimelineEntry.objects.create(
             anomaly=anomaly,
             entry_type=AnomalyTimelineEntry.ENTRY_NOTE,
-            body=f'Anomaly created with severity {anomaly.get_severity_display()} — {anomaly.get_subsystem_display()}',
+            body=f'Anomaly created with severity {anomaly.get_severity_display()} — {sub_display}',
             created_by=request.user,
         )
 
@@ -149,11 +154,11 @@ def _create_context(request):
     now = timezone.now()
     return {
         'satellites': Satellite.objects.all(),
+        'subsystems': Subsystem.objects.all(),
         'severity_choices': Anomaly.SEVERITY_CHOICES,
-        'subsystem_choices': Anomaly.SUBSYSTEM_CHOICES,
         'form_title': '',
         'form_satellite_id': None,
-        'form_subsystem': Anomaly.SUBSYSTEM_OTHER,
+        'form_subsystem_id': None,
         'form_severity': Anomaly.SEVERITY_L2,
         'form_detected_time': now.strftime('%Y-%m-%dT%H:%M'),
         'form_description': '',
@@ -162,7 +167,7 @@ def _create_context(request):
 
 def anomaly_detail(request, anomaly_id):
     anomaly = get_object_or_404(
-        Anomaly.objects.select_related('satellite', 'created_by'),
+        Anomaly.objects.select_related('satellite', 'subsystem', 'created_by'),
         pk=anomaly_id,
     )
     timeline = anomaly.timeline_entries.select_related('created_by').order_by('created_at')

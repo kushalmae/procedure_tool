@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'anomalies',
     'cmdtlm',
     'references',
+    'smerequests',
 ]
 
 MIDDLEWARE = [
