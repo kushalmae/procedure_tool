@@ -1,67 +1,79 @@
 {% extends "base.html" %}
-{% block title %}Create Procedure{% endblock %}
+{% block title %}Create Procedure — Satops{% endblock %}
 {% block content %}
-<h2>Create procedure</h2>
-{% if error %}<p class="card" style="color: var(--fail);">{{ error }}</p>{% endif %}
-<div class="card">
-    <form method="post" id="procedure-form">{% csrf_token %}
-        <label for="name">Procedure name</label>
-        <input id="name" name="name" type="text" placeholder="e.g. Bus Checkout" value="{{ form_name }}" required maxlength="100">
-        <label for="version">Version</label>
-        <input id="version" name="version" type="text" placeholder="e.g. 1.0" value="{{ form_version }}" maxlength="20">
-        <label for="preconditions">Preconditions (optional)</label>
-        <textarea id="preconditions" name="preconditions" rows="3" placeholder="Prerequisites, required state, or notes before starting (e.g. Contact established, telemetry nominal)...">{{ form_preconditions|default:"" }}</textarea>
-        <hr style="margin: 1.25rem 0; border: none; border-top: 1px solid var(--border);">
-        <label>Steps</label>
-        <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">Each step needs an id (e.g. power, telemetry) and a description. Optionally add an input label (e.g. voltage).</p>
-        <div id="steps-container">
-            {% for s in form_steps %}
-            <div class="step-row">
-                <input name="step_id" type="text" placeholder="Step id" value="{{ s.id|default:'' }}" class="step-id">
-                <input name="step_description" type="text" placeholder="Description" value="{{ s.description|default:'' }}" class="step-desc">
-                <input name="step_input" type="text" placeholder="Input (optional)" value="{{ s.input|default:'' }}" class="step-input">
-                <button type="button" class="btn btn-secondary btn-remove-step" aria-label="Remove step">Remove</button>
-            </div>
-            {% endfor %}
-        </div>
-        <p><button type="button" id="add-step" class="btn btn-secondary" aria-label="Add another step">Add step</button></p>
-        <hr style="margin: 1.25rem 0; border: none; border-top: 1px solid var(--border);">
-        <p>
-            <button type="submit" class="btn btn-primary">Create procedure</button>
-            <a href="{% url 'start' %}" class="btn btn-secondary">Cancel</a>
-        </p>
-    </form>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Create Procedure</h1>
 </div>
+
+{% if error %}
+<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+  <form method="post" id="procedure-form">{% csrf_token %}
+    <label class="first" for="name">Procedure name</label>
+    <input id="name" name="name" type="text" placeholder="e.g. Bus Checkout" value="{{ form_name }}" required maxlength="100">
+
+    <label for="version">Version</label>
+    <input id="version" name="version" type="text" placeholder="e.g. 1.0" value="{{ form_version }}" maxlength="20">
+
+    <label for="preconditions">Preconditions <span class="text-gray-400 font-normal">(optional)</span></label>
+    <textarea id="preconditions" name="preconditions" rows="3" placeholder="Prerequisites, required state, or notes before starting…">{{ form_preconditions|default:"" }}</textarea>
+
+    <div class="border-t border-gray-200 my-5"></div>
+
+    <label>Steps</label>
+    <p class="text-sm text-gray-500 mb-3">Each step needs an ID (e.g. power, telemetry) and a description. Optionally add an input label (e.g. voltage).</p>
+
+    <div id="steps-container" class="space-y-2">
+      {% for s in form_steps %}
+      <div class="step-row">
+        <input name="step_id" type="text" placeholder="Step ID" value="{{ s.id|default:'' }}">
+        <input name="step_description" type="text" placeholder="Description" value="{{ s.description|default:'' }}">
+        <input name="step_input" type="text" placeholder="Input (optional)" value="{{ s.input|default:'' }}">
+        <button type="button" class="btn btn-secondary btn-remove-step" aria-label="Remove step">Remove</button>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="mt-2"><button type="button" id="add-step" class="btn btn-secondary" aria-label="Add another step">+ Add step</button></p>
+
+    <div class="border-t border-gray-200 my-5"></div>
+
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-primary">Create procedure</button>
+      <a href="{% url 'start' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
 <script>
 (function() {
-    var container = document.getElementById('steps-container');
-    var addBtn = document.getElementById('add-step');
-    if (!container || !addBtn) return;
+  var container = document.getElementById('steps-container');
+  var addBtn = document.getElementById('add-step');
+  if (!container || !addBtn) return;
 
-    function newStepRow() {
-        var div = document.createElement('div');
-        div.className = 'step-row';
-        div.innerHTML =
-            '<input name="step_id" type="text" placeholder="Step id" class="step-id">' +
-            '<input name="step_description" type="text" placeholder="Description" class="step-desc">' +
-            '<input name="step_input" type="text" placeholder="Input (optional)" class="step-input">' +
-            '<button type="button" class="btn btn-secondary btn-remove-step" aria-label="Remove step">Remove</button>';
-        div.querySelector('.btn-remove-step').addEventListener('click', function() {
-            if (container.querySelectorAll('.step-row').length > 1) div.remove();
-        });
-        return div;
-    }
-
-    addBtn.addEventListener('click', function() {
-        container.appendChild(newStepRow());
+  function newStepRow() {
+    var div = document.createElement('div');
+    div.className = 'step-row';
+    div.innerHTML =
+      '<input name="step_id" type="text" placeholder="Step ID">' +
+      '<input name="step_description" type="text" placeholder="Description">' +
+      '<input name="step_input" type="text" placeholder="Input (optional)">' +
+      '<button type="button" class="btn btn-secondary btn-remove-step" aria-label="Remove step">Remove</button>';
+    div.querySelector('.btn-remove-step').addEventListener('click', function() {
+      if (container.querySelectorAll('.step-row').length > 1) div.remove();
     });
+    return div;
+  }
 
-    container.querySelectorAll('.btn-remove-step').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var row = btn.closest('.step-row');
-            if (container.querySelectorAll('.step-row').length > 1) row.remove();
-        });
+  addBtn.addEventListener('click', function() { container.appendChild(newStepRow()); });
+  container.querySelectorAll('.btn-remove-step').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var row = btn.closest('.step-row');
+      if (container.querySelectorAll('.step-row').length > 1) row.remove();
     });
+  });
 })();
 </script>
 {% endblock %}

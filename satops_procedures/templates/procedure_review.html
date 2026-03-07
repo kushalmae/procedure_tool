@@ -1,32 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Review: {{ procedure.name }}{% endblock %}
+{% block title %}Review: {{ procedure.name }} — Satops{% endblock %}
 {% block content %}
-<h2>Review procedure</h2>
-<div class="card">
-    <h3 style="margin-top: 0;">{{ procedure.name }} <span style="color: var(--text-muted-on-light); font-weight: normal;">(v{{ procedure.version }})</span></h3>
-    {% if procedure.tags.exists %}
-    <p class="tag-list">
-        {% for t in procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}
-    </p>
-    {% endif %}
-    {% if preconditions %}
-    <div class="preconditions-block" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg); border-radius: var(--radius); border-left: 3px solid var(--accent);">
-        <strong>Preconditions</strong>
-        <p style="margin: 0.5rem 0 0; white-space: pre-wrap;">{{ preconditions }}</p>
-    </div>
-    {% endif %}
-    <p style="color: var(--text-muted-on-light); margin-bottom: 1rem;">{{ steps|length }} step{{ steps|length|pluralize }}</p>
-    <ol class="review-step-list">
-        {% for step in steps %}
-        <li class="review-step">
-            <span class="review-step-desc">{{ step.description }}</span>
-            {% if step.input %}<span class="review-step-input">— input: <em>{{ step.input }}</em></span>{% endif %}
-        </li>
-        {% endfor %}
-    </ol>
-    <p style="margin-top: 1.25rem; margin-bottom: 0;">
-        <a href="{% url 'start' %}?procedure={{ procedure.id }}" class="btn btn-primary">Start this procedure</a>
-        <a href="{% url 'start' %}" class="btn btn-secondary">Back to Start</a>
-    </p>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">
+    {{ procedure.name }}
+    <span class="text-gray-400 font-normal text-lg">v{{ procedure.version }}</span>
+  </h1>
+  {% if procedure.tags.exists %}
+  <div class="mt-2">
+    {% for t in procedure.tags.all %}<span class="tag-pill">{{ t.name }}</span>{% endfor %}
+  </div>
+  {% endif %}
 </div>
+
+{% if preconditions %}
+<div class="bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-4 mb-5">
+  <p class="text-sm font-semibold text-amber-800 mb-1">Preconditions</p>
+  <p class="text-sm text-amber-700 whitespace-pre-wrap">{{ preconditions }}</p>
+</div>
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-5">
+  <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+    <h2 class="text-sm font-semibold text-gray-900">Steps</h2>
+    <span class="text-sm text-gray-500">{{ steps|length }} step{{ steps|length|pluralize }}</span>
+  </div>
+  <ol class="divide-y divide-gray-100">
+    {% for step in steps %}
+    <li class="px-5 py-3 flex items-start gap-3">
+      <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold flex items-center justify-center mt-0.5">{{ forloop.counter }}</span>
+      <div>
+        <p class="text-sm text-gray-900">{{ step.description }}</p>
+        {% if step.input %}<p class="text-xs text-gray-500 mt-0.5">Input: <em>{{ step.input }}</em></p>{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</div>
+
+<div class="flex gap-2">
+  <a href="{% url 'start' %}?procedure={{ procedure.id }}" class="btn btn-primary">Start this procedure</a>
+  <a href="{% url 'start' %}" class="btn btn-secondary">Back to Start</a>
+  <a href="{% url 'procedure_edit' procedure.id %}" class="btn btn-secondary no-print">Edit</a>
+</div>
+
 {% endblock %}

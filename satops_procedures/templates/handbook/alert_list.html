@@ -1,94 +1,127 @@
 {% extends "base.html" %}
-{% block title %}Alerts & Limits Handbook{% endblock %}
-{% block main_class %}main-full-width{% endblock %}
+{% block title %}Alerts & Limits Handbook — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / Alerts & Limits Handbook
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Alerts &amp; Limits Handbook
 </nav>
-<h2>Alerts & Limits Handbook</h2>
-<p class="no-print">
+
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-2xl font-semibold text-gray-900">Alerts &amp; Limits Handbook</h1>
+  <div class="no-print">
     {% if user.is_authenticated %}
-    <a href="{% url 'handbook_alert_create' %}" class="btn btn-primary">Add alert</a>
+    <a href="{% url 'handbook_alert_create' %}" class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Add alert
+    </a>
     {% else %}
-    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a> to add or edit alerts.
+    <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary">Log in to edit</a>
     {% endif %}
-</p>
-<div class="search-bar card no-print">
-    <form method="get" class="search-form">
-        <input type="text" name="q" value="{{ search_query }}" placeholder="Search parameter, mnemonic, APID, description..." class="search-input">
-        <label for="filter-subsystem">Subsystem</label>
-        <select id="filter-subsystem" name="subsystem">
-            <option value="">All</option>
-            {% for s in subsystems %}
-            <option value="{{ s.id }}" {% if filter_subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
-            {% endfor %}
-        </select>
-        <label for="filter-severity">Severity</label>
-        <select id="filter-severity" name="severity">
-            <option value="">All</option>
-            {% for val, label in severity_choices %}
-            <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <label for="sort-handbook">Sort</label>
-        <select id="sort-handbook" name="sort">
-            <option value="subsystem__name" {% if sort == 'subsystem__name' %}selected{% endif %}>Subsystem, parameter</option>
-            <option value="parameter" {% if sort == 'parameter' %}selected{% endif %}>Parameter A–Z</option>
-            <option value="-parameter" {% if sort == '-parameter' %}selected{% endif %}>Parameter Z–A</option>
-            <option value="-updated_at" {% if sort == '-updated_at' %}selected{% endif %}>Updated (newest)</option>
-            <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
-            <option value="-severity" {% if sort == '-severity' %}selected{% endif %}>Severity (desc)</option>
-        </select>
-        <button type="submit" class="btn btn-primary">Filter / Sort</button>
-        {% if search_query or filter_subsystem_id or filter_severity %}
-        <a href="{% url 'handbook_alert_list' %}?clear=1" class="btn btn-secondary">Clear filters</a>
-        {% endif %}
-    </form>
+  </div>
 </div>
-<div class="card">
-    <table>
-        <thead>
-            <tr>
-                <th>Parameter</th>
-                <th>Mnemonic</th>
-                <th>APID(s)</th>
-                <th>Subsystem</th>
-                <th>Severity</th>
-                <th>Warning</th>
-                <th>Critical</th>
-                <th>Response (high level)</th>
-                <th>Version</th>
-                <th>Updated</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for a in alerts %}
-            <tr>
-                <td><a href="{% url 'handbook_alert_detail' a.id %}">{{ a.parameter }}</a></td>
-                <td>{% if a.mnemonic %}<a href="{% url 'handbook_alert_detail' a.id %}" title="View details, mnemonic description and user notes"><code>{{ a.mnemonic }}</code></a>{% else %}—{% endif %}</td>
-                <td>{{ a.apids|default:"—" }}</td>
-                <td>{{ a.subsystem.name }}</td>
-                <td>{{ a.get_severity_display }}</td>
-                <td>{{ a.warning_threshold|default:"—" }}</td>
-                <td>{{ a.critical_threshold|default:"—" }}</td>
-                <td class="response-preview">{% if a.recommended_response %}{{ a.recommended_response|truncatewords:15 }}{% else %}—{% endif %}</td>
-                <td>{{ a.version }}</td>
-                <td>{{ a.updated_at|date:"Y-m-d" }}</td>
-                <td>
-                    <a href="{% url 'handbook_alert_detail' a.id %}" class="btn btn-secondary">View</a>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'handbook_alert_edit' a.id %}" class="btn btn-secondary">Edit</a>
-                    <a href="{% url 'handbook_alert_delete' a.id %}" class="btn btn-secondary" style="color: var(--fail);">Delete</a>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="11">No alerts. {% if user.is_authenticated %}<a href="{% url 'handbook_alert_create' %}">Add one</a> or run <code>python manage.py seed_handbook --alerts</code>.{% else %}Run <code>python manage.py seed_handbook --alerts</code> for samples.{% endif %} Or clear filters.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+
+<!-- Filter bar -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[180px]">
+      <label class="first" for="hb-q">Search</label>
+      <input type="text" id="hb-q" name="q" value="{{ search_query }}" placeholder="Parameter, mnemonic, APID, description…">
+    </div>
+    <div>
+      <label for="hb-subsystem">Subsystem</label>
+      <select id="hb-subsystem" name="subsystem">
+        <option value="">All</option>
+        {% for s in subsystems %}
+        <option value="{{ s.id }}" {% if filter_subsystem_id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="hb-severity">Severity</label>
+      <select id="hb-severity" name="severity">
+        <option value="">All</option>
+        {% for val, label in severity_choices %}
+        <option value="{{ val }}" {% if filter_severity == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="hb-sort">Sort</label>
+      <select id="hb-sort" name="sort">
+        <option value="subsystem__name" {% if sort == 'subsystem__name' %}selected{% endif %}>Subsystem, parameter</option>
+        <option value="parameter" {% if sort == 'parameter' %}selected{% endif %}>Parameter A–Z</option>
+        <option value="-parameter" {% if sort == '-parameter' %}selected{% endif %}>Parameter Z–A</option>
+        <option value="-updated_at" {% if sort == '-updated_at' %}selected{% endif %}>Updated (newest)</option>
+        <option value="severity" {% if sort == 'severity' %}selected{% endif %}>Severity</option>
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn-primary">Filter</button>
+      {% if search_query or filter_subsystem_id or filter_severity %}
+      <a href="{% url 'handbook_alert_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Parameter</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Mnemonic</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">APID(s)</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Subsystem</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Severity</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Warning</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Critical</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Response</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">v</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Updated</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider no-print"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for a in alerts %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-medium">
+            <a href="{% url 'handbook_alert_detail' a.id %}" class="text-brand hover:underline">{{ a.parameter }}</a>
+          </td>
+          <td class="px-4 py-3">
+            {% if a.mnemonic %}
+            <a href="{% url 'handbook_alert_detail' a.id %}" class="text-gray-600 hover:text-brand font-mono text-xs">{{ a.mnemonic }}</a>
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ a.apids|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600">{{ a.subsystem.name }}</td>
+          <td class="px-4 py-3"><span class="badge badge-{{ a.severity|lower }}">{{ a.get_severity_display }}</span></td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ a.warning_threshold|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-500 text-xs">{{ a.critical_threshold|default:"—" }}</td>
+          <td class="px-4 py-3 text-gray-600 max-w-xs">{% if a.recommended_response %}{{ a.recommended_response|truncatewords:15 }}{% else %}—{% endif %}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs">{{ a.version }}</td>
+          <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ a.updated_at|date:"Y-m-d" }}</td>
+          <td class="px-4 py-3 no-print">
+            <a href="{% url 'handbook_alert_detail' a.id %}" class="btn btn-secondary">View</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'handbook_alert_edit' a.id %}" class="btn btn-secondary">Edit</a>
+            <a href="{% url 'handbook_alert_delete' a.id %}" class="btn btn-secondary abort-btn">Delete</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="11" class="px-4 py-8 text-center text-gray-500">
+            No alerts.
+            {% if user.is_authenticated %}<a href="{% url 'handbook_alert_create' %}" class="text-brand hover:underline">Add one</a> or run <code class="bg-gray-100 px-1 rounded text-xs">python manage.py seed_handbook --alerts</code>.{% else %}Run <code class="bg-gray-100 px-1 rounded text-xs">python manage.py seed_handbook --alerts</code> for samples.{% endif %}
+            Or clear filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 </div>
+
 {% endblock %}

@@ -1,127 +1,159 @@
 {% extends "base.html" %}
 {% block title %}{{ procedure.name }} — {{ satellite }}{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
 {% block content %}
-<nav class="breadcrumb no-print" aria-label="Breadcrumb">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; {{ procedure.name }} &rarr; Run (step {{ step_index|add:1 }} of {{ total_steps }})
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'procedure_list' %}">Procedures</a> &rsaquo;
+  {{ procedure.name }} &rsaquo; Run (step {{ step_index|add:1 }} of {{ total_steps }})
 </nav>
-<h2>{{ procedure.name }} — {{ satellite }}</h2>
-{% if preconditions %}
-<div class="card preconditions-block" style="margin-bottom: 1rem; border-left: 3px solid var(--accent);">
-    <strong>Preconditions</strong>
-    <p style="margin: 0.5rem 0 0; white-space: pre-wrap;">{{ preconditions }}</p>
-</div>
-{% endif %}
-<div class="no-print run-actions">
-  <p>
+
+<div class="flex items-start justify-between mb-4 gap-4">
+  <h1 class="text-xl font-semibold text-gray-900">{{ procedure.name }} <span class="text-gray-400 font-normal">— {{ satellite }}</span></h1>
+  <div class="no-print flex items-center gap-2 flex-shrink-0">
     {% if view_all %}
-    <a href="{% url 'run' run.id %}?step={{ num_done }}">See one step at a time</a>
+    <a href="{% url 'run' run.id %}?step={{ num_done }}" class="btn btn-secondary text-xs">One step at a time</a>
     {% else %}
-    <a href="{% url 'run' run.id %}?view=all">See all steps at once</a>
+    <a href="{% url 'run' run.id %}?view=all" class="btn btn-secondary text-xs">All steps</a>
     {% endif %}
-    | <a href="{% url 'run_summary' run.id %}">View all steps / Print</a>
-  </p>
-  <p>
-    <form method="post" action="{% url 'run' run.id %}" style="display: inline;" onsubmit="return confirm('Abort this procedure run? The run will be marked as cancelled.');">{% csrf_token %}
-      <input type="hidden" name="abort" value="1">
-      <button type="submit" class="btn btn-secondary abort-btn">Abort procedure</button>
+    <a href="{% url 'run_summary' run.id %}" class="btn btn-secondary text-xs">Summary / Print</a>
+    <form method="post" action="{% url 'run' run.id %}" style="display:inline;" onsubmit="return confirm('Abort this procedure run? It will be marked as cancelled.');">
+      {% csrf_token %}<input type="hidden" name="abort" value="1">
+      <button type="submit" class="btn btn-secondary abort-btn text-xs">Abort</button>
     </form>
-  </p>
+  </div>
 </div>
 
-<div class="run-notes-card card no-print">
-    <h3 style="margin-top: 0;">Run notes</h3>
-    <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">Handover or anomaly notes for this run. Shown on the run summary.</p>
-    <form method="post">{% csrf_token %}
-        <input type="hidden" name="save_run_notes" value="1">
-        <label for="run-notes-field">Notes</label>
-        <textarea name="run_notes" id="run-notes-field" rows="3" placeholder="e.g. Anomaly at step 2, discussed with shift lead...">{{ run.run_notes }}</textarea>
-        <p><button type="submit" class="btn btn-secondary">Save run notes</button></p>
-    </form>
+{% if preconditions %}
+<div class="bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-4 mb-4">
+  <p class="text-sm font-semibold text-amber-800 mb-1">Preconditions</p>
+  <p class="text-sm text-amber-700 whitespace-pre-wrap">{{ preconditions }}</p>
+</div>
+{% endif %}
+
+<!-- Run notes -->
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-5">
+  <h3 class="text-sm font-semibold text-gray-700 mb-2">Run Notes</h3>
+  <p class="text-xs text-gray-400 mb-3">Handover or anomaly notes for this run. Shown on the run summary.</p>
+  <form method="post">{% csrf_token %}
+    <input type="hidden" name="save_run_notes" value="1">
+    <textarea name="run_notes" rows="2" placeholder="e.g. Anomaly at step 2, discussed with shift lead…" style="max-width:100%;">{{ run.run_notes }}</textarea>
+    <button type="submit" class="btn btn-secondary">Save notes</button>
+  </form>
 </div>
 
 {% if view_all %}
-<div class="run-all-steps card no-print">
-    <div class="progress-bar" role="progressbar" aria-valuenow="{{ num_done }}" aria-valuemin="0" aria-valuemax="{{ total_steps }}" aria-label="Procedure progress">
-        <div style="width: {% widthratio num_done total_steps 100 %}%; height: 100%; background: var(--accent); border-radius: 2px;"></div>
-    </div>
-    <p><strong>{{ num_done }} of {{ total_steps }} steps completed.</strong></p>
+<!-- All steps view -->
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+  <div class="progress-bar mb-2">
+    <div style="width: {% widthratio num_done total_steps 100 %}%;"></div>
+  </div>
+  <p class="text-sm text-gray-500 mb-5"><strong class="text-gray-900">{{ num_done }}</strong> of {{ total_steps }} steps completed.</p>
+
+  <div class="space-y-4">
     {% for item in steps_with_execution %}
-    <div class="run-all-step-item {% if item.is_current %}run-all-step-current{% endif %}">
-        <h3>{{ forloop.counter }}. {{ item.step.description }}</h3>
-        {% if item.execution %}
-        <p><strong>Status:</strong> <span class="badge badge-{{ item.execution.status|lower }}">{{ item.execution.status }}</span>
-        {% if item.execution.input_value %} <strong>Input:</strong> {{ item.execution.input_value }}{% endif %}</p>
-        {% if item.execution.notes %}<p><strong>Notes:</strong> {{ item.execution.notes }}</p>{% endif %}
-        <p style="color: var(--text-muted); font-size: 0.9rem;">{{ item.execution.timestamp|date:"Y-m-d H:i:s" }}</p>
-        {% elif item.is_current %}
+    <div class="rounded-lg border {% if item.is_current %}border-brand bg-red-50{% else %}border-gray-200{% endif %} p-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-2">{{ forloop.counter }}. {{ item.step.description }}</h3>
+      {% if item.execution %}
+        <p class="text-sm">
+          <span class="badge badge-{{ item.execution.status|lower }}">{{ item.execution.status }}</span>
+          {% if item.execution.input_value %} <span class="text-gray-600">Input: {{ item.execution.input_value }}</span>{% endif %}
+        </p>
+        {% if item.execution.notes %}<p class="text-sm text-gray-600 mt-1"><strong>Notes:</strong> {{ item.execution.notes }}</p>{% endif %}
+        <p class="text-xs text-gray-400 mt-1">{{ item.execution.timestamp|date:"Y-m-d H:i:s" }}</p>
+      {% elif item.is_current %}
         <form method="post" id="run-step-form">{% csrf_token %}
-            <input type="hidden" name="view_all" value="1">
-            <label for="run-status">Status</label>
-            <select name="status" id="run-status" autofocus><option value="PASS">PASS</option><option value="FAIL">FAIL</option></select>
-            {% if item.step.input %}
-            <label for="run-value">Input ({{ item.step.input }})</label>
-            <input name="value" id="run-value" type="text">
-            {% endif %}
-            <label for="run-notes">Notes</label>
-            <textarea name="notes" id="run-notes" rows="3"></textarea>
-            <p><button type="submit" class="btn btn-primary">Submit step</button></p>
+          <input type="hidden" name="view_all" value="1">
+          <label class="first" for="run-status-all">Status</label>
+          <select name="status" id="run-status-all" autofocus>
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+          </select>
+          {% if item.step.input %}
+          <label for="run-value-all">Input ({{ item.step.input }})</label>
+          <input name="value" id="run-value-all" type="text">
+          {% endif %}
+          <label for="run-notes-all">Notes</label>
+          <textarea name="notes" id="run-notes-all" rows="2"></textarea>
+          <button type="submit" class="btn btn-primary">Submit step</button>
         </form>
-        {% else %}
-        <p style="color: var(--text-muted);">— Not yet done</p>
-        {% endif %}
+      {% else %}
+        <p class="text-sm text-gray-400">— Not yet done</p>
+      {% endif %}
     </div>
     {% endfor %}
+  </div>
 </div>
-{% else %}
-<div class="run-layout">
-    <aside class="step-list no-print" aria-label="Procedure steps">
-        <strong>Steps</strong>
-        {% for item in step_list %}
-        {% if item.current %}
-        <span class="current" aria-current="step">{{ item.index|add:1 }}. {{ item.step.id }}</span>
-        {% else %}
-        <a href="{% url 'run' run.id %}?step={{ item.index }}">{{ item.index|add:1 }}. {{ item.step.id }}{% if item.done %} ✓{% endif %}</a>
-        {% endif %}
-        {% endfor %}
-    </aside>
-    <div class="run-content">
-        <div class="progress-bar no-print" role="progressbar" aria-valuenow="{{ num_done }}" aria-valuemin="0" aria-valuemax="{{ total_steps }}" aria-label="Procedure progress">
-            <div style="width: {% widthratio num_done total_steps 100 %}%; height: 100%; background: var(--accent); border-radius: 2px;"></div>
-        </div>
-        <p>Step {{ step_index|add:1 }} of {{ total_steps }}</p>
 
-        {% if step_is_readonly %}
-        <div class="card">
-            <h3>{{ step.description }}</h3>
-            <p><strong>Status:</strong> <span class="badge badge-{{ execution.status|lower }}">{{ execution.status }}</span></p>
-            {% if execution.input_value %}<p><strong>Input:</strong> {{ execution.input_value }}</p>{% endif %}
-            {% if execution.notes %}<p><strong>Notes:</strong> {{ execution.notes }}</p>{% endif %}
-            <p style="color: var(--text-muted); font-size: 0.9rem;">{{ execution.timestamp|date:"Y-m-d H:i:s" }}</p>
-            <p class="no-print">
-                {% if has_prev %}<a href="{% url 'run' run.id %}?step={{ step_index|add:-1 }}" class="btn btn-secondary">Previous</a>{% endif %}
-                {% if has_next %}<a href="{% url 'run' run.id %}?step={{ step_index|add:1 }}" class="btn btn-primary">Next</a>{% endif %}
-            </p>
-        </div>
-        {% else %}
-        <div class="card">
-            <h3>{{ step.description }}</h3>
-            <form method="post" id="run-step-form">{% csrf_token %}
-                <label for="run-status">Status</label>
-                <select name="status" id="run-status" autofocus><option value="PASS">PASS</option><option value="FAIL">FAIL</option></select>
-                {% if step.input %}
-                <label for="run-value">Input ({{ step.input }})</label>
-                <input name="value" id="run-value" type="text">
-                {% endif %}
-                <label for="run-notes">Notes</label>
-                <textarea name="notes" id="run-notes" rows="3"></textarea>
-                <p class="no-print">
-                    {% if has_prev %}<a href="{% url 'run' run.id %}?step={{ step_index|add:-1 }}" class="btn btn-secondary">Previous</a>{% endif %}
-                    <button type="submit" class="btn btn-primary">Submit step</button>
-                </p>
-            </form>
-        </div>
-        {% endif %}
+{% else %}
+<!-- Single step view -->
+<div class="flex gap-5">
+  <!-- Step list sidebar -->
+  <aside class="no-print w-44 flex-shrink-0">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sticky top-6">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Steps</p>
+      <ol class="space-y-1">
+        {% for item in step_list %}
+        <li>
+          {% if item.current %}
+          <span class="flex items-center px-2 py-1 rounded bg-red-50 text-brand text-xs font-medium" aria-current="step">
+            {{ item.index|add:1 }}. {{ item.step.id }}
+          </span>
+          {% else %}
+          <a href="{% url 'run' run.id %}?step={{ item.index }}" class="flex items-center px-2 py-1 rounded text-xs text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+            {{ item.index|add:1 }}. {{ item.step.id }}{% if item.done %} <span class="ml-auto text-green-500">✓</span>{% endif %}
+          </a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ol>
     </div>
+  </aside>
+
+  <!-- Step content -->
+  <div class="flex-1 min-w-0">
+    <div class="progress-bar mb-1">
+      <div style="width: {% widthratio num_done total_steps 100 %}%;"></div>
+    </div>
+    <p class="text-xs text-gray-500 mb-4 no-print">Step {{ step_index|add:1 }} of {{ total_steps }}</p>
+
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">{{ step.description }}</h2>
+
+      {% if step_is_readonly %}
+        <div class="flex items-center gap-3 mb-3">
+          <span class="badge badge-{{ execution.status|lower }}">{{ execution.status }}</span>
+          {% if execution.input_value %}<span class="text-sm text-gray-600">Input: <strong>{{ execution.input_value }}</strong></span>{% endif %}
+        </div>
+        {% if execution.notes %}<p class="text-sm text-gray-600 mb-3"><strong>Notes:</strong> {{ execution.notes }}</p>{% endif %}
+        <p class="text-xs text-gray-400 mb-4">{{ execution.timestamp|date:"Y-m-d H:i:s" }}</p>
+        <div class="no-print flex gap-2">
+          {% if has_prev %}<a href="{% url 'run' run.id %}?step={{ step_index|add:-1 }}" class="btn btn-secondary">← Previous</a>{% endif %}
+          {% if has_next %}<a href="{% url 'run' run.id %}?step={{ step_index|add:1 }}" class="btn btn-primary">Next →</a>{% endif %}
+        </div>
+      {% else %}
+        <form method="post" id="run-step-form">{% csrf_token %}
+          <label class="first" for="run-status">Status</label>
+          <select name="status" id="run-status" autofocus>
+            <option value="PASS">PASS</option>
+            <option value="FAIL">FAIL</option>
+          </select>
+          {% if step.input %}
+          <label for="run-value">Input ({{ step.input }})</label>
+          <input name="value" id="run-value" type="text">
+          {% endif %}
+          <label for="run-notes">Notes</label>
+          <textarea name="notes" id="run-notes" rows="3"></textarea>
+          <div class="no-print flex gap-2">
+            {% if has_prev %}<a href="{% url 'run' run.id %}?step={{ step_index|add:-1 }}" class="btn btn-secondary">← Previous</a>{% endif %}
+            <button type="submit" class="btn btn-primary">Submit step</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endif %}
+
 {% endblock %}

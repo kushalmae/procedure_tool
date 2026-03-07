@@ -1,46 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Start Procedure{% endblock %}
+{% block title %}Start Procedure — Satops{% endblock %}
 {% block content %}
-<h2>Start Procedure</h2>
-<p><a href="{% url 'procedure_create' %}" class="btn btn-secondary">Create new procedure</a></p>
-{% if tags %}
-<p class="tag-filter no-print">
-    <span class="tag-label">Filter by tag:</span>
-    <a href="{% url 'start' %}" class="tag-pill {% if not filter_tag_id %}tag-pill-active{% endif %}">All</a>
-    {% for t in tags %}
-    <a href="{% url 'start' %}?tag={{ t.id }}" class="tag-pill {% if filter_tag_id == t.id %}tag-pill-active{% endif %}">{{ t.name }}</a>
-    {% endfor %}
-</p>
-{% endif %}
-{% if error %}<p class="card" style="color: #f85149;">{{ error }}</p>{% endif %}
-<div class="card">
-    <form method="post">{% csrf_token %}
-        <label for="satellite">Satellite</label>
-        <input id="satellite" name="satellite" type="text" placeholder="e.g. SAT-021" value="{% firstof request.POST.satellite preselected_satellite_name %}" required>
-        <label for="procedure">Procedure</label>
-        <div class="procedure-select-row">
-            <select id="procedure" name="procedure" required>
-                {% for p in procedures %}
-                <option value="{{ p.id }}" {% if preselected_procedure_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.version }}){% if p.tags.exists %} — {% for t in p.tags.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</option>
-                {% endfor %}
-            </select>
-            <a href="#" id="review-link" class="btn btn-secondary">Review selected procedure</a>
-        </div>
-        <p style="color: var(--text-muted-on-light); font-size: 0.9rem;">You will be recorded as <strong>{{ user.get_username }}</strong>.</p>
-        <p><button type="submit" class="btn btn-primary">Start</button></p>
-    </form>
+
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-semibold text-gray-900">Start Procedure</h1>
+  <a href="{% url 'procedure_create' %}" class="btn btn-secondary no-print">Create new procedure</a>
 </div>
-<p style="color: var(--text-muted); font-size: 0.9rem;">Add or edit tags in <a href="/admin/procedures/procedure/">Django Admin</a>.</p>
+
+{% if tags %}
+<div class="no-print flex flex-wrap items-center gap-2 mb-5">
+  <span class="text-sm text-gray-500 font-medium">Filter by tag:</span>
+  <a href="{% url 'start' %}" class="tag-pill {% if not filter_tag_id %}tag-pill-active{% endif %}">All</a>
+  {% for t in tags %}
+  <a href="{% url 'start' %}?tag={{ t.id }}" class="tag-pill {% if filter_tag_id == t.id %}tag-pill-active{% endif %}">{{ t.name }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if error %}
+<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>
+{% endif %}
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+  <form method="post">{% csrf_token %}
+    <label class="first" for="satellite">Satellite</label>
+    <input id="satellite" name="satellite" type="text" placeholder="e.g. SAT-021"
+           value="{% firstof request.POST.satellite preselected_satellite_name %}" required>
+
+    <label for="procedure">Procedure</label>
+    <div class="flex flex-wrap items-center gap-2 mb-3">
+      <select id="procedure" name="procedure" required style="margin-bottom:0;">
+        {% for p in procedures %}
+        <option value="{{ p.id }}" {% if preselected_procedure_id == p.id %}selected{% endif %}>
+          {{ p.name }} ({{ p.version }}){% if p.tags.exists %} — {% for t in p.tags.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <a href="#" id="review-link" class="btn btn-secondary">Review procedure</a>
+    </div>
+
+    <p class="text-sm text-gray-500 mb-4">You will be recorded as <strong class="text-gray-700">{{ user.get_username }}</strong>.</p>
+
+    <button type="submit" class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Start
+    </button>
+  </form>
+</div>
+
+<p class="mt-4 text-sm text-gray-400 no-print">Add or edit tags in <a href="/admin/procedures/procedure/" class="text-brand hover:underline">Django Admin</a>.</p>
+
 <script>
 (function() {
-    var select = document.getElementById('procedure');
-    var link = document.getElementById('review-link');
-    if (!select || !link) return;
-    function updateReviewLink() {
-        link.href = '{% url "procedure_review" %}?procedure=' + encodeURIComponent(select.value);
-    }
-    select.addEventListener('change', updateReviewLink);
-    updateReviewLink();
+  var select = document.getElementById('procedure');
+  var link = document.getElementById('review-link');
+  if (!select || !link) return;
+  function updateLink() { link.href = '{% url "procedure_review" %}?procedure=' + encodeURIComponent(select.value); }
+  select.addEventListener('change', updateLink);
+  updateLink();
 })();
 </script>
 {% endblock %}

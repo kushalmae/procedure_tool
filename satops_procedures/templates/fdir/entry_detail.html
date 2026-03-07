@@ -1,55 +1,60 @@
 {% extends "base.html" %}
 {% block title %}{{ entry.name }} — FDIR Handbook{% endblock %}
 {% block content %}
-<nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="{% url 'dashboard' %}">Dashboard</a> / <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a> / {{ entry.name }}
+
+<nav class="breadcrumb no-print">
+  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a> &rsaquo; {{ entry.name }}
 </nav>
-<h2>{{ entry.name }}{% if entry.fault_code %} <span class="text-muted">({{ entry.fault_code }})</span>{% endif %}</h2>
-<div class="card">
-    <dl class="detail-list">
-        <dt>Subsystem</dt>
-        <dd>{{ entry.subsystem.name }}</dd>
-        <dt>Severity</dt>
-        <dd>{{ entry.get_severity_display }}</dd>
-        {% if entry.fault_type %}
-        <dt>Fault type</dt>
-        <dd>{{ entry.fault_type }}</dd>
-        {% endif %}
-        <dt>Triggering conditions</dt>
-        <dd>{% if entry.triggering_conditions %}{{ entry.triggering_conditions|linebreaks }}{% else %}—{% endif %}</dd>
-        <dt>Detection thresholds / persistence</dt>
-        <dd>{% if entry.detection_thresholds %}{{ entry.detection_thresholds|linebreaks }}{% else %}—{% endif %}</dd>
-        <dt>Onboard automated response</dt>
-        <dd>{% if entry.onboard_automated_response %}{{ entry.onboard_automated_response|linebreaks }}{% else %}—{% endif %}</dd>
-        <dt>Operator recovery procedures</dt>
-        <dd>
-            {% if entry.operator_procedures.all %}
-            <ul>
-                {% for proc in entry.operator_procedures.all %}
-                <li>
-                    <a href="{% url 'procedure_review' %}?procedure={{ proc.id }}">{{ proc.name }} (v{{ proc.version }})</a>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'start' %}?procedure={{ proc.id }}" class="btn btn-secondary" style="margin-left: 0.5rem;">Start this procedure</a>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            —
-            {% endif %}
-        </dd>
-        {% if entry.version %}
-        <dt>Version</dt>
-        <dd>{{ entry.version }}</dd>
-        {% endif %}
-        <dt>Last updated</dt>
-        <dd>{{ entry.updated_at|date:"Y-m-d H:i" }}</dd>
-    </dl>
-    <p class="no-print">
-        {% if user.is_authenticated %}
-        <a href="{% url 'fdir_entry_edit' entry.id %}" class="btn btn-primary">Edit</a>
-        {% endif %}
-        <a href="{% url 'fdir_entry_list' %}" class="btn btn-secondary">Back to list</a>
-    </p>
+
+<div class="flex items-start justify-between mb-5 gap-4">
+  <h1 class="text-2xl font-semibold text-gray-900">
+    {{ entry.name }}
+    {% if entry.fault_code %}<span class="text-gray-400 font-normal text-lg ml-2 font-mono">({{ entry.fault_code }})</span>{% endif %}
+  </h1>
+  <div class="no-print flex gap-2">
+    {% if user.is_authenticated %}
+    <a href="{% url 'fdir_entry_edit' entry.id %}" class="btn btn-primary">Edit</a>
+    {% endif %}
+    <a href="{% url 'fdir_entry_list' %}" class="btn btn-secondary">Back to list</a>
+  </div>
 </div>
+
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+  <dl class="detail-list">
+    <dt>Subsystem</dt><dd>{{ entry.subsystem.name }}</dd>
+    <dt>Severity</dt><dd><span class="badge badge-{{ entry.severity|lower }}">{{ entry.get_severity_display }}</span></dd>
+    {% if entry.fault_type %}
+    <dt>Fault type</dt><dd>{{ entry.fault_type }}</dd>
+    {% endif %}
+    <dt>Triggering conditions</dt>
+    <dd>{% if entry.triggering_conditions %}{{ entry.triggering_conditions|linebreaks }}{% else %}—{% endif %}</dd>
+    <dt>Detection thresholds</dt>
+    <dd>{% if entry.detection_thresholds %}{{ entry.detection_thresholds|linebreaks }}{% else %}—{% endif %}</dd>
+    <dt>Onboard automated response</dt>
+    <dd>{% if entry.onboard_automated_response %}{{ entry.onboard_automated_response|linebreaks }}{% else %}—{% endif %}</dd>
+    <dt>Operator recovery procedures</dt>
+    <dd>
+      {% if entry.operator_procedures.all %}
+      <ul class="space-y-2">
+        {% for proc in entry.operator_procedures.all %}
+        <li class="flex items-center gap-2">
+          <a href="{% url 'procedure_review' %}?procedure={{ proc.id }}" class="text-brand hover:underline">{{ proc.name }} (v{{ proc.version }})</a>
+          {% if user.is_authenticated %}
+          <a href="{% url 'start' %}?procedure={{ proc.id }}" class="btn btn-secondary no-print">Start procedure</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      —
+      {% endif %}
+    </dd>
+    {% if entry.version %}
+    <dt>Version</dt><dd>{{ entry.version }}</dd>
+    {% endif %}
+    <dt>Last updated</dt><dd>{{ entry.updated_at|date:"Y-m-d H:i" }}</dd>
+  </dl>
+</div>
+
 {% endblock %}

@@ -2,71 +2,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ procedure.name }} — {{ run.satellite.name }} (summary)</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ procedure.name }} — {{ run.satellite.name }} (summary)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { colors: { brand: '#E10600' } } } }</script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body>
-    <a href="#main" class="skip-link">Skip to main content</a>
-    <nav class="no-print" aria-label="Main navigation">
-        <a href="{% url 'run' run.id %}">Back to run</a>
-        <a href="{% url 'dashboard' %}">Dashboard</a>
-        <a href="{% url 'history' %}">History</a>
-        <button type="button" onclick="window.print();" class="btn btn-primary" style="margin-left: auto;" aria-label="Print this run summary">Print</button>
+<body class="bg-gray-50">
+
+  <!-- Print/nav bar -->
+  <div class="no-print bg-zinc-900 text-white px-6 py-3 flex items-center gap-3 text-sm">
+    <span class="text-brand font-bold tracking-widest">SAT</span><span class="font-bold tracking-widest mr-4">OPS</span>
+    <a href="{% url 'run' run.id %}" class="text-zinc-300 hover:text-white">← Back to run</a>
+    <a href="{% url 'dashboard' %}" class="text-zinc-300 hover:text-white">Dashboard</a>
+    <a href="{% url 'history' %}" class="text-zinc-300 hover:text-white">History</a>
+    <button type="button" onclick="window.print();" class="btn btn-primary ml-auto" aria-label="Print run summary">Print</button>
+  </div>
+
+  <main id="main" class="max-w-3xl mx-auto px-6 py-8">
+
+    <nav class="breadcrumb no-print">
+      <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
+      <a href="{% url 'procedure_list' %}">Procedures</a> &rsaquo; {{ procedure.name }} &rsaquo; Summary
     </nav>
-    <main id="main">
-        <nav class="breadcrumb no-print" aria-label="Breadcrumb">
-            <a href="{% url 'dashboard' %}">Dashboard</a> &rarr; <a href="{% url 'procedure_list' %}">Procedures</a> &rarr; {{ procedure.name }} &rarr; Summary
-        </nav>
-        <div class="run-summary-header">
-            <h2>{{ procedure.name }} — {{ run.satellite.name }}</h2>
-            <div class="run-summary-meta">
-                Operator: {{ run.operator_name|default:"—" }} &nbsp;|&nbsp;
-                Started: {{ run.start_time|date:"Y-m-d H:i:s" }}
-                {% if run.end_time %} &nbsp;|&nbsp; Ended: {{ run.end_time|date:"Y-m-d H:i:s" }}{% endif %}
-                &nbsp;|&nbsp; Status: <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
-            </div>
+
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-semibold text-gray-900">{{ procedure.name }}</h1>
+      <p class="text-gray-500 text-sm mt-1">Satellite: <strong class="text-gray-700">{{ run.satellite.name }}</strong></p>
+      <div class="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
+        <span>Operator: <strong>{{ run.operator_name|default:"—" }}</strong></span>
+        <span>Started: <strong>{{ run.start_time|date:"Y-m-d H:i:s" }}</strong></span>
+        {% if run.end_time %}<span>Ended: <strong>{{ run.end_time|date:"Y-m-d H:i:s" }}</strong></span>{% endif %}
+        <span>Status: <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span></span>
+      </div>
+    </div>
+
+    {% if preconditions %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-2">Preconditions</h3>
+      <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ preconditions }}</p>
+    </div>
+    {% endif %}
+
+    {% if run.run_notes %}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+      <h3 class="text-sm font-semibold text-amber-800 mb-2">Run Notes</h3>
+      <p class="text-sm text-amber-700 whitespace-pre-wrap">{{ run.run_notes }}</p>
+    </div>
+    {% endif %}
+
+    {% if run.linked_anomalies.all %}
+    <div class="no-print bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+      <h3 class="text-sm font-semibold text-red-800 mb-2">Anomalies reported during this run</h3>
+      <ul class="space-y-1">
+        {% for a in run.linked_anomalies.all %}
+        <li class="text-sm">
+          <a href="{% url 'anomalies_detail' a.id %}" class="text-brand hover:underline">Anomaly {{ a.id }}</a>
+          — {{ a.satellite.name }} · <span class="badge badge-{{ a.severity|lower }}">{{ a.get_severity_display }}</span> {{ a.get_status_display }}{% if a.description %} — {{ a.description|truncatewords:12 }}{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Steps -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-sm font-semibold text-gray-900">Steps</h2>
+      </div>
+      <div class="divide-y divide-gray-100">
+        {% for item in steps_with_execution %}
+        <div class="summary-step px-5">
+          <div class="step-desc">{{ forloop.counter }}. {{ item.step.description }}</div>
+          {% if item.execution %}
+          <div class="step-result">
+            <span class="badge badge-{{ item.execution.status|lower }}">{{ item.execution.status }}</span>
+            {% if item.execution.input_value %} — {{ item.execution.input_value }}{% endif %}
+            {% if item.execution.notes %} — {{ item.execution.notes }}{% endif %}
+            <span class="ml-2 text-xs">{{ item.execution.timestamp|date:"H:i:s" }}</span>
+          </div>
+          {% else %}
+          <div class="step-result">— Not executed</div>
+          {% endif %}
         </div>
-        {% if preconditions %}
-        <div class="card run-preconditions-summary">
-            <h3 style="margin-top: 0;">Preconditions</h3>
-            <p style="white-space: pre-wrap;">{{ preconditions }}</p>
-        </div>
-        {% endif %}
-        {% if run.run_notes %}
-        <div class="card run-notes-summary">
-            <h3 style="margin-top: 0;">Run notes</h3>
-            <p style="white-space: pre-wrap;">{{ run.run_notes }}</p>
-        </div>
-        {% endif %}
-        {% if run.linked_anomalies.all %}
-        <div class="card run-linked-anomalies no-print">
-            <h3 style="margin-top: 0;">Anomalies reported during this run</h3>
-            <ul>
-                {% for a in run.linked_anomalies.all %}
-                <li><a href="{% url 'anomalies_detail' a.id %}">Anomaly {{ a.id }}</a> — {{ a.satellite.name }} · {{ a.get_severity_display }} · {{ a.get_status_display }}{% if a.description %} — {{ a.description|truncatewords:12 }}{% endif %}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        <div class="card">
-            {% for item in steps_with_execution %}
-            <div class="summary-step">
-                <div class="step-desc">{{ forloop.counter }}. {{ item.step.description }}</div>
-                {% if item.execution %}
-                <div class="step-result">
-                    <span class="badge badge-{{ item.execution.status|lower }}">{{ item.execution.status }}</span>
-                    {% if item.execution.input_value %} — {{ item.execution.input_value }}{% endif %}
-                    {% if item.execution.notes %} — {{ item.execution.notes }}{% endif %}
-                    ({{ item.execution.timestamp|date:"H:i:s" }})
-                </div>
-                {% else %}
-                <div class="step-result" style="color: var(--text-muted);">—</div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        </div>
-    </main>
+        {% endfor %}
+      </div>
+    </div>
+
+  </main>
 </body>
 </html>
