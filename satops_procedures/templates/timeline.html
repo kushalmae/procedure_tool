@@ -6,7 +6,7 @@
 <div class="flex items-center justify-between mb-2">
   <h1 class="text-2xl font-semibold text-gray-900">Mission Timeline</h1>
 </div>
-<p class="text-sm text-gray-500 mb-5 no-print">Fused chronological view: procedure runs, mission log entries, and anomalies.</p>
+<p class="text-sm text-gray-500 mb-5 no-print">Fused chronological view: procedure runs, mission log entries, and events.</p>
 
 <!-- Filter bar -->
 <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
@@ -26,7 +26,6 @@
         <option value="" {% if not filter_type %}selected{% endif %}>All</option>
         <option value="run" {% if filter_type == 'run' %}selected{% endif %}>Procedure runs</option>
         <option value="scribe" {% if filter_type == 'scribe' %}selected{% endif %}>Mission log</option>
-        <option value="anomaly" {% if filter_type == 'anomaly' %}selected{% endif %}>Anomalies</option>
         <option value="event" {% if filter_type == 'event' %}selected{% endif %}>Events</option>
       </select>
     </div>
@@ -67,8 +66,6 @@
             <span class="badge badge-run">Run {% if ev.type == 'run_end' %}end{% else %}start{% endif %}</span>
             {% elif ev.type == 'scribe' %}
             <span class="badge badge-scribe">Log</span>
-            {% elif ev.type == 'anomaly' %}
-            <span class="badge badge-anomaly">Anomaly</span>
             {% elif ev.type == 'event' %}
             <span class="badge badge-event">Event</span>
             {% else %}
@@ -83,9 +80,6 @@
             <span class="text-gray-500">({{ ev.operator_name }})</span>
             {% elif ev.type == 'scribe' %}
             <strong>{{ ev.role_name }}</strong> — {{ ev.category_name }}{% if ev.description %}: <span class="text-gray-600">{{ ev.description|truncatewords:15 }}</span>{% endif %}
-            {% elif ev.type == 'anomaly' %}
-            <span class="badge badge-{{ ev.severity|lower }}">{{ ev.severity }}</span>
-            {{ ev.status }}{% if ev.description %} — <span class="text-gray-600">{{ ev.description|truncatewords:12 }}</span>{% endif %}
             {% elif ev.type == 'event' %}
             <span class="font-medium">{{ ev.event_title }}</span>
             <span class="badge badge-severity-{{ ev.severity|lower }} ml-1">{{ ev.severity }}</span>
@@ -98,8 +92,6 @@
             <a href="{% url 'run_summary' ev.run_id %}" class="text-brand hover:underline">View run</a>
             {% elif ev.type == 'scribe' %}
             <a href="{% url 'scribe_timeline' %}" class="text-brand hover:underline">Timeline</a>
-            {% elif ev.type == 'anomaly' %}
-            <a href="{% url 'anomalies_detail' ev.anomaly_id %}" class="text-brand hover:underline">View</a>
             {% elif ev.type == 'event' %}
             <a href="{% url 'events_detail' event_id=ev.event_id %}" class="text-brand hover:underline">View</a>
             {% endif %}

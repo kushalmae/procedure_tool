@@ -5,11 +5,11 @@
 
 <div class="flex items-center justify-between mb-2">
   <h1 class="text-2xl font-semibold text-gray-900">Fleet Overview</h1>
-  <span class="badge badge-health-{{ fleet_health }} text-sm" title="Green: nominal; Yellow: open medium/low anomalies or recent fail; Red: open critical/high anomaly">
+  <span class="badge badge-health-{{ fleet_health }} text-sm" title="Green: nominal; Yellow: open events or recent fail; Red: L4/L5 critical events">
     Fleet: {{ fleet_health|upper }}
   </span>
 </div>
-<p class="text-sm text-gray-500 mb-5 no-print">Per-satellite status: last procedure run, open anomalies, and latest mission log entry.</p>
+<p class="text-sm text-gray-500 mb-5 no-print">Per-satellite status: last procedure run, open events, and latest mission log entry.</p>
 
 <div class="no-print flex gap-2 mb-5">
   <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
@@ -25,7 +25,6 @@
           <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Health</th>
           <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Satellite</th>
           <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Last Procedure Run</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Open Anomalies</th>
           <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Open Events</th>
           <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Last Mission Log</th>
           <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider no-print">Actions</th>
@@ -48,13 +47,6 @@
             {% endif %}
           </td>
           <td class="px-4 py-3">
-            {% if row.open_anomalies_count %}
-            <a href="{% url 'anomalies_registry' %}?satellite={{ row.satellite.id }}" class="text-brand font-semibold hover:underline">{{ row.open_anomalies_count }}</a>
-            {% else %}
-            <span class="text-gray-400">0</span>
-            {% endif %}
-          </td>
-          <td class="px-4 py-3">
             {% if row.open_events_count %}
             <a href="{% url 'events_list' %}?satellite={{ row.satellite.id }}" class="text-brand font-semibold hover:underline">{{ row.open_events_count }}</a>
             {% else %}
@@ -71,14 +63,14 @@
           </td>
           <td class="px-4 py-3 no-print">
             <a href="{% url 'start' %}" class="btn btn-secondary">Start</a>
-            {% if row.open_anomalies_count %}
-            <a href="{% url 'anomalies_registry' %}?satellite={{ row.satellite.id }}" class="btn btn-secondary">Anomalies</a>
+            {% if row.open_events_count %}
+            <a href="{% url 'events_list' %}?satellite={{ row.satellite.id }}" class="btn btn-secondary">Events</a>
             {% endif %}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+          <td colspan="6" class="px-4 py-8 text-center text-gray-500">
             No satellites. Add them via <a href="{% url 'admin:index' %}" class="text-brand hover:underline">Admin</a> or by starting a procedure with a new satellite name.
           </td>
         </tr>

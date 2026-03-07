@@ -39,7 +39,7 @@
             </h1>
             <p class="hp-hero-subtitle">
                 SatOps is an integrated suite for satellite operations teams.
-                Run step-by-step procedures, log mission events, track fleet anomalies,
+                Run step-by-step procedures, log mission events, track operational issues,
                 manage alert thresholds, and document FDIR logic &mdash; all in one
                 offline-first, auditable platform.
             </p>
@@ -83,7 +83,7 @@
                 <div class="hp-feature-card">
                     <div class="hp-feature-icon" aria-hidden="true">&#128752;</div>
                     <h3>Fleet-wide visibility</h3>
-                    <p>Run procedures per satellite, track anomalies across your fleet, and see real-time health status from a single dashboard.</p>
+                    <p>Run procedures per satellite, track events across your fleet, and see real-time health status from a single dashboard.</p>
                 </div>
                 <div class="hp-feature-card">
                     <div class="hp-feature-icon" aria-hidden="true">&#128196;</div>
@@ -152,19 +152,19 @@
 
                 <div class="hp-tool-card">
                     <div class="hp-tool-number">03</div>
-                    <h3>Fleet Anomaly Tracker</h3>
+                    <h3>Event Workflow</h3>
                     <p>
-                        Capture, track, and manage anomalies across your satellite fleet. Standardized reporting with
-                        satellite, subsystem, severity, and operational impact fields. Track investigation progress from
-                        New through Resolved.
+                        Create, track, and resolve operational events across your satellite fleet. Standardized
+                        lifecycle from detection through investigation, mitigation, and closure with full
+                        resolution documentation.
                     </p>
                     <ul class="hp-tool-highlights">
-                        <li>Structured anomaly reporting with severity classification</li>
-                        <li>Centralized fleet-wide anomaly registry</li>
-                        <li>Status tracking: New &rarr; Investigating &rarr; Mitigated &rarr; Resolved</li>
-                        <li>Notes and updates with author attribution</li>
+                        <li>Structured event creation with L1–L5 severity levels</li>
+                        <li>Full lifecycle: New &rarr; Investigating &rarr; Mitigated &rarr; Resolved &rarr; Closed</li>
+                        <li>Timeline with investigation notes, actions, and status changes</li>
+                        <li>Resolution documentation with root cause and recommendations</li>
                     </ul>
-                    <a href="{% url 'anomalies_registry' %}" class="hp-tool-link">View Anomaly Tracker &rarr;</a>
+                    <a href="{% url 'events_list' %}" class="hp-tool-link">View Event Workflow &rarr;</a>
                 </div>
 
                 <div class="hp-tool-card">
@@ -272,7 +272,7 @@ python manage.py seed_all</code></pre>
                 <div class="hp-workflow-step">
                     <div class="hp-workflow-icon" aria-hidden="true">&#128203;</div>
                     <h3>Document</h3>
-                    <p>Add run notes, log scribe events, and report anomalies as they occur during the shift.</p>
+                    <p>Add run notes, log scribe events, and create events as they occur during the shift.</p>
                 </div>
                 <div class="hp-workflow-arrow" aria-hidden="true">&rarr;</div>
                 <div class="hp-workflow-step">
@@ -306,7 +306,7 @@ python manage.py seed_all</code></pre>
             <a href="{% url 'dashboard' %}">Dashboard</a>
             <a href="{% url 'procedure_list' %}">Procedures</a>
             <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
-            <a href="{% url 'anomalies_registry' %}">Anomaly Tracker</a>
+            <a href="{% url 'events_list' %}">Event Workflow</a>
             <a href="{% url 'handbook_alert_list' %}">Alerts Handbook</a>
             <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
         </div>

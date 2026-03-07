@@ -8,7 +8,6 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('', include('procedures.urls')),
     path('scribe/', include('scribe.urls')),
-    path('anomalies/', include('anomalies.urls')),
     path('handbook/', include('handbook.urls')),
     path('fdir/', include('fdir.urls')),
     path('events/', include('events.urls')),

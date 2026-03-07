@@ -11,13 +11,12 @@ SEED_COMMANDS = [
     ('seed_scribe', {}, 'Scribe roles, event categories'),
     ('seed_handbook', {'alerts': True}, 'Handbook subsystems and sample alerts'),
     ('seed_fdir', {'entries': True}, 'FDIR subsystems and sample entries'),
-    ('seed_anomalies', {'anomalies': True}, 'Anomaly subsystems, types, and sample anomalies'),
     ('seed_events', {'events': True}, 'Event workflow sample events'),
 ]
 
 
 class Command(BaseCommand):
-    help = 'Run all seed commands (procedures, scribe, handbook, fdir, anomalies, events) in one go.'
+    help = 'Run all seed commands (procedures, scribe, handbook, fdir, events) in one go.'
 
     def add_arguments(self, parser):
         parser.add_argument(

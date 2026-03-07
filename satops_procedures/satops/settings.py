@@ -22,7 +22,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'procedures',
     'scribe',
-    'anomalies',
     'handbook',
     'fdir',
     'events',

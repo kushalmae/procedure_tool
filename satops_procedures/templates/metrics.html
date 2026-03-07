@@ -11,7 +11,7 @@
     <a href="{% url 'handover' %}" class="btn btn-secondary">Handover</a>
   </div>
 </div>
-<p class="text-sm text-gray-500 mb-6 no-print">Procedure performance, anomaly metrics, fleet utilization, and operator workload.</p>
+<p class="text-sm text-gray-500 mb-6 no-print">Procedure performance, event metrics, fleet utilization, and operator workload.</p>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -51,11 +51,11 @@
     {% endif %}
   </section>
 
-  <!-- Anomaly metrics -->
+  <!-- Event metrics -->
   <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-gray-200 bg-gray-50">
-      <h2 class="text-sm font-semibold text-gray-900">Anomaly Metrics</h2>
-      <p class="text-xs text-gray-500">Open anomalies by severity; resolved in last 30 days</p>
+      <h2 class="text-sm font-semibold text-gray-900">Event Metrics</h2>
+      <p class="text-xs text-gray-500">Open events by severity; resolved/closed in last 30 days</p>
     </div>
     <div class="p-5">
       {% if open_by_severity %}
@@ -70,7 +70,7 @@
           <tbody class="divide-y divide-gray-100">
             {% for row in open_by_severity %}
             <tr class="hover:bg-gray-50">
-              <td class="px-4 py-2"><span class="badge badge-{{ row.severity|lower }}">{{ row.severity }}</span></td>
+              <td class="px-4 py-2"><span class="badge badge-severity-{{ row.severity|lower }}">{{ row.severity }}</span></td>
               <td class="px-4 py-2 font-medium text-gray-900">{{ row.cnt }}</td>
             </tr>
             {% endfor %}
@@ -78,9 +78,9 @@
         </table>
       </div>
       {% else %}
-      <p class="text-sm text-gray-500 mb-3">No open anomalies.</p>
+      <p class="text-sm text-gray-500 mb-3">No open events.</p>
       {% endif %}
-      <p class="text-sm text-gray-700"><strong>Resolved (last 30 days):</strong> {{ resolved_30 }}</p>
+      <p class="text-sm text-gray-700"><strong>Resolved / Closed (last 30 days):</strong> {{ resolved_30 }}</p>
     </div>
   </section>
 
