@@ -1,0 +1,320 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SatOps — Satellite Operations Suite</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/homepage.css' %}">
+</head>
+<body class="homepage-body">
+
+<header class="hp-header">
+    <div class="hp-header-inner">
+        <a href="{% url 'homepage' %}" class="hp-logo">
+            <span class="hp-logo-icon" aria-hidden="true">&#9670;</span>
+            SatOps
+        </a>
+        <nav class="hp-nav" aria-label="Homepage navigation">
+            <a href="#features">Features</a>
+            <a href="#tools">Tools</a>
+            <a href="#get-started">Get Started</a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="hp-nav-cta">Open Dashboard</a>
+            {% else %}
+            <a href="{% url 'login' %}" class="hp-nav-cta">Log In</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="hp-hero">
+        <div class="hp-hero-inner">
+            <div class="hp-hero-badge">Satellite Operations Platform</div>
+            <h1 class="hp-hero-title">
+                Mission-critical ops,<br>
+                <span class="hp-hero-accent">simplified.</span>
+            </h1>
+            <p class="hp-hero-subtitle">
+                SatOps is an integrated suite for satellite operations teams.
+                Run step-by-step procedures, log mission events, track fleet anomalies,
+                manage alert thresholds, and document FDIR logic &mdash; all in one
+                offline-first, auditable platform.
+            </p>
+            <div class="hp-hero-actions">
+                <a href="{% url 'dashboard' %}" class="btn btn-primary hp-btn-lg">Go to Dashboard</a>
+                <a href="#get-started" class="btn btn-secondary hp-btn-lg">Get Started</a>
+            </div>
+            <div class="hp-hero-stats">
+                <div class="hp-stat">
+                    <span class="hp-stat-value">5</span>
+                    <span class="hp-stat-label">Integrated tools</span>
+                </div>
+                <div class="hp-stat">
+                    <span class="hp-stat-value">100%</span>
+                    <span class="hp-stat-label">Offline-capable</span>
+                </div>
+                <div class="hp-stat">
+                    <span class="hp-stat-value">YAML</span>
+                    <span class="hp-stat-label">Procedure definitions</span>
+                </div>
+                <div class="hp-stat">
+                    <span class="hp-stat-value">Full</span>
+                    <span class="hp-stat-label">Audit trail</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hp-section" id="features">
+        <div class="hp-container">
+            <div class="hp-section-header">
+                <h2>Built for satellite operations</h2>
+                <p>Everything your ops team needs to execute, document, and hand over with confidence.</p>
+            </div>
+            <div class="hp-features-grid">
+                <div class="hp-feature-card">
+                    <div class="hp-feature-icon" aria-hidden="true">&#9745;</div>
+                    <h3>Step-by-step execution</h3>
+                    <p>Walk through procedures one step at a time. Record pass/fail, capture inputs and notes, with automatic timestamps on every action.</p>
+                </div>
+                <div class="hp-feature-card">
+                    <div class="hp-feature-icon" aria-hidden="true">&#128752;</div>
+                    <h3>Fleet-wide visibility</h3>
+                    <p>Run procedures per satellite, track anomalies across your fleet, and see real-time health status from a single dashboard.</p>
+                </div>
+                <div class="hp-feature-card">
+                    <div class="hp-feature-icon" aria-hidden="true">&#128196;</div>
+                    <h3>YAML-based procedures</h3>
+                    <p>Define procedures in human-readable YAML. Version, edit, clone, and review them through the UI or directly in files.</p>
+                </div>
+                <div class="hp-feature-card">
+                    <div class="hp-feature-icon" aria-hidden="true">&#128274;</div>
+                    <h3>Operator attribution</h3>
+                    <p>Multi-user login with full operator tracking. Every run, every step, every note is tied to the logged-in user.</p>
+                </div>
+                <div class="hp-feature-card">
+                    <div class="hp-feature-icon" aria-hidden="true">&#128424;</div>
+                    <h3>Print-ready records</h3>
+                    <p>Run summaries, handover packs, and shift logs are formatted for print. Ready for records, compliance, or shift briefings.</p>
+                </div>
+                <div class="hp-feature-card">
+                    <div class="hp-feature-icon" aria-hidden="true">&#127760;</div>
+                    <h3>Offline-first</h3>
+                    <p>No cloud dependency. Runs on SQLite and local YAML files. Deploy on a single server or shared drive in air-gapped environments.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hp-section hp-section-dark" id="tools">
+        <div class="hp-container">
+            <div class="hp-section-header hp-section-header-light">
+                <h2>Five integrated tools</h2>
+                <p>Each tool solves a distinct ops problem. Together, they give your team a complete operational picture.</p>
+            </div>
+
+            <div class="hp-tools">
+                <div class="hp-tool-card">
+                    <div class="hp-tool-number">01</div>
+                    <h3>Procedure Runner</h3>
+                    <p>
+                        Execute step-by-step checklists against your fleet. Create procedures in YAML, review before starting,
+                        and record pass/fail with notes at each step. Completed runs produce a full summary with timestamps
+                        and run notes for handover or audit.
+                    </p>
+                    <ul class="hp-tool-highlights">
+                        <li>Create, edit, clone, and review procedures</li>
+                        <li>Per-satellite execution with operator tracking</li>
+                        <li>Run notes for handover and anomaly documentation</li>
+                        <li>Searchable history with tag filtering</li>
+                    </ul>
+                    <a href="{% url 'procedure_list' %}" class="hp-tool-link">View Procedures &rarr;</a>
+                </div>
+
+                <div class="hp-tool-card">
+                    <div class="hp-tool-number">02</div>
+                    <h3>Mission Scribe</h3>
+                    <p>
+                        Record structured shift logs across multiple roles &mdash; Mission Director, Flight Dynamics, TNC,
+                        Payload, and Ground Systems. All entries appear in a unified mission timeline with filters and search.
+                    </p>
+                    <ul class="hp-tool-highlights">
+                        <li>Role-based event logging with structured metadata</li>
+                        <li>Unified chronological mission timeline</li>
+                        <li>Shift-based logging with handoff notes</li>
+                        <li>Filter by role, satellite, category, and severity</li>
+                    </ul>
+                    <a href="{% url 'scribe_timeline' %}" class="hp-tool-link">Open Mission Scribe &rarr;</a>
+                </div>
+
+                <div class="hp-tool-card">
+                    <div class="hp-tool-number">03</div>
+                    <h3>Fleet Anomaly Tracker</h3>
+                    <p>
+                        Capture, track, and manage anomalies across your satellite fleet. Standardized reporting with
+                        satellite, subsystem, severity, and operational impact fields. Track investigation progress from
+                        New through Resolved.
+                    </p>
+                    <ul class="hp-tool-highlights">
+                        <li>Structured anomaly reporting with severity classification</li>
+                        <li>Centralized fleet-wide anomaly registry</li>
+                        <li>Status tracking: New &rarr; Investigating &rarr; Mitigated &rarr; Resolved</li>
+                        <li>Notes and updates with author attribution</li>
+                    </ul>
+                    <a href="{% url 'anomalies_registry' %}" class="hp-tool-link">View Anomaly Tracker &rarr;</a>
+                </div>
+
+                <div class="hp-tool-card">
+                    <div class="hp-tool-number">04</div>
+                    <h3>Alerts &amp; Limits Handbook</h3>
+                    <p>
+                        A single source of truth for operational alerts, monitoring rules, and telemetry limits. Each entry
+                        documents the parameter, warning/critical thresholds, and recommended operator response.
+                    </p>
+                    <ul class="hp-tool-highlights">
+                        <li>Structured alert and limit definitions</li>
+                        <li>Warning and critical thresholds with response guidance</li>
+                        <li>Version tracking with automatic increment on edit</li>
+                        <li>Optional link to recovery procedures</li>
+                    </ul>
+                    <a href="{% url 'handbook_alert_list' %}" class="hp-tool-link">Open Handbook &rarr;</a>
+                </div>
+
+                <div class="hp-tool-card">
+                    <div class="hp-tool-number">05</div>
+                    <h3>FDIR Handbook</h3>
+                    <p>
+                        Document all Fault Detection, Isolation, and Recovery logic. Each entry describes how faults are
+                        detected onboard, what automatic responses the spacecraft executes, and which operator procedures
+                        to follow for recovery.
+                    </p>
+                    <ul class="hp-tool-highlights">
+                        <li>Structured FDIR definitions with fault codes</li>
+                        <li>Onboard automated response documentation</li>
+                        <li>Cross-links to operator recovery procedures</li>
+                        <li>Filter by subsystem, severity, and fault type</li>
+                    </ul>
+                    <a href="{% url 'fdir_entry_list' %}" class="hp-tool-link">Open FDIR Handbook &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hp-section" id="get-started">
+        <div class="hp-container">
+            <div class="hp-section-header">
+                <h2>Get started in minutes</h2>
+                <p>SatOps runs locally with no external dependencies. Set up your environment and start running procedures.</p>
+            </div>
+            <div class="hp-steps">
+                <div class="hp-step">
+                    <div class="hp-step-num">1</div>
+                    <div class="hp-step-content">
+                        <h3>Install dependencies</h3>
+                        <p>Create a virtual environment and install the requirements.</p>
+                        <pre class="hp-code"><code>python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt</code></pre>
+                    </div>
+                </div>
+                <div class="hp-step">
+                    <div class="hp-step-num">2</div>
+                    <div class="hp-step-content">
+                        <h3>Initialize the database</h3>
+                        <p>Run migrations and seed sample data for procedures, satellites, and all reference tools.</p>
+                        <pre class="hp-code"><code>python manage.py migrate
+python manage.py seed_all</code></pre>
+                    </div>
+                </div>
+                <div class="hp-step">
+                    <div class="hp-step-num">3</div>
+                    <div class="hp-step-content">
+                        <h3>Create a user</h3>
+                        <p>Create a superuser to log in and start running procedures.</p>
+                        <pre class="hp-code"><code>python manage.py createsuperuser</code></pre>
+                    </div>
+                </div>
+                <div class="hp-step">
+                    <div class="hp-step-num">4</div>
+                    <div class="hp-step-content">
+                        <h3>Launch the server</h3>
+                        <p>Start the development server and open the app in your browser.</p>
+                        <pre class="hp-code"><code>python manage.py runserver</code></pre>
+                        <p class="hp-step-note">Then visit <strong>http://localhost:8000</strong> — you're ready to go.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hp-section hp-section-dark hp-workflow">
+        <div class="hp-container">
+            <div class="hp-section-header hp-section-header-light">
+                <h2>Typical workflow</h2>
+                <p>From preparation to handover, SatOps supports the full operational cycle.</p>
+            </div>
+            <div class="hp-workflow-grid">
+                <div class="hp-workflow-step">
+                    <div class="hp-workflow-icon" aria-hidden="true">&#9998;</div>
+                    <h3>Prepare</h3>
+                    <p>Create or edit procedures in the UI. Use tags for organization. Review steps before starting.</p>
+                </div>
+                <div class="hp-workflow-arrow" aria-hidden="true">&rarr;</div>
+                <div class="hp-workflow-step">
+                    <div class="hp-workflow-icon" aria-hidden="true">&#9654;</div>
+                    <h3>Execute</h3>
+                    <p>Log in, pick a satellite and procedure. Work through steps recording pass/fail and notes.</p>
+                </div>
+                <div class="hp-workflow-arrow" aria-hidden="true">&rarr;</div>
+                <div class="hp-workflow-step">
+                    <div class="hp-workflow-icon" aria-hidden="true">&#128203;</div>
+                    <h3>Document</h3>
+                    <p>Add run notes, log scribe events, and report anomalies as they occur during the shift.</p>
+                </div>
+                <div class="hp-workflow-arrow" aria-hidden="true">&rarr;</div>
+                <div class="hp-workflow-step">
+                    <div class="hp-workflow-icon" aria-hidden="true">&#128257;</div>
+                    <h3>Handover</h3>
+                    <p>Print run summaries and shift logs. Brief the next shift with complete records.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="hp-section hp-cta-section">
+        <div class="hp-container hp-cta-inner">
+            <h2>Ready to streamline your satellite operations?</h2>
+            <p>Jump into the dashboard and start running procedures, logging events, and tracking your fleet.</p>
+            <div class="hp-hero-actions">
+                <a href="{% url 'dashboard' %}" class="btn btn-primary hp-btn-lg">Open Dashboard</a>
+                <a href="{% url 'procedure_list' %}" class="btn btn-secondary hp-btn-lg">Browse Procedures</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="hp-footer">
+    <div class="hp-container hp-footer-inner">
+        <div class="hp-footer-brand">
+            <span class="hp-logo-icon" aria-hidden="true">&#9670;</span>
+            SatOps
+        </div>
+        <div class="hp-footer-links">
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+            <a href="{% url 'procedure_list' %}">Procedures</a>
+            <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
+            <a href="{% url 'anomalies_registry' %}">Anomaly Tracker</a>
+            <a href="{% url 'handbook_alert_list' %}">Alerts Handbook</a>
+            <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
+        </div>
+        <div class="hp-footer-copy">
+            Built for satellite operations teams. Runs offline. No cloud required.
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -78,7 +78,7 @@ STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
 PROCEDURES_YAML_DIR = BASE_DIR / 'procedures_yaml'
