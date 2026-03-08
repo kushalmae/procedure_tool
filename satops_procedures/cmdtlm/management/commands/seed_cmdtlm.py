@@ -455,7 +455,7 @@ class Command(BaseCommand):
     help = 'Seed sample command and telemetry definitions for the C&T Reference Module.'
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
 
         cmd_count = 0
         inp_count = 0
