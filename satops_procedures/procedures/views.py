@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
-from auditlog.services import log_action, log_create, log_delete, log_update
+from auditlog.services import log_action, log_create, log_update
 from missions.decorators import mission_role_required
 
 from .models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
