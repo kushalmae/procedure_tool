@@ -2,9 +2,9 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
+from missions.models import Mission, MissionMembership
 from procedures.models import Satellite
 from smerequests.models import RequestNote, RequestType, SMERequest
-
 
 # ---------------------------------------------------------------------------
 # Model tests
@@ -12,15 +12,19 @@ from smerequests.models import RequestNote, RequestType, SMERequest
 
 
 class RequestTypeModelTest(TestCase):
+    def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+
     def test_str(self):
-        rt = RequestType.objects.create(name='Backorbit Data')
+        rt = RequestType.objects.create(name='Backorbit Data', mission=self.mission)
         self.assertEqual(str(rt), 'Backorbit Data')
 
 
 class SMERequestModelTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user('ops', password='ops')
-        self.sat = Satellite.objects.create(name='SAT-1')
+        self.sat = Satellite.objects.create(name='SAT-1', mission=self.mission)
 
     def test_str(self):
         req = SMERequest.objects.create(
@@ -28,6 +32,7 @@ class SMERequestModelTest(TestCase):
             description='Need data',
             status=SMERequest.STATUS_SUBMITTED,
             requested_by=self.user,
+            mission=self.mission,
         )
         self.assertIn('Test request', str(req))
         self.assertIn(str(req.pk), str(req))
@@ -37,17 +42,20 @@ class SMERequestModelTest(TestCase):
             title='Test',
             description='Desc',
             requested_by=self.user,
+            mission=self.mission,
         )
         self.assertEqual(req.status, SMERequest.STATUS_SUBMITTED)
 
 
 class RequestNoteModelTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user('ops', password='ops')
         self.req = SMERequest.objects.create(
             title='Test',
             description='Desc',
             requested_by=self.user,
+            mission=self.mission,
         )
 
     def test_str(self):
@@ -63,8 +71,13 @@ class RequestNoteModelTest(TestCase):
 
 
 class RequestListViewTest(TestCase):
+    def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+
     def test_loads_empty(self):
-        resp = self.client.get(reverse('sme_request_list'))
+        resp = self.client.get(
+            reverse('sme_request_list', kwargs={'mission_slug': 'test'})
+        )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'SME')
 
@@ -74,40 +87,59 @@ class RequestListViewTest(TestCase):
             title='Test Request',
             description='Need data',
             requested_by=user,
+            mission=self.mission,
         )
-        resp = self.client.get(reverse('sme_request_list'))
+        resp = self.client.get(
+            reverse('sme_request_list', kwargs={'mission_slug': 'test'})
+        )
         self.assertContains(resp, 'Test Request')
 
     def test_clear_filters(self):
-        resp = self.client.get(reverse('sme_request_list'), {'clear': '1'})
+        resp = self.client.get(
+            reverse('sme_request_list', kwargs={'mission_slug': 'test'}),
+            {'clear': '1'},
+        )
         self.assertEqual(resp.status_code, 302)
 
 
 class OpsQueueViewTest(TestCase):
+    def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+
     def test_loads(self):
-        resp = self.client.get(reverse('sme_ops_queue'))
+        resp = self.client.get(
+            reverse('sme_ops_queue', kwargs={'mission_slug': 'test'})
+        )
         self.assertEqual(resp.status_code, 200)
 
 
 class CreateRequestViewTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user('ops', password='ops')
-        Satellite.objects.create(name='SAT-1')
+        MissionMembership.objects.create(
+            user=self.user, mission=self.mission, role='OPERATOR'
+        )
+        Satellite.objects.create(name='SAT-1', mission=self.mission)
 
     def test_requires_login(self):
-        resp = self.client.get(reverse('sme_request_create'))
+        resp = self.client.get(
+            reverse('sme_request_create', kwargs={'mission_slug': 'test'})
+        )
         self.assertEqual(resp.status_code, 302)
         self.assertIn('login', resp.url)
 
     def test_get_when_logged_in(self):
         self.client.login(username='ops', password='ops')
-        resp = self.client.get(reverse('sme_request_create'))
+        resp = self.client.get(
+            reverse('sme_request_create', kwargs={'mission_slug': 'test'})
+        )
         self.assertEqual(resp.status_code, 200)
 
     def test_post_creates_request(self):
         self.client.login(username='ops', password='ops')
         resp = self.client.post(
-            reverse('sme_request_create'),
+            reverse('sme_request_create', kwargs={'mission_slug': 'test'}),
             {
                 'title': 'New Request',
                 'description': 'Need telemetry export',
@@ -119,23 +151,31 @@ class CreateRequestViewTest(TestCase):
 
 class RequestDetailViewTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user('ops', password='ops')
         self.req = SMERequest.objects.create(
             title='Detail Test',
             description='Desc',
             requested_by=self.user,
+            mission=self.mission,
         )
 
     def test_detail_loads(self):
         resp = self.client.get(
-            reverse('sme_request_detail', args=[self.req.pk])
+            reverse(
+                'sme_request_detail',
+                kwargs={'mission_slug': 'test', 'request_id': self.req.pk},
+            )
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Detail Test')
 
     def test_detail_404(self):
         resp = self.client.get(
-            reverse('sme_request_detail', args=[99999])
+            reverse(
+                'sme_request_detail',
+                kwargs={'mission_slug': 'test', 'request_id': 99999},
+            )
         )
         self.assertEqual(resp.status_code, 404)
 
@@ -146,6 +186,9 @@ class RequestDetailViewTest(TestCase):
 
 
 class SeedSMERequestsCommandTest(TestCase):
+    def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+
     def test_seed_creates_types(self):
         from django.core.management import call_command
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Handover Pack — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
@@ -10,9 +11,9 @@
   </div>
   <div class="flex gap-2">
     <button type="button" onclick="window.print();" class="btn btn-primary" aria-label="Print handover pack">Print handover</button>
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
-    <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a>
-    <a href="{% url 'metrics' %}" class="btn btn-secondary">Metrics</a>
+    <a href="{% murl 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+    <a href="{% murl 'fleet' %}" class="btn btn-secondary">Fleet</a>
+    <a href="{% murl 'metrics' %}" class="btn btn-secondary">Metrics</a>
   </div>
 </div>
 
@@ -42,7 +43,7 @@
             <td class="px-4 py-2 text-gray-700">{{ run.procedure.name }}</td>
             <td class="px-4 py-2 text-gray-500">{{ run.operator_name|default:"—" }}</td>
             <td class="px-4 py-2 text-gray-500">{{ run.start_time|date:"Y-m-d H:i" }}</td>
-            <td class="px-4 py-2 no-print"><a href="{% url 'run' run.id %}" class="text-brand hover:underline">Resume</a></td>
+            <td class="px-4 py-2 no-print"><a href="{% murl 'run' run_id=run.id %}" class="text-brand hover:underline">Resume</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -79,7 +80,7 @@
             <td class="px-4 py-2"><span class="badge badge-severity-{{ a.severity|lower }}">{{ a.get_severity_display }}</span></td>
             <td class="px-4 py-2"><span class="badge badge-{{ a.status|lower }}">{{ a.get_status_display }}</span></td>
             <td class="px-4 py-2 text-gray-500">{{ a.detected_time|date:"Y-m-d H:i" }}</td>
-            <td class="px-4 py-2 no-print"><a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="text-brand hover:underline">View</a></td>
+            <td class="px-4 py-2 no-print"><a href="{% murl 'anomalies_detail' anomaly_id=a.id %}" class="text-brand hover:underline">View</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -100,9 +101,9 @@
     {% else %}
     <p class="text-sm text-gray-400">No handoff notes for this shift.</p>
     {% endif %}
-    <p class="mt-3 no-print"><a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">View all shifts</a></p>
+    <p class="mt-3 no-print"><a href="{% murl 'scribe_shift_list' %}" class="btn btn-secondary">View all shifts</a></p>
     {% else %}
-    <p class="text-sm text-gray-500">No shifts defined. <a href="{% url 'scribe_shift_list' %}" class="text-brand hover:underline">Create a shift</a> in Mission Scribe.</p>
+    <p class="text-sm text-gray-500">No shifts defined. <a href="{% murl 'scribe_shift_list' %}" class="text-brand hover:underline">Create a shift</a> in Mission Scribe.</p>
     {% endif %}
   </section>
 
@@ -130,14 +131,14 @@
             <td class="px-4 py-2 text-gray-700">{{ run.procedure.name }}</td>
             <td class="px-4 py-2"><span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span></td>
             <td class="px-4 py-2 text-gray-500">{{ run.start_time|date:"Y-m-d H:i" }}</td>
-            <td class="px-4 py-2 no-print"><a href="{% url 'run_summary' run.id %}" class="text-brand hover:underline">View</a></td>
+            <td class="px-4 py-2 no-print"><a href="{% murl 'run_summary' run_id=run.id %}" class="text-brand hover:underline">View</a></td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     <div class="px-5 py-3 no-print">
-      <a href="{% url 'history' %}" class="text-sm text-brand hover:underline">Full history →</a>
+      <a href="{% murl 'history' %}" class="text-sm text-brand hover:underline">Full history →</a>
     </div>
     {% else %}
     <p class="px-5 py-4 text-sm text-gray-500">No recent completed runs.</p>

@@ -2,6 +2,10 @@ from django.db import models
 
 
 class CommandDefinition(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='command_definitions', null=True, blank=True,
+    )
     name = models.CharField(max_length=200)
     command_id = models.CharField(
         max_length=80,
@@ -68,6 +72,10 @@ class CommandInput(models.Model):
 
 
 class TelemetryDefinition(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='telemetry_definitions', null=True, blank=True,
+    )
     name = models.CharField(max_length=200)
     mnemonic = models.CharField(max_length=120, blank=True)
     apid = models.CharField(

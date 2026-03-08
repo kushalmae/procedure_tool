@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}{% if entry %}Edit: {{ entry.title }}{% else %}Add reference{% endif %} — Central Reference Page{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'reference_list' %}">Central Reference Page</a> &rsaquo;
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'reference_list' %}">Central Reference Page</a> &rsaquo;
   {% if entry %}Edit{% else %}Add reference{% endif %}
 </nav>
 
@@ -54,9 +55,9 @@
     <div class="flex gap-2 mt-4">
       <button type="submit" class="btn btn-primary">{% if entry %}Save changes{% else %}Create reference{% endif %}</button>
       {% if entry %}
-      <a href="{% url 'reference_detail' entry.id %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'reference_detail' entry_id=entry.id %}" class="btn btn-secondary">Cancel</a>
       {% else %}
-      <a href="{% url 'reference_list' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'reference_list' %}" class="btn btn-secondary">Cancel</a>
       {% endif %}
     </div>
   </form>

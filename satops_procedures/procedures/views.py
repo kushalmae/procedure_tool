@@ -3,7 +3,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,12 +10,14 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from missions.decorators import mission_role_required
+
 from .models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
 from .services.procedure_loader import load_procedure, save_procedure
 from .services.runner import get_next_step
 
 RUN_SORT_OPTIONS = [
-    '-start_time',  # newest first (default)
+    '-start_time',
     'start_time',
     'satellite__name',
     '-satellite__name',
@@ -28,7 +29,6 @@ RUN_SORT_OPTIONS = [
 
 
 def _search_runs(queryset, q, tag_id, satellite_id=None):
-    """Filter runs by search query, tag, and/or satellite."""
     if q:
         q = q.strip()
         if q:
@@ -44,11 +44,21 @@ def _search_runs(queryset, q, tag_id, satellite_id=None):
     return queryset
 
 
-def homepage(request):
-    return render(request, 'homepage.html')
+def _mission_qs(model, request):
+    """Return queryset filtered by the current mission."""
+    qs = model.objects
+    if request.mission:
+        qs = qs.filter(mission=request.mission)
+    return qs
 
 
-def dashboard(request):
+def _reverse_m(url_name, request, **kwargs):
+    """Reverse a URL with mission_slug injected."""
+    kwargs['mission_slug'] = request.mission.slug if request.mission else 'sandbox'
+    return reverse(url_name, kwargs=kwargs)
+
+
+def dashboard(request, mission_slug):
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     satellite_id = request.GET.get('satellite', '')
@@ -70,24 +80,22 @@ def dashboard(request):
     if sort not in RUN_SORT_OPTIONS:
         sort = '-start_time'
     runs = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .select_related('satellite', 'procedure')
         .prefetch_related('procedure__tags')
         .order_by(sort)
     )
     runs = _search_runs(runs, q, tag_id, satellite_id)[:50]
-    tags = Tag.objects.all()
-    satellites = Satellite.objects.order_by('name')
+    tags = _mission_qs(Tag, request).all()
+    satellites = _mission_qs(Satellite, request).order_by('name')
 
-    # Base querysets - optionally scoped by satellite
-    run_qs = ProcedureRun.objects
+    run_qs = _mission_qs(ProcedureRun, request)
     if satellite_id:
         run_qs = run_qs.filter(satellite_id=satellite_id)
 
-    # Summary stats for dashboard (all scoped by satellite when filter applied)
     running_count = run_qs.filter(status='RUNNING').count()
-    procedures_count = Procedure.objects.count()
-    satellites_count = 1 if satellite_id else Satellite.objects.count()
+    procedures_count = _mission_qs(Procedure, request).count()
+    satellites_count = 1 if satellite_id else _mission_qs(Satellite, request).count()
     week_ago = timezone.now() - timedelta(days=7)
     runs_last_7_days = run_qs.filter(start_time__gte=week_ago).count()
     scribe_entries_24h = 0
@@ -96,6 +104,8 @@ def dashboard(request):
         MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
         day_ago = timezone.now() - timedelta(days=1)
         scribe_qs = MissionLogEntry.objects.filter(timestamp__gte=day_ago)
+        if request.mission:
+            scribe_qs = scribe_qs.filter(mission=request.mission)
         if satellite_id:
             scribe_qs = scribe_qs.filter(satellite_id=satellite_id)
         scribe_entries_24h = scribe_qs.count()
@@ -103,6 +113,8 @@ def dashboard(request):
             MissionLogEntry.objects.select_related('role', 'satellite', 'category')
             .order_by('-timestamp')
         )
+        if request.mission:
+            recent_scribe_qs = recent_scribe_qs.filter(mission=request.mission)
         if satellite_id:
             recent_scribe_qs = recent_scribe_qs.filter(satellite_id=satellite_id)
         recent_scribe_entries = list(recent_scribe_qs[:8])
@@ -117,6 +129,8 @@ def dashboard(request):
         anomaly_qs = Anomaly.objects.exclude(
             status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED]
         )
+        if request.mission:
+            anomaly_qs = anomaly_qs.filter(mission=request.mission)
         if satellite_id:
             anomaly_qs = anomaly_qs.filter(satellite_id=satellite_id)
         active_anomalies_count = anomaly_qs.count()
@@ -124,6 +138,8 @@ def dashboard(request):
             Anomaly.objects.select_related('satellite')
             .order_by('-detected_time')
         )
+        if request.mission:
+            recent_anomaly_qs = recent_anomaly_qs.filter(mission=request.mission)
         if satellite_id:
             recent_anomaly_qs = recent_anomaly_qs.filter(satellite_id=satellite_id)
         recent_anomalies = list(recent_anomaly_qs[:8])
@@ -162,33 +178,37 @@ def dashboard(request):
     })
 
 
-@login_required
-def start(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def start(request, mission_slug):
     if request.method == 'POST':
         satellite_name = request.POST.get('satellite', '').strip()
         procedure_id = request.POST.get('procedure')
         if not satellite_name or not procedure_id:
-            satellites = Satellite.objects.all()
-            procedures = Procedure.objects.prefetch_related('tags').all()
-            tags = Tag.objects.all()
+            satellites = _mission_qs(Satellite, request).all()
+            procedures = _mission_qs(Procedure, request).prefetch_related('tags').all()
+            tags = _mission_qs(Tag, request).all()
             return render(request, 'start.html', {
                 'satellites': satellites,
                 'procedures': procedures,
                 'tags': tags,
                 'error': 'Satellite and procedure are required.',
             })
-        satellite, _ = Satellite.objects.get_or_create(name=satellite_name, defaults={'name': satellite_name})
+        satellite, _ = Satellite.objects.get_or_create(
+            name=satellite_name, mission=request.mission,
+            defaults={'name': satellite_name, 'mission': request.mission},
+        )
         procedure = get_object_or_404(Procedure, pk=procedure_id)
         run = ProcedureRun.objects.create(
+            mission=request.mission,
             satellite=satellite,
             procedure=procedure,
             operator=request.user,
             operator_name=request.user.get_username(),
             status=ProcedureRun.STATUS_RUNNING,
         )
-        return redirect(reverse('run', kwargs={'run_id': run.pk}) + '?step=0')
-    satellites = Satellite.objects.all()
-    procedures = Procedure.objects.prefetch_related('tags').all()
+        return redirect(_reverse_m('run', request, run_id=run.pk) + '?step=0')
+    satellites = _mission_qs(Satellite, request).all()
+    procedures = _mission_qs(Procedure, request).prefetch_related('tags').all()
     filter_tag_id = None
     tag_param = request.GET.get('tag', '')
     if tag_param:
@@ -197,7 +217,7 @@ def start(request):
             procedures = procedures.filter(tags__id=filter_tag_id).distinct()
         except ValueError:
             pass
-    tags = Tag.objects.all()
+    tags = _mission_qs(Tag, request).all()
     preselected_procedure_id = request.GET.get('procedure', '')
     try:
         preselected_procedure_id = int(preselected_procedure_id) if preselected_procedure_id else None
@@ -224,15 +244,14 @@ def start(request):
 
 
 PROCEDURE_SORT_OPTIONS = [
-    ('name', 'Name A–Z'),
-    ('-name', 'Name Z–A'),
+    ('name', 'Name A\u2013Z'),
+    ('-name', 'Name Z\u2013A'),
     ('version', 'Version'),
     ('-version', 'Version (newest first)'),
 ]
 
 
-def procedure_list(request):
-    """List all procedures with links to review and start. Filter by tag, sort by name/version."""
+def procedure_list(request, mission_slug):
     q = request.GET.get('q', '').strip()
     tag_id = request.GET.get('tag', '')
     try:
@@ -243,21 +262,20 @@ def procedure_list(request):
     allowed_sort = [s[0] for s in PROCEDURE_SORT_OPTIONS]
     if sort not in allowed_sort:
         sort = 'name'
-    procedures = Procedure.objects.prefetch_related('tags').order_by(sort)
+    procedures = _mission_qs(Procedure, request).prefetch_related('tags').order_by(sort)
     if filter_tag_id:
         procedures = procedures.filter(tags__id=filter_tag_id).distinct()
     if q:
         procedures = procedures.filter(
             Q(name__icontains=q) | Q(version__icontains=q) | Q(description__icontains=q)
         )
-    # Attach step count where YAML is loadable
     for p in procedures:
         try:
             proc = load_procedure(p.yaml_file)
             p.step_count = len(proc.get('steps', []))
         except (FileNotFoundError, OSError):
             p.step_count = None
-    tags = Tag.objects.all()
+    tags = _mission_qs(Tag, request).all()
     return render(request, 'procedure_list.html', {
         'procedures': procedures,
         'tags': tags,
@@ -268,20 +286,19 @@ def procedure_list(request):
     })
 
 
-def procedure_review(request):
-    """Show procedure steps before starting a run."""
+def procedure_review(request, mission_slug):
     procedure_id = request.GET.get('procedure', '')
     if not procedure_id:
-        return redirect('start')
+        return redirect(_reverse_m('start', request))
     try:
         procedure_id = int(procedure_id)
     except ValueError:
-        return redirect('start')
+        return redirect(_reverse_m('start', request))
     procedure = get_object_or_404(Procedure.objects.prefetch_related('tags'), pk=procedure_id)
     try:
         proc = load_procedure(procedure.yaml_file)
     except FileNotFoundError:
-        return redirect('start')
+        return redirect(_reverse_m('start', request))
     steps = proc.get('steps', [])
     preconditions = (proc.get('preconditions') or '').strip()
     return render(request, 'procedure_review.html', {
@@ -293,7 +310,6 @@ def procedure_review(request):
 
 
 def _unique_yaml_stem(name):
-    """Generate a unique yaml_file stem from procedure name."""
     base = (slugify(name) or 'procedure').replace('-', '_').strip('_') or 'procedure'
     stem = base
     n = 0
@@ -303,8 +319,7 @@ def _unique_yaml_stem(name):
     return stem
 
 
-def procedure_create(request):
-    """Create a new procedure from the UI (writes YAML and creates Procedure record)."""
+def procedure_create(request, mission_slug):
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         version = request.POST.get('version', '1.0').strip() or '1.0'
@@ -356,8 +371,11 @@ def procedure_create(request):
                 'form_preconditions': preconditions,
                 'form_steps': steps,
             })
-        procedure = Procedure.objects.create(name=name, version=version, description=description, yaml_file=yaml_stem)
-        return redirect(reverse('procedure_review') + f'?procedure={procedure.id}')
+        procedure = Procedure.objects.create(
+            mission=request.mission, name=name, version=version,
+            description=description, yaml_file=yaml_stem,
+        )
+        return redirect(_reverse_m('procedure_review', request) + f'?procedure={procedure.id}')
     return render(request, 'procedure_create.html', {
         'form_name': '',
         'form_version': '1.0',
@@ -367,13 +385,12 @@ def procedure_create(request):
     })
 
 
-def procedure_edit(request, procedure_id):
-    """Edit an existing procedure (name, version, steps). Keeps same yaml_file."""
+def procedure_edit(request, mission_slug, procedure_id):
     procedure = get_object_or_404(Procedure.objects.prefetch_related('tags'), pk=procedure_id)
     try:
         proc = load_procedure(procedure.yaml_file)
     except (FileNotFoundError, OSError):
-        return redirect('procedure_list')
+        return redirect(_reverse_m('procedure_list', request))
     steps = proc.get('steps', [])
     form_preconditions = (proc.get('preconditions') or '')
     form_steps = [{'id': s.get('id', ''), 'description': s.get('description', ''), 'input': s.get('input', '')} for s in steps]
@@ -435,7 +452,7 @@ def procedure_edit(request, procedure_id):
         procedure.description = description
         procedure.save()
         messages.success(request, f'Procedure "{name}" updated.')
-        return redirect(reverse('procedure_review') + f'?procedure={procedure.id}')
+        return redirect(_reverse_m('procedure_review', request) + f'?procedure={procedure.id}')
     return render(request, 'procedure_edit.html', {
         'procedure': procedure,
         'form_name': procedure.name,
@@ -446,8 +463,7 @@ def procedure_edit(request, procedure_id):
     })
 
 
-def procedure_delete(request, procedure_id):
-    """Confirm and delete a procedure (and its YAML file). Runs are deleted by CASCADE."""
+def procedure_delete(request, mission_slug, procedure_id):
     procedure = get_object_or_404(Procedure, pk=procedure_id)
     run_count = procedure.procedurerun_set.count()
     if request.method == 'POST':
@@ -463,21 +479,20 @@ def procedure_delete(request, procedure_id):
                     pass
         procedure.delete()
         messages.success(request, f'Procedure "{name}" has been deleted.')
-        return redirect('procedure_list')
+        return redirect(_reverse_m('procedure_list', request))
     return render(request, 'procedure_delete_confirm.html', {
         'procedure': procedure,
         'run_count': run_count,
     })
 
 
-def procedure_clone(request, procedure_id):
-    """Clone a procedure: new name, new YAML file, copy steps and tags; redirect to edit."""
+def procedure_clone(request, mission_slug, procedure_id):
     procedure = get_object_or_404(Procedure.objects.prefetch_related('tags'), pk=procedure_id)
     try:
         proc = load_procedure(procedure.yaml_file)
     except (FileNotFoundError, OSError):
         messages.error(request, 'Could not load procedure to clone.')
-        return redirect('procedure_list')
+        return redirect(_reverse_m('procedure_list', request))
     new_name = f"Copy of {procedure.name}"
     new_stem = _unique_yaml_stem(new_name)
     proc_dict = {
@@ -491,8 +506,9 @@ def procedure_clone(request, procedure_id):
         save_procedure(proc_dict, new_stem)
     except OSError as e:
         messages.error(request, f'Could not save cloned procedure: {e}')
-        return redirect('procedure_list')
+        return redirect(_reverse_m('procedure_list', request))
     new_procedure = Procedure.objects.create(
+        mission=request.mission,
         name=new_name,
         version=procedure.version,
         yaml_file=new_stem,
@@ -500,11 +516,10 @@ def procedure_clone(request, procedure_id):
     for tag in procedure.tags.all():
         new_procedure.tags.add(tag)
     messages.success(request, f'Cloned as "{new_name}". Edit the new procedure as needed.')
-    return redirect(reverse('procedure_edit', kwargs={'procedure_id': new_procedure.pk}))
+    return redirect(_reverse_m('procedure_edit', request, procedure_id=new_procedure.pk))
 
 
 def _run_step_context(run, proc, step_index, executed_list):
-    """Build step list for sidebar and clamp step_index."""
     steps = proc.get('steps', [])
     total = len(steps)
     num_done = len(executed_list)
@@ -520,22 +535,21 @@ def _run_step_context(run, proc, step_index, executed_list):
     return step_index, step_list, total, num_done
 
 
-@login_required
-def run_procedure(request, run_id):
+@mission_role_required('OPERATOR', 'ADMIN')
+def run_procedure(request, mission_slug, run_id):
     run = get_object_or_404(
         ProcedureRun.objects.select_related('satellite', 'procedure'),
         pk=run_id,
     )
     if run.status != ProcedureRun.STATUS_RUNNING:
-        return redirect('run_summary', run_id=run_id)
+        return redirect(_reverse_m('run_summary', request, run_id=run_id))
 
     if request.method == 'POST' and request.POST.get('abort') is not None:
-        from django.utils import timezone
         run.status = ProcedureRun.STATUS_CANCELLED
         run.end_time = timezone.now()
         run.save()
         messages.success(request, 'Procedure run aborted.')
-        return redirect('dashboard')
+        return redirect(_reverse_m('dashboard', request))
 
     executed_list = list(run.step_executions.order_by('timestamp'))
     proc = load_procedure(run.procedure.yaml_file)
@@ -549,10 +563,10 @@ def run_procedure(request, run_id):
             run.save()
             messages.success(request, 'Run notes saved.')
             q = '?view=all' if keep_view_all else f'?step={step_index}'
-            return redirect(reverse('run', kwargs={'run_id': run_id}) + q)
+            return redirect(_reverse_m('run', request, run_id=run_id) + q)
         step = get_next_step(proc, step_index)
         if step is None:
-            return redirect('dashboard')
+            return redirect(_reverse_m('dashboard', request))
         status = request.POST.get('status', 'PASS')
         input_value = request.POST.get('value', '').strip() or None
         notes = request.POST.get('notes', '').strip() or None
@@ -566,25 +580,23 @@ def run_procedure(request, run_id):
         )
         next_step = get_next_step(proc, step_index + 1)
         if next_step is None:
-            from django.utils import timezone
             run.end_time = timezone.now()
             run.status = status
             run.save()
-            return redirect('dashboard')
+            return redirect(_reverse_m('dashboard', request))
         q = '?view=all' if keep_view_all else f'?step={step_index + 1}'
-        return redirect(reverse('run', kwargs={'run_id': run_id}) + q)
+        return redirect(_reverse_m('run', request, run_id=run_id) + q)
 
     if num_done >= total_steps and total_steps > 0:
-        from django.utils import timezone
         if run.end_time is None:
             run.end_time = timezone.now()
             run.status = ProcedureRun.STATUS_PASS
             run.save()
-        return redirect('dashboard')
+        return redirect(_reverse_m('dashboard', request))
 
     step = get_next_step(proc, step_index)
     if step is None:
-        return redirect('dashboard')
+        return redirect(_reverse_m('dashboard', request))
 
     step_is_readonly = step_index < num_done
     execution = executed_list[step_index] if step_is_readonly else None
@@ -625,8 +637,7 @@ def run_procedure(request, run_id):
     })
 
 
-def run_summary(request, run_id):
-    """All steps in one view, print-friendly."""
+def run_summary(request, mission_slug, run_id):
     run = get_object_or_404(
         ProcedureRun.objects.select_related('satellite', 'procedure'),
         pk=run_id,
@@ -647,7 +658,7 @@ def run_summary(request, run_id):
     })
 
 
-def history(request):
+def history(request, mission_slug):
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     if tag_id:
@@ -661,13 +672,13 @@ def history(request):
     if sort not in RUN_SORT_OPTIONS:
         sort = '-start_time'
     runs = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .select_related('satellite', 'procedure')
         .prefetch_related('procedure__tags')
         .order_by(sort)
     )
     runs = _search_runs(runs, q, tag_id)[:100]
-    tags = Tag.objects.all()
+    tags = _mission_qs(Tag, request).all()
     return render(request, 'history.html', {
         'runs': runs,
         'search_query': q,
@@ -678,8 +689,7 @@ def history(request):
     })
 
 
-def history_csv_export(request):
-    """Export procedure runs (history) as CSV with current filters."""
+def history_csv_export(request, mission_slug):
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     if tag_id:
@@ -693,7 +703,7 @@ def history_csv_export(request):
     if sort not in RUN_SORT_OPTIONS:
         sort = '-start_time'
     runs = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .select_related('satellite', 'procedure', 'operator')
         .prefetch_related('procedure__tags')
         .order_by(sort)
@@ -724,15 +734,13 @@ def history_csv_export(request):
     return response
 
 
-def fleet(request):
-    """Fleet-centric single pane of glass: per-satellite last run, open anomalies, last scribe."""
-    satellites = list(Satellite.objects.order_by('name'))
+def fleet(request, mission_slug):
+    satellites = list(_mission_qs(Satellite, request).order_by('name'))
     if not satellites:
         return render(request, 'fleet.html', {'fleet_rows': [], 'satellites_count': 0, 'fleet_health': 'green'})
 
-    # Latest run per satellite (one query, then first per satellite in Python)
     runs = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .filter(satellite__in=satellites)
         .select_related('satellite', 'procedure')
         .order_by('satellite_id', '-start_time')
@@ -742,37 +750,38 @@ def fleet(request):
         if r.satellite_id not in last_run_by_sat:
             last_run_by_sat[r.satellite_id] = r
 
-    # Last scribe entry per satellite
     last_scribe_by_sat = {}
     try:
         MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
-        scribe_entries = (
+        scribe_qs = (
             MissionLogEntry.objects
             .filter(satellite_id__in=[s.id for s in satellites])
             .select_related('satellite', 'role', 'category')
             .order_by('satellite_id', '-timestamp')
         )
-        for e in scribe_entries:
+        if request.mission:
+            scribe_qs = scribe_qs.filter(mission=request.mission)
+        for e in scribe_qs:
             if e.satellite_id and e.satellite_id not in last_scribe_by_sat:
                 last_scribe_by_sat[e.satellite_id] = e
     except Exception:
         pass
 
-    # Open anomalies per satellite
     open_anomaly_counts = {}
     satellites_with_critical_anomalies = set()
     try:
         Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        anomaly_base = Anomaly.objects.exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
+        if request.mission:
+            anomaly_base = anomaly_base.filter(mission=request.mission)
         open_anomaly_counts = dict(
-            Anomaly.objects
-            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
+            anomaly_base
             .values('satellite_id')
             .annotate(cnt=Count('id'))
             .values_list('satellite_id', 'cnt')
         )
         satellites_with_critical_anomalies = set(
-            Anomaly.objects
-            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
+            anomaly_base
             .filter(severity__in=[Anomaly.SEVERITY_L4, Anomaly.SEVERITY_L5])
             .values_list('satellite_id', flat=True)
         )
@@ -809,12 +818,11 @@ def fleet(request):
     })
 
 
-def handover(request):
-    """Handover pack: running procedures, open anomalies, latest shift notes, recent runs. Print-friendly."""
+def handover(request, mission_slug):
     now = timezone.now()
 
     running_runs = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .filter(status=ProcedureRun.STATUS_RUNNING)
         .select_related('satellite', 'procedure')
         .order_by('satellite__name')
@@ -823,9 +831,11 @@ def handover(request):
     open_anomalies = []
     try:
         Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        anomaly_qs = Anomaly.objects.exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
+        if request.mission:
+            anomaly_qs = anomaly_qs.filter(mission=request.mission)
         open_anomalies = list(
-            Anomaly.objects
-            .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
+            anomaly_qs
             .select_related('satellite')
             .order_by('-severity', '-detected_time')[:50]
         )
@@ -835,12 +845,15 @@ def handover(request):
     latest_shift = None
     try:
         Shift = __import__('scribe.models', fromlist=['Shift']).Shift
-        latest_shift = Shift.objects.order_by('-start_time').first()
+        shift_qs = Shift.objects.order_by('-start_time')
+        if request.mission:
+            shift_qs = shift_qs.filter(mission=request.mission)
+        latest_shift = shift_qs.first()
     except Exception:
         pass
 
     recent_runs = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .select_related('satellite', 'procedure')
         .exclude(status=ProcedureRun.STATUS_RUNNING)
         .order_by('-start_time')[:15]
@@ -855,14 +868,12 @@ def handover(request):
     })
 
 
-def metrics(request):
-    """Ops metrics / KPIs: procedure performance, anomaly metrics, fleet utilization, operator workload."""
+def metrics(request, mission_slug):
     now = timezone.now()
     period_7 = now - timedelta(days=7)
     period_30 = now - timedelta(days=30)
 
-    # Procedure performance (last 30 days): pass/fail/cancelled per procedure
-    runs_30 = ProcedureRun.objects.filter(
+    runs_30 = _mission_qs(ProcedureRun, request).filter(
         start_time__gte=period_30
     ).exclude(status=ProcedureRun.STATUS_RUNNING)
     procedure_stats = (
@@ -876,43 +887,44 @@ def metrics(request):
         .order_by('-total')
     )
 
-    # Anomaly metrics: open by severity
     open_by_severity = []
+    resolved_30 = 0
     try:
         Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        anomaly_base = Anomaly.objects.all()
+        if request.mission:
+            anomaly_base = anomaly_base.filter(mission=request.mission)
         open_by_severity = list(
-            Anomaly.objects
+            anomaly_base
             .exclude(status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED])
             .values('severity')
             .annotate(cnt=Count('id'))
             .order_by('-cnt')
         )
-        resolved_30 = Anomaly.objects.filter(
+        resolved_30 = anomaly_base.filter(
             status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED],
             updated_at__gte=period_30,
         ).count()
     except Exception:
-        resolved_30 = 0
+        pass
 
-    # Fleet utilization: runs per satellite (last 7 and 30 days)
     runs_per_satellite_7 = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .filter(start_time__gte=period_7)
         .values('satellite__name', 'satellite_id')
         .annotate(run_count=Count('id'))
         .order_by('-run_count')
     )
     runs_per_satellite_30 = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .filter(start_time__gte=period_30)
         .values('satellite__name', 'satellite_id')
         .annotate(run_count=Count('id'))
         .order_by('-run_count')
     )
 
-    # Operator workload: runs per operator (last 30 days)
     runs_per_operator = (
-        ProcedureRun.objects
+        _mission_qs(ProcedureRun, request)
         .filter(start_time__gte=period_30)
         .values('operator_name')
         .annotate(run_count=Count('id'))
@@ -932,10 +944,9 @@ def metrics(request):
     })
 
 
-def timeline(request):
-    """Fused mission timeline: procedure runs, scribe entries, and events in one chronological list."""
+def timeline(request, mission_slug):
     satellite_id = request.GET.get('satellite', '')
-    event_type = request.GET.get('type', '')  # run, scribe, event or empty = all
+    event_type = request.GET.get('type', '')
     date_from = request.GET.get('from', '').strip()
     date_to = request.GET.get('to', '').strip()
     export_csv = request.GET.get('export') == 'csv'
@@ -946,8 +957,7 @@ def timeline(request):
         sat_id = None
 
     events = []
-    # Procedure runs: one event per run at start_time (and optionally end for completed)
-    runs = ProcedureRun.objects.select_related('satellite', 'procedure').order_by('-start_time')
+    runs = _mission_qs(ProcedureRun, request).select_related('satellite', 'procedure').order_by('-start_time')
     if sat_id:
         runs = runs.filter(satellite_id=sat_id)
     if date_from:
@@ -972,7 +982,7 @@ def timeline(request):
             'run_id': r.id,
             'procedure_name': r.procedure.name,
             'status': r.status,
-            'operator_name': r.operator_name or '—',
+            'operator_name': r.operator_name or '\u2014',
         })
         if r.end_time and r.status != ProcedureRun.STATUS_RUNNING:
             events.append({
@@ -982,12 +992,14 @@ def timeline(request):
                 'run_id': r.id,
                 'procedure_name': r.procedure.name,
                 'status': r.status,
-                'operator_name': r.operator_name or '—',
+                'operator_name': r.operator_name or '\u2014',
             })
 
     try:
         MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
         entries = MissionLogEntry.objects.select_related('role', 'satellite', 'category').order_by('-timestamp')
+        if request.mission:
+            entries = entries.filter(mission=request.mission)
         if sat_id:
             entries = entries.filter(satellite_id=sat_id)
         if date_from:
@@ -1008,7 +1020,7 @@ def timeline(request):
             events.append({
                 'timestamp': e.timestamp,
                 'type': 'scribe',
-                'satellite_name': e.satellite.name if e.satellite else '—',
+                'satellite_name': e.satellite.name if e.satellite else '\u2014',
                 'entry_id': e.id,
                 'role_name': e.role.name,
                 'category_name': e.category.name,
@@ -1018,10 +1030,11 @@ def timeline(request):
     except Exception:
         pass
 
-    # Anomalies
     try:
         AnomalyModel = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
         evt_qs = AnomalyModel.objects.select_related('satellite').order_by('-detected_time')
+        if request.mission:
+            evt_qs = evt_qs.filter(mission=request.mission)
         if sat_id:
             evt_qs = evt_qs.filter(satellite_id=sat_id)
         if date_from:
@@ -1056,9 +1069,6 @@ def timeline(request):
     events = events[:300]
 
     if export_csv:
-        import csv
-
-        from django.http import HttpResponse
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="mission_timeline.csv"'
         response['X-Content-Type-Options'] = 'nosniff'
@@ -1067,9 +1077,9 @@ def timeline(request):
         for ev in events:
             detail = ''
             if ev['type'] in ('run', 'run_end'):
-                detail = f"{ev.get('procedure_name', '')} — {ev.get('status', '')} ({ev.get('operator_name', '')})"
+                detail = f"{ev.get('procedure_name', '')} \u2014 {ev.get('status', '')} ({ev.get('operator_name', '')})"
             elif ev['type'] == 'scribe':
-                detail = f"{ev.get('role_name', '')} — {ev.get('category_name', '')}: {(ev.get('description') or '')[:80]}"
+                detail = f"{ev.get('role_name', '')} \u2014 {ev.get('category_name', '')}: {(ev.get('description') or '')[:80]}"
             elif ev['type'] == 'anomaly':
                 detail = f"ANOM {ev.get('anomaly_title', '')} [{ev.get('severity', '')}] {ev.get('status', '')}: {(ev.get('description') or '')[:80]}"
             w.writerow([
@@ -1080,7 +1090,7 @@ def timeline(request):
             ])
         return response
 
-    satellites = Satellite.objects.all().order_by('name')
+    satellites = _mission_qs(Satellite, request).all().order_by('name')
     return render(request, 'timeline.html', {
         'events': events,
         'satellites': satellites,

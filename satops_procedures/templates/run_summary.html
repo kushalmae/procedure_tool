@@ -1,4 +1,5 @@
 {% load static %}
+{% load mission_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,17 +15,17 @@
   <!-- Print/nav bar -->
   <div class="no-print bg-zinc-900 text-white px-6 py-3 flex items-center gap-3 text-sm">
     <span class="text-brand font-bold tracking-widest">SAT</span><span class="font-bold tracking-widest mr-4">OPS</span>
-    <a href="{% url 'run' run.id %}" class="text-zinc-300 hover:text-white">← Back to run</a>
-    <a href="{% url 'dashboard' %}" class="text-zinc-300 hover:text-white">Dashboard</a>
-    <a href="{% url 'history' %}" class="text-zinc-300 hover:text-white">History</a>
+    <a href="{% murl 'run' run_id=run.id %}" class="text-zinc-300 hover:text-white">← Back to run</a>
+    <a href="{% murl 'dashboard' %}" class="text-zinc-300 hover:text-white">Dashboard</a>
+    <a href="{% murl 'history' %}" class="text-zinc-300 hover:text-white">History</a>
     <button type="button" onclick="window.print();" class="btn btn-primary ml-auto" aria-label="Print run summary">Print</button>
   </div>
 
   <main id="main" class="max-w-3xl mx-auto px-6 py-8">
 
     <nav class="breadcrumb no-print">
-      <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-      <a href="{% url 'procedure_list' %}">Procedures</a> &rsaquo; {{ procedure.name }} &rsaquo; Summary
+      <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+      <a href="{% murl 'procedure_list' %}">Procedures</a> &rsaquo; {{ procedure.name }} &rsaquo; Summary
     </nav>
 
     <!-- Header -->

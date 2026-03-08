@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 
+from missions.models import Mission
 from references.models import ReferenceEntry, Subsystem
 
 DEFAULT_SUBSYSTEMS = [
@@ -127,22 +128,28 @@ class Command(BaseCommand):
     help = 'Seed Central Reference Page with subsystems and sample reference entries.'
 
     def handle(self, *args, **options):
+        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+
         for name in DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(name=name)
+            _, created = Subsystem.objects.get_or_create(
+                name=name, mission=mission, defaults={'name': name, 'mission': mission}
+            )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
 
         for data in SAMPLE_REFERENCES:
-            subsystem = Subsystem.objects.get(name=data['subsystem'])
+            subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
             _, created = ReferenceEntry.objects.get_or_create(
                 title=data['title'],
                 subsystem=subsystem,
+                mission=mission,
                 defaults={
                     'document_type': data['document_type'],
                     'section': data['section'],
                     'version': data['version'],
                     'location': data['location'],
                     'user_notes': data['user_notes'],
+                    'mission': mission,
                 },
             )
             if created:

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Fleet Procedures — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold text-gray-900">Fleet Procedures</h1>
-  <a href="{% url 'start' %}" class="btn btn-primary no-print">
+  <a href="{% murl 'start' %}" class="btn btn-primary no-print">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
     Start Procedure
   </a>
@@ -85,7 +86,7 @@
         </div>
         <div class="flex items-end gap-2">
           <button type="submit" class="btn btn-primary">Filter</button>
-          {% if search_query or tag_id or satellite_id %}<a href="{% url 'dashboard' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
+          {% if search_query or tag_id or satellite_id %}<a href="{% murl 'dashboard' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
         </div>
       </form>
     </div>
@@ -117,9 +118,9 @@
               <td class="px-4 py-3 text-gray-500">{{ run.start_time|date:"Y-m-d H:i" }}</td>
               <td class="px-4 py-3 no-print">
                 {% if run.status == 'RUNNING' %}
-                <a href="{% url 'run' run.id %}?step={{ run.step_executions.count }}" class="text-brand hover:text-brand-dark font-medium">Resume →</a>
+                <a href="{% murl 'run' run_id=run.id %}?step={{ run.step_executions.count }}" class="text-brand hover:text-brand-dark font-medium">Resume →</a>
                 {% else %}
-                <a href="{% url 'run_summary' run.id %}" class="text-gray-600 hover:text-gray-900">View</a>
+                <a href="{% murl 'run_summary' run_id=run.id %}" class="text-gray-600 hover:text-gray-900">View</a>
                 {% endif %}
               </td>
             </tr>
@@ -128,9 +129,9 @@
               <td colspan="5" class="px-4 py-8 text-center text-gray-500">
                 No runs found.
                 {% if search_query or tag_id or satellite_id %}
-                <a href="{% url 'dashboard' %}" class="text-brand hover:underline">Clear filters</a>
+                <a href="{% murl 'dashboard' %}" class="text-brand hover:underline">Clear filters</a>
                 {% else %}
-                <a href="{% url 'start' %}" class="text-brand hover:underline">Start a procedure</a>
+                <a href="{% murl 'start' %}" class="text-brand hover:underline">Start a procedure</a>
                 {% endif %}
               </td>
             </tr>
@@ -149,7 +150,7 @@
       <ul class="space-y-1">
         {% for a in recent_anomalies %}
         <li>
-          <a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="block py-2.5 px-2 -mx-2 rounded-lg text-sm hover:bg-gray-50 transition-colors group">
+          <a href="{% murl 'anomalies_detail' anomaly_id=a.id %}" class="block py-2.5 px-2 -mx-2 rounded-lg text-sm hover:bg-gray-50 transition-colors group">
             <span class="font-medium text-gray-900 group-hover:text-brand">{{ a.satellite.name }}</span>
             <span class="mx-1">—</span><span class="badge badge-severity-{{ a.severity|lower }}">{{ a.get_severity_display }}</span>
             <span class="badge badge-{{ a.status|lower }}">{{ a.get_status_display }}</span>
@@ -159,8 +160,8 @@
         {% endfor %}
       </ul>
       <div class="mt-3 flex gap-2">
-        <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">View all</a>
-        {% if user.is_authenticated %}<a href="{% url 'anomalies_create' %}" class="btn btn-secondary">Report</a>{% endif %}
+        <a href="{% murl 'anomalies_list' %}" class="btn btn-secondary">View all</a>
+        {% if user.is_authenticated %}<a href="{% murl 'anomalies_create' %}" class="btn btn-secondary">Report</a>{% endif %}
       </div>
     </div>
     {% endif %}
@@ -179,7 +180,7 @@
         {% endfor %}
       </ul>
       <div class="mt-3">
-        <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Mission Scribe</a>
+        <a href="{% murl 'scribe_timeline' %}" class="btn btn-secondary">Mission Scribe</a>
       </div>
     </div>
     {% endif %}
@@ -188,8 +189,8 @@
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
       <p class="text-sm text-gray-500">No recent anomalies or mission log entries.</p>
       <div class="mt-3 flex gap-2">
-        <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">Anomalies</a>
-        <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Scribe</a>
+        <a href="{% murl 'anomalies_list' %}" class="btn btn-secondary">Anomalies</a>
+        <a href="{% murl 'scribe_timeline' %}" class="btn btn-secondary">Scribe</a>
       </div>
     </div>
     {% endif %}

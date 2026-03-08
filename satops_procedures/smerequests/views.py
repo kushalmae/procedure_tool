@@ -2,17 +2,23 @@ import csv
 import io
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 
+from missions.decorators import mission_role_required
 from procedures.models import Satellite, Subsystem
 from scribe.models import MissionLogEntry
 
 from .models import RequestNote, RequestType, SMERequest
+
+
+def _mission_filter(qs, request):
+    if request.mission:
+        return qs.filter(mission=request.mission)
+    return qs
 
 
 def _int_or_none(val):
@@ -26,11 +32,11 @@ def _int_or_none(val):
 # Request queue / list
 # ---------------------------------------------------------------------------
 
-def request_list(request):
+def request_list(request, mission_slug):
     if request.GET.get('clear'):
         if 'sme_filters' in request.session:
             del request.session['sme_filters']
-        return redirect('sme_request_list')
+        return redirect('sme_request_list', mission_slug=mission_slug)
 
     SORT_OPTIONS = [
         '-created_at', 'created_at', 'priority', '-priority', 'status', '-status',
@@ -62,6 +68,7 @@ def request_list(request):
         .select_related('satellite', 'subsystem', 'request_type', 'requested_by', 'assigned_to')
         .order_by(sort)
     )
+    qs = _mission_filter(qs, request)
 
     if satellite_id:
         try:
@@ -82,10 +89,13 @@ def request_list(request):
 
     qs = qs[:200]
 
+    satellites = _mission_filter(Satellite.objects.all(), request)
+    request_types = _mission_filter(RequestType.objects.all(), request)
+
     context = {
         'requests': qs,
-        'satellites': Satellite.objects.all(),
-        'request_types': RequestType.objects.all(),
+        'satellites': satellites,
+        'request_types': request_types,
         'filter_satellite_id': _int_or_none(satellite_id),
         'filter_request_type_id': _int_or_none(request_type_id),
         'filter_status': status or None,
@@ -102,7 +112,7 @@ def request_list(request):
 # Operations queue (approved / queued / in-progress only)
 # ---------------------------------------------------------------------------
 
-def ops_queue(request):
+def ops_queue(request, mission_slug):
     active_statuses = [
         SMERequest.STATUS_APPROVED,
         SMERequest.STATUS_QUEUED,
@@ -114,6 +124,7 @@ def ops_queue(request):
         .select_related('satellite', 'subsystem', 'request_type', 'requested_by', 'assigned_to')
         .order_by('priority', 'created_at')
     )
+    qs = _mission_filter(qs, request)
     context = {
         'requests': qs[:200],
         'priority_choices': SMERequest.PRIORITY_CHOICES,
@@ -125,28 +136,28 @@ def ops_queue(request):
 # Create request
 # ---------------------------------------------------------------------------
 
-@login_required
-def create_request(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def create_request(request, mission_slug):
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         description = (request.POST.get('description') or '').strip()
         if not title or not description:
             messages.error(request, 'Title and description are required.')
-            return render(request, 'smerequests/request_form.html', _create_context(request))
+            return render(request, 'smerequests/request_form.html', _create_context(request, mission_slug))
 
         satellite_id = request.POST.get('satellite') or None
-        satellite = get_object_or_404(Satellite, pk=satellite_id) if satellite_id else None
+        satellite = get_object_or_404(_mission_filter(Satellite.objects.all(), request), pk=satellite_id) if satellite_id else None
         subsystem_id = request.POST.get('subsystem') or None
-        subsystem = get_object_or_404(Subsystem, pk=subsystem_id) if subsystem_id else None
+        subsystem = get_object_or_404(_mission_filter(Subsystem.objects.all(), request), pk=subsystem_id) if subsystem_id else None
         request_type_id = request.POST.get('request_type') or None
-        request_type = get_object_or_404(RequestType, pk=request_type_id) if request_type_id else None
+        request_type = get_object_or_404(_mission_filter(RequestType.objects.all(), request), pk=request_type_id) if request_type_id else None
         priority = request.POST.get('priority') or SMERequest.PRIORITY_NORMAL
         tr_start_str = (request.POST.get('time_range_start') or '').strip()
         tr_end_str = (request.POST.get('time_range_end') or '').strip()
         time_range_start = parse_datetime(tr_start_str) if tr_start_str else None
         time_range_end = parse_datetime(tr_end_str) if tr_end_str else None
         linked_event_id = request.POST.get('linked_event') or None
-        linked_event = get_object_or_404(MissionLogEntry, pk=linked_event_id) if linked_event_id else None
+        linked_event = get_object_or_404(_mission_filter(MissionLogEntry.objects.all(), request), pk=linked_event_id) if linked_event_id else None
 
         sme_req = SMERequest.objects.create(
             title=title,
@@ -160,23 +171,25 @@ def create_request(request):
             time_range_end=time_range_end,
             requested_by=request.user,
             linked_event=linked_event,
+            mission=request.mission,
         )
         messages.success(request, f'Request #{sme_req.pk} created.')
-        return redirect(reverse('sme_request_detail', kwargs={'request_id': sme_req.pk}))
+        return redirect(reverse('sme_request_detail', kwargs={'mission_slug': mission_slug, 'request_id': sme_req.pk}))
 
-    return render(request, 'smerequests/request_form.html', _create_context(request))
+    return render(request, 'smerequests/request_form.html', _create_context(request, mission_slug))
 
 
-def _create_context(request):
-    recent_events = (
+def _create_context(request, mission_slug):
+    recent_events = _mission_filter(
         MissionLogEntry.objects
         .select_related('role', 'satellite', 'category')
-        .order_by('-timestamp')[:30]
-    )
+        .order_by('-timestamp'),
+        request,
+    )[:30]
     return {
-        'satellites': Satellite.objects.all(),
-        'subsystems': Subsystem.objects.all(),
-        'request_types': RequestType.objects.all(),
+        'satellites': _mission_filter(Satellite.objects.all(), request),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
+        'request_types': _mission_filter(RequestType.objects.all(), request),
         'priority_choices': SMERequest.PRIORITY_CHOICES,
         'recent_events': recent_events,
     }
@@ -186,14 +199,15 @@ def _create_context(request):
 # Request detail (view, update status, add notes, claim, approve/reject)
 # ---------------------------------------------------------------------------
 
-def request_detail(request, request_id):
-    sme_req = get_object_or_404(
+def request_detail(request, mission_slug, request_id):
+    qs = _mission_filter(
         SMERequest.objects.select_related(
             'satellite', 'subsystem', 'request_type',
             'requested_by', 'assigned_to', 'approved_by', 'linked_event',
         ),
-        pk=request_id,
+        request,
     )
+    sme_req = get_object_or_404(qs, pk=request_id)
     notes = sme_req.notes.select_related('created_by').order_by('-created_at')
     operators = User.objects.filter(is_active=True).order_by('username')
 
@@ -274,7 +288,7 @@ def request_detail(request, request_id):
             sme_req.save(update_fields=['status', 'updated_at'])
             messages.success(request, 'Request sent for approval.')
 
-        return redirect(reverse('sme_request_detail', kwargs={'request_id': sme_req.pk}))
+        return redirect(reverse('sme_request_detail', kwargs={'mission_slug': mission_slug, 'request_id': sme_req.pk}))
 
     context = {
         'sme_req': sme_req,
@@ -291,13 +305,14 @@ def request_detail(request, request_id):
 # ---------------------------------------------------------------------------
 
 
-def request_csv_export(request):
+def request_csv_export(request, mission_slug):
     """Export SME requests as CSV with current filters."""
     qs = (
         SMERequest.objects
         .select_related('satellite', 'subsystem', 'request_type', 'requested_by', 'assigned_to')
         .order_by('-created_at')
     )
+    qs = _mission_filter(qs, request)
     satellite_id = request.GET.get('satellite')
     request_type_id = request.GET.get('request_type')
     status = request.GET.get('status')
@@ -350,26 +365,26 @@ def request_csv_export(request):
     return response
 
 
-@login_required
-def request_csv_import(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def request_csv_import(request, mission_slug):
     """Import SME requests from CSV (POST with csv_file) or redirect to list."""
     if request.method != 'POST':
-        return redirect('sme_request_list')
+        return redirect('sme_request_list', mission_slug=mission_slug)
 
     csv_file = request.FILES.get('csv_file')
     if not csv_file:
         messages.error(request, 'Please select a CSV file.')
-        return redirect('sme_request_list')
+        return redirect('sme_request_list', mission_slug=mission_slug)
     if not csv_file.name.endswith('.csv'):
         messages.error(request, 'File must be a CSV.')
-        return redirect('sme_request_list')
+        return redirect('sme_request_list', mission_slug=mission_slug)
 
     try:
         decoded = csv_file.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(decoded))
     except Exception:
         messages.error(request, 'Could not read the CSV file.')
-        return redirect('sme_request_list')
+        return redirect('sme_request_list', mission_slug=mission_slug)
 
     def get(row, *keys):
         for k in keys:
@@ -383,11 +398,24 @@ def request_csv_import(request):
     has_description = any('description' in k for k in fieldnames)
     if not has_title or not has_description:
         messages.error(request, 'CSV must contain Title and Description columns.')
-        return redirect('sme_request_list')
+        return redirect('sme_request_list', mission_slug=mission_slug)
 
-    satellites = {s.name: s for s in Satellite.objects.all()}
-    subsystems = {s.name: s for s in Subsystem.objects.all()}
-    request_types = {rt.name: rt for rt in RequestType.objects.all()}
+    mission = request.mission
+    satellites_qs = Satellite.objects.all()
+    subsystems_qs = Subsystem.objects.all()
+    request_types_qs = RequestType.objects.all()
+    if mission:
+        satellites_qs = satellites_qs.filter(mission=mission)
+        subsystems_qs = subsystems_qs.filter(mission=mission)
+        request_types_qs = request_types_qs.filter(mission=mission)
+    else:
+        satellites_qs = satellites_qs.filter(mission__isnull=True)
+        subsystems_qs = subsystems_qs.filter(mission__isnull=True)
+        request_types_qs = request_types_qs.filter(mission__isnull=True)
+
+    satellites = {s.name: s for s in satellites_qs}
+    subsystems = {s.name: s for s in subsystems_qs}
+    request_types = {rt.name: rt for rt in request_types_qs}
     created = 0
     skipped = 0
 
@@ -401,22 +429,31 @@ def request_csv_import(request):
         sat_name = get(row, 'Satellite', 'satellite')
         satellite = satellites.get(sat_name)
         if sat_name and not satellite:
-            satellite = Satellite.objects.filter(name=sat_name).first()
+            satellite = satellites_qs.filter(name=sat_name).first()
             if satellite:
+                satellites[satellite.name] = satellite
+            else:
+                satellite = Satellite.objects.create(name=sat_name, mission=mission)
                 satellites[satellite.name] = satellite
 
         sub_name = get(row, 'Subsystem', 'subsystem')
         subsystem = subsystems.get(sub_name)
         if sub_name and not subsystem:
-            subsystem = Subsystem.objects.filter(name=sub_name).first()
+            subsystem = subsystems_qs.filter(name=sub_name).first()
             if subsystem:
+                subsystems[subsystem.name] = subsystem
+            else:
+                subsystem = Subsystem.objects.create(name=sub_name, mission=mission)
                 subsystems[subsystem.name] = subsystem
 
         rt_name = get(row, 'Request Type', 'request_type')
         request_type = request_types.get(rt_name)
         if rt_name and not request_type:
-            request_type = RequestType.objects.filter(name=rt_name).first()
+            request_type = request_types_qs.filter(name=rt_name).first()
             if request_type:
+                request_types[request_type.name] = request_type
+            else:
+                request_type = RequestType.objects.create(name=rt_name, mission=mission)
                 request_types[request_type.name] = request_type
 
         priority = get(row, 'Priority', 'priority') or SMERequest.PRIORITY_NORMAL
@@ -442,6 +479,7 @@ def request_csv_import(request):
             time_range_start=time_range_start,
             time_range_end=time_range_end,
             requested_by=request.user,
+            mission=mission,
         )
         created += 1
 
@@ -449,4 +487,4 @@ def request_csv_import(request):
     if skipped:
         msg += f' Skipped {skipped} row(s).'
     messages.success(request, msg)
-    return redirect('sme_request_list')
+    return redirect('sme_request_list', mission_slug=mission_slug)

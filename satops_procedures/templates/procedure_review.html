@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Review: {{ procedure.name }} — Satops{% endblock %}
 {% block content %}
 
@@ -40,9 +41,9 @@
 </div>
 
 <div class="flex gap-2">
-  <a href="{% url 'start' %}?procedure={{ procedure.id }}" class="btn btn-primary">Start this procedure</a>
-  <a href="{% url 'start' %}" class="btn btn-secondary">Back to Start</a>
-  <a href="{% url 'procedure_edit' procedure.id %}" class="btn btn-secondary no-print">Edit</a>
+  <a href="{% murl 'start' %}?procedure={{ procedure.id }}" class="btn btn-primary">Start this procedure</a>
+  <a href="{% murl 'start' %}" class="btn btn-secondary">Back to Start</a>
+  <a href="{% murl 'procedure_edit' procedure_id=procedure.id %}" class="btn btn-secondary no-print">Edit</a>
 </div>
 
 {% endblock %}

@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Mission Scribe — Shifts{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> &rsaquo; Shifts
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'scribe_timeline' %}">Mission Scribe</a> &rsaquo; Shifts
 </nav>
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold text-gray-900">Shifts</h1>
   <div class="flex gap-2">
-    <a href="{% url 'scribe_shift_create' %}" class="btn btn-primary">Add shift</a>
-    <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Back to timeline</a>
+    <a href="{% murl 'scribe_shift_create' %}" class="btn btn-primary">Add shift</a>
+    <a href="{% murl 'scribe_timeline' %}" class="btn btn-secondary">Back to timeline</a>
   </div>
 </div>
 
@@ -34,13 +35,13 @@
           <td class="px-4 py-3 text-gray-700 whitespace-nowrap">{{ sh.end_time|date:"Y-m-d H:i" }}</td>
           <td class="px-4 py-3 text-gray-500 max-w-sm truncate">{{ sh.handoff_notes|truncatewords:10|default:"—" }}</td>
           <td class="px-4 py-3">
-            <a href="{% url 'scribe_shift_detail' sh.id %}" class="text-brand hover:underline">View</a>
+            <a href="{% murl 'scribe_shift_detail' shift_id=sh.id %}" class="text-brand hover:underline">View</a>
           </td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-            No shifts. <a href="{% url 'scribe_shift_create' %}" class="text-brand hover:underline">Add a shift</a>.
+            No shifts. <a href="{% murl 'scribe_shift_create' %}" class="text-brand hover:underline">Add a shift</a>.
           </td>
         </tr>
         {% endfor %}

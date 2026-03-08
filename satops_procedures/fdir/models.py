@@ -3,8 +3,12 @@ from django.db import models
 
 class Subsystem(models.Model):
     """Subsystem for FDIR classification (e.g. ADCS, Power, Thermal)."""
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='fdir_subsystems', null=True, blank=True,
+    )
     name = models.CharField(max_length=80)
-    slug = models.SlugField(max_length=80, unique=True, blank=True)
+    slug = models.SlugField(max_length=80, blank=True)
 
     class Meta:
         ordering = ['name']
@@ -30,6 +34,10 @@ class FDIREntry(models.Model):
         (SEVERITY_CRITICAL, 'Critical'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='fdir_entries', null=True, blank=True,
+    )
     name = models.CharField(max_length=200, help_text='Fault name')
     fault_code = models.CharField(max_length=80, blank=True, help_text='Short identifier or code')
     subsystem = models.ForeignKey(

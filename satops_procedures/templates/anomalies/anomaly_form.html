@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Report Anomaly — Satops{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'anomalies_list' %}">Anomaly Tracker</a> &rsaquo; Report Anomaly
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'anomalies_list' %}">Anomaly Tracker</a> &rsaquo; Report Anomaly
 </nav>
 
 <div class="mb-6">
@@ -49,7 +50,7 @@
 
     <div class="flex gap-2">
       <button type="submit" class="btn btn-primary">Report Anomaly</button>
-      <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'anomalies_list' %}" class="btn btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

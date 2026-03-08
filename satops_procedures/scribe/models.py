@@ -3,6 +3,10 @@ from django.db import models
 
 
 class Role(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='scribe_roles', null=True, blank=True,
+    )
     name = models.CharField(max_length=80)
 
     class Meta:
@@ -13,6 +17,10 @@ class Role(models.Model):
 
 
 class EventCategory(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='event_categories', null=True, blank=True,
+    )
     name = models.CharField(max_length=80)
 
     class Meta:
@@ -24,8 +32,12 @@ class EventCategory(models.Model):
 
 
 class ScribeTag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True, blank=True)
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='scribe_tags', null=True, blank=True,
+    )
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=50, blank=True)
 
     class Meta:
         ordering = ['name']
@@ -41,6 +53,10 @@ class ScribeTag(models.Model):
 
 
 class Shift(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='shifts', null=True, blank=True,
+    )
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     handoff_notes = models.TextField(blank=True)
@@ -62,6 +78,10 @@ class MissionLogEntry(models.Model):
         (SEVERITY_CRITICAL, 'Critical'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='mission_log_entries', null=True, blank=True,
+    )
     timestamp = models.DateTimeField()
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -108,6 +128,10 @@ class MissionLogEntry(models.Model):
 
 class EntryTemplate(models.Model):
     """Quick-entry template: pre-filled role, category, description, severity for one-click log entries."""
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='entry_templates', null=True, blank=True,
+    )
     name = models.CharField(max_length=120, help_text='Short label (e.g. Pass complete, Contact logged)')
     role = models.ForeignKey(
         Role,

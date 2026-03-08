@@ -2,14 +2,20 @@ import csv
 import io
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from missions.decorators import mission_role_required
 from procedures.models import Procedure
 
 from .models import AlertDefinition, Subsystem
+
+
+def _mission_filter(qs, request):
+    if request.mission:
+        return qs.filter(mission=request.mission)
+    return qs
 
 
 def _int_or_none(val):
@@ -19,11 +25,11 @@ def _int_or_none(val):
         return None
 
 
-def alert_list(request):
+def alert_list(request, mission_slug):
     if request.GET.get('clear'):
         if 'handbook_filters' in request.session:
             del request.session['handbook_filters']
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
 
     HANDBOOK_SORT_OPTIONS = [
         'subsystem__name',
@@ -50,10 +56,11 @@ def alert_list(request):
             'sort': sort,
         }
 
-    alerts = (
+    alerts = _mission_filter(
         AlertDefinition.objects
         .select_related('subsystem', 'procedure')
-        .order_by(sort)
+        .order_by(sort),
+        request,
     )
 
     if subsystem_id:
@@ -74,7 +81,7 @@ def alert_list(request):
 
     context = {
         'alerts': alerts,
-        'subsystems': Subsystem.objects.all(),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
         'filter_subsystem_id': _int_or_none(subsystem_id),
         'filter_severity': severity or None,
         'search_query': q,
@@ -84,16 +91,19 @@ def alert_list(request):
     return render(request, 'handbook/alert_list.html', context)
 
 
-def alert_detail(request, alert_id):
+def alert_detail(request, mission_slug, alert_id):
     alert = get_object_or_404(
-        AlertDefinition.objects.select_related('subsystem', 'procedure'),
+        _mission_filter(
+            AlertDefinition.objects.select_related('subsystem', 'procedure'),
+            request,
+        ),
         pk=alert_id,
     )
     return render(request, 'handbook/alert_detail.html', {'alert': alert})
 
 
-@login_required
-def alert_create(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def alert_create(request, mission_slug):
     if request.method == 'POST':
         parameter = (request.POST.get('parameter') or '').strip()
         mnemonic = (request.POST.get('mnemonic') or '').strip()
@@ -112,8 +122,8 @@ def alert_create(request):
         if not parameter or not subsystem_id or not description:
             messages.error(request, 'Parameter, subsystem, and description are required.')
             return render(request, 'handbook/alert_form.html', {
-                'subsystems': Subsystem.objects.all(),
-                'procedures': Procedure.objects.all(),
+                'subsystems': _mission_filter(Subsystem.objects.all(), request),
+                'procedures': _mission_filter(Procedure.objects.all(), request),
                 'severity_choices': AlertDefinition.SEVERITY_CHOICES,
                 'form': {
                     'parameter': parameter,
@@ -132,10 +142,19 @@ def alert_create(request):
                 },
             })
 
-        subsystem = get_object_or_404(Subsystem, pk=subsystem_id)
-        procedure = get_object_or_404(Procedure, pk=procedure_id) if procedure_id else None
+        subsystem = get_object_or_404(
+            _mission_filter(Subsystem.objects.all(), request),
+            pk=subsystem_id,
+        )
+        procedure = None
+        if procedure_id:
+            procedure = get_object_or_404(
+                _mission_filter(Procedure.objects.all(), request),
+                pk=procedure_id,
+            )
 
         alert = AlertDefinition.objects.create(
+            mission=request.mission,
             parameter=parameter,
             mnemonic=mnemonic,
             mnemonic_description=mnemonic_description,
@@ -151,11 +170,11 @@ def alert_create(request):
             severity=severity,
         )
         messages.success(request, f'Alert "{alert.parameter}" created.')
-        return redirect('handbook_alert_detail', alert_id=alert.pk)
+        return redirect('handbook_alert_detail', mission_slug=mission_slug, alert_id=alert.pk)
 
     context = {
-        'subsystems': Subsystem.objects.all(),
-        'procedures': Procedure.objects.all(),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
+        'procedures': _mission_filter(Procedure.objects.all(), request),
         'severity_choices': AlertDefinition.SEVERITY_CHOICES,
         'form': {
             'parameter': '',
@@ -176,9 +195,12 @@ def alert_create(request):
     return render(request, 'handbook/alert_form.html', context)
 
 
-@login_required
-def alert_edit(request, alert_id):
-    alert = get_object_or_404(AlertDefinition, pk=alert_id)
+@mission_role_required('OPERATOR', 'ADMIN')
+def alert_edit(request, mission_slug, alert_id):
+    alert = get_object_or_404(
+        _mission_filter(AlertDefinition.objects.all(), request),
+        pk=alert_id,
+    )
     if request.method == 'POST':
         parameter = (request.POST.get('parameter') or '').strip()
         mnemonic = (request.POST.get('mnemonic') or '').strip()
@@ -198,8 +220,8 @@ def alert_edit(request, alert_id):
             messages.error(request, 'Parameter, subsystem, and description are required.')
             return render(request, 'handbook/alert_form.html', {
                 'alert': alert,
-                'subsystems': Subsystem.objects.all(),
-                'procedures': Procedure.objects.all(),
+                'subsystems': _mission_filter(Subsystem.objects.all(), request),
+                'procedures': _mission_filter(Procedure.objects.all(), request),
                 'severity_choices': AlertDefinition.SEVERITY_CHOICES,
                 'form': {
                     'parameter': parameter,
@@ -218,8 +240,16 @@ def alert_edit(request, alert_id):
                 },
             })
 
-        subsystem = get_object_or_404(Subsystem, pk=subsystem_id)
-        procedure = get_object_or_404(Procedure, pk=procedure_id) if procedure_id else None
+        subsystem = get_object_or_404(
+            _mission_filter(Subsystem.objects.all(), request),
+            pk=subsystem_id,
+        )
+        procedure = None
+        if procedure_id:
+            procedure = get_object_or_404(
+                _mission_filter(Procedure.objects.all(), request),
+                pk=procedure_id,
+            )
 
         alert.parameter = parameter
         alert.mnemonic = mnemonic
@@ -236,12 +266,12 @@ def alert_edit(request, alert_id):
         alert.severity = severity
         alert.save()
         messages.success(request, f'Alert "{alert.parameter}" updated (version {alert.version}).')
-        return redirect('handbook_alert_detail', alert_id=alert.pk)
+        return redirect('handbook_alert_detail', mission_slug=mission_slug, alert_id=alert.pk)
 
     context = {
         'alert': alert,
-        'subsystems': Subsystem.objects.all(),
-        'procedures': Procedure.objects.all(),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
+        'procedures': _mission_filter(Procedure.objects.all(), request),
         'severity_choices': AlertDefinition.SEVERITY_CHOICES,
         'form': {
             'parameter': alert.parameter,
@@ -262,14 +292,17 @@ def alert_edit(request, alert_id):
     return render(request, 'handbook/alert_form.html', context)
 
 
-@login_required
-def alert_delete(request, alert_id):
-    alert = get_object_or_404(AlertDefinition, pk=alert_id)
+@mission_role_required('OPERATOR', 'ADMIN')
+def alert_delete(request, mission_slug, alert_id):
+    alert = get_object_or_404(
+        _mission_filter(AlertDefinition.objects.all(), request),
+        pk=alert_id,
+    )
     if request.method == 'POST':
         name = alert.parameter
         alert.delete()
         messages.success(request, f'Alert "{name}" has been deleted.')
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
     return render(request, 'handbook/alert_confirm_delete.html', {'alert': alert})
 
 
@@ -278,12 +311,13 @@ def alert_delete(request, alert_id):
 # ---------------------------------------------------------------------------
 
 
-def alert_csv_export(request):
+def alert_csv_export(request, mission_slug):
     """Export alert definitions as CSV with current filters."""
-    qs = (
+    qs = _mission_filter(
         AlertDefinition.objects
         .select_related('subsystem', 'procedure')
-        .order_by('subsystem__name', 'parameter')
+        .order_by('subsystem__name', 'parameter'),
+        request,
     )
     subsystem_id = request.GET.get('subsystem')
     severity = request.GET.get('severity')
@@ -332,26 +366,26 @@ def alert_csv_export(request):
     return response
 
 
-@login_required
-def alert_csv_import(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def alert_csv_import(request, mission_slug):
     """Import alert definitions from CSV (POST with csv_file)."""
     if request.method != 'POST':
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
 
     csv_file = request.FILES.get('csv_file')
     if not csv_file:
         messages.error(request, 'Please select a CSV file.')
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
     if not csv_file.name.endswith('.csv'):
         messages.error(request, 'File must be a CSV.')
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
 
     try:
         decoded = csv_file.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(decoded))
     except Exception:
         messages.error(request, 'Could not read the CSV file.')
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
 
     def get(row, *keys):
         for k in keys:
@@ -366,10 +400,11 @@ def alert_csv_import(request):
     has_desc = any('description' in k for k in fieldnames)
     if not (has_param and has_subsystem and has_desc):
         messages.error(request, 'CSV must contain: Parameter, Subsystem, Description.')
-        return redirect('handbook_alert_list')
+        return redirect('handbook_alert_list', mission_slug=mission_slug)
 
-    subsystems = {s.name: s for s in Subsystem.objects.all()}
-    procedures = {p.name: p for p in Procedure.objects.all()}
+    subsystems_qs = _mission_filter(Subsystem.objects.all(), request)
+    subsystems = {s.name: s for s in subsystems_qs}
+    procedures = {p.name: p for p in _mission_filter(Procedure.objects.all(), request)}
     created = 0
     skipped = 0
 
@@ -383,17 +418,23 @@ def alert_csv_import(request):
 
         subsystem = subsystems.get(sub_name)
         if not subsystem:
-            subsystem = Subsystem.objects.filter(name=sub_name).first()
+            subsystem = _mission_filter(
+                Subsystem.objects.filter(name=sub_name),
+                request,
+            ).first()
             if subsystem:
                 subsystems[subsystem.name] = subsystem
             else:
-                subsystem = Subsystem.objects.create(name=sub_name)
+                subsystem = Subsystem.objects.create(name=sub_name, mission=request.mission)
                 subsystems[subsystem.name] = subsystem
 
         proc_name = get(row, 'Procedure', 'procedure')
         procedure = procedures.get(proc_name) if proc_name else None
         if proc_name and not procedure:
-            procedure = Procedure.objects.filter(name=proc_name).first()
+            procedure = _mission_filter(
+                Procedure.objects.filter(name=proc_name),
+                request,
+            ).first()
             if procedure:
                 procedures[procedure.name] = procedure
 
@@ -402,6 +443,7 @@ def alert_csv_import(request):
             severity = AlertDefinition.SEVERITY_WARNING
 
         AlertDefinition.objects.create(
+            mission=request.mission,
             parameter=parameter,
             mnemonic=get(row, 'Mnemonic', 'mnemonic'),
             mnemonic_description=get(row, 'Mnemonic Description', 'mnemonic_description'),
@@ -422,4 +464,4 @@ def alert_csv_import(request):
     if skipped:
         msg += f' Skipped {skipped} row(s).'
     messages.success(request, msg)
-    return redirect('handbook_alert_list')
+    return redirect('handbook_alert_list', mission_slug=mission_slug)

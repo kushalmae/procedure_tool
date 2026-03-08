@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}{% if alert %}Edit: {{ alert.parameter }}{% else %}Add alert{% endif %} — Alerts Handbook{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'handbook_alert_list' %}">Alerts &amp; Limits Handbook</a> &rsaquo;
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'handbook_alert_list' %}">Alerts &amp; Limits Handbook</a> &rsaquo;
   {% if alert %}Edit{% else %}Add alert{% endif %}
 </nav>
 
@@ -70,9 +71,9 @@
     <div class="flex gap-2 mt-4">
       <button type="submit" class="btn btn-primary">{% if alert %}Save changes{% else %}Create alert{% endif %}</button>
       {% if alert %}
-      <a href="{% url 'handbook_alert_detail' alert.id %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'handbook_alert_detail' alert_id=alert.id %}" class="btn btn-secondary">Cancel</a>
       {% else %}
-      <a href="{% url 'handbook_alert_list' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'handbook_alert_list' %}" class="btn btn-secondary">Cancel</a>
       {% endif %}
     </div>
   </form>
