@@ -1,16 +1,21 @@
 import csv
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from missions.decorators import mission_role_required
 from procedures.models import Satellite
 
 from .models import EntryTemplate, EventCategory, MissionLogEntry, Role, ScribeTag, Shift
+
+
+def _mission_filter(qs, request):
+    if request.mission:
+        return qs.filter(mission=request.mission)
+    return qs
 
 
 def _create_log_entry_from_post(request):
@@ -24,13 +29,13 @@ def _create_log_entry_from_post(request):
     description = (request.POST.get('description') or '').strip()
     if not role_id or not category_id or not description:
         return False, 'Role, category, and description are required.'
-    role = get_object_or_404(Role, pk=role_id)
-    category = get_object_or_404(EventCategory, pk=category_id)
+    role = get_object_or_404(_mission_filter(Role.objects.all(), request), pk=role_id)
+    category = get_object_or_404(_mission_filter(EventCategory.objects.all(), request), pk=category_id)
     satellite_id = request.POST.get('satellite') or None
-    satellite = get_object_or_404(Satellite, pk=satellite_id) if satellite_id else None
+    satellite = get_object_or_404(_mission_filter(Satellite.objects.all(), request), pk=satellite_id) if satellite_id else None
     severity = request.POST.get('severity') or MissionLogEntry.SEVERITY_INFO
     shift_id = request.POST.get('shift') or None
-    shift = get_object_or_404(Shift, pk=shift_id) if shift_id else None
+    shift = get_object_or_404(_mission_filter(Shift.objects.all(), request), pk=shift_id) if shift_id else None
     tag_ids = request.POST.getlist('tags')
     entry = MissionLogEntry.objects.create(
         timestamp=ts,
@@ -41,16 +46,17 @@ def _create_log_entry_from_post(request):
         severity=severity,
         description=description,
         shift=shift,
+        mission=request.mission,
     )
     for tid in tag_ids:
         try:
-            entry.tags.add(ScribeTag.objects.get(pk=tid))
+            entry.tags.add(_mission_filter(ScribeTag.objects.all(), request).get(pk=tid))
         except (ValueError, ScribeTag.DoesNotExist):
             pass
     return True, None
 
 
-def timeline(request):
+def timeline(request, mission_slug):
     # Handle add-entry form POST (form on timeline page)
     if request.method == 'POST' and request.user.is_authenticated and request.POST.get('description') is not None:
         ok, err = _create_log_entry_from_post(request)
@@ -58,13 +64,13 @@ def timeline(request):
             messages.success(request, 'Log entry added.')
         else:
             messages.error(request, err)
-        return redirect('scribe_timeline')
+        return redirect('scribe_timeline', mission_slug=mission_slug)
 
     # Persist filters in session: if no GET params but session has saved filters, redirect with them
     if request.GET.get('clear'):
         if 'scribe_filters' in request.session:
             del request.session['scribe_filters']
-        return redirect('scribe_timeline')
+        return redirect('scribe_timeline', mission_slug=mission_slug)
 
     saved = request.session.get('scribe_filters') or {}
     role_id = request.GET.get('role', saved.get('role', ''))
@@ -93,7 +99,7 @@ def timeline(request):
         }
 
     entries = (
-        MissionLogEntry.objects
+        _mission_filter(MissionLogEntry.objects.all(), request)
         .select_related('role', 'satellite', 'category', 'shift', 'created_by')
         .prefetch_related('tags')
         .order_by(sort_param)
@@ -139,12 +145,12 @@ def timeline(request):
 
     context = {
         'entries': entries,
-        'roles': Role.objects.all(),
-        'satellites': Satellite.objects.all(),
-        'categories': EventCategory.objects.all(),
-        'shifts': Shift.objects.all()[:50],
-        'scribe_tags': ScribeTag.objects.all(),
-        'entry_templates': EntryTemplate.objects.all(),
+        'roles': _mission_filter(Role.objects.all(), request),
+        'satellites': _mission_filter(Satellite.objects.all(), request),
+        'categories': _mission_filter(EventCategory.objects.all(), request),
+        'shifts': _mission_filter(Shift.objects.all(), request)[:50],
+        'scribe_tags': _mission_filter(ScribeTag.objects.all(), request),
+        'entry_templates': _mission_filter(EntryTemplate.objects.all(), request),
         'filter_role_id': _int_or_none(role_id),
         'filter_satellite_id': _int_or_none(satellite_id),
         'filter_category_id': _int_or_none(category_id),
@@ -164,7 +170,7 @@ def timeline(request):
         selected_template = None
         if template_id:
             try:
-                selected_template = EntryTemplate.objects.get(pk=int(template_id))
+                selected_template = _mission_filter(EntryTemplate.objects.all(), request).get(pk=int(template_id))
             except (ValueError, EntryTemplate.DoesNotExist):
                 pass
         if selected_template:
@@ -177,7 +183,7 @@ def timeline(request):
             context['selected_template'] = selected_template
         else:
             last = (
-                MissionLogEntry.objects.filter(created_by=request.user)
+                _mission_filter(MissionLogEntry.objects.filter(created_by=request.user), request)
                 .order_by('-timestamp')
                 .first()
             )
@@ -190,7 +196,7 @@ def timeline(request):
     return render(request, 'scribe/timeline.html', context)
 
 
-def scribe_csv_export(request):
+def scribe_csv_export(request, mission_slug):
     """Export Mission Log entries as CSV with current filters."""
     saved = request.session.get('scribe_filters') or {}
     role_id = request.GET.get('role', saved.get('role', ''))
@@ -205,7 +211,7 @@ def scribe_csv_export(request):
         sort_param = '-timestamp'
 
     entries = (
-        MissionLogEntry.objects
+        _mission_filter(MissionLogEntry.objects.all(), request)
         .select_related('role', 'satellite', 'category', 'shift', 'created_by')
         .prefetch_related('tags')
         .order_by(sort_param)
@@ -264,8 +270,8 @@ def scribe_csv_export(request):
     return response
 
 
-@login_required
-def add_entry(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def add_entry(request, mission_slug):
     if request.method == 'POST':
         ts_str = (request.POST.get('timestamp') or '').strip()
         ts = parse_datetime(ts_str) if ts_str else timezone.now()
@@ -277,16 +283,16 @@ def add_entry(request):
         if not role_id or not category_id or not description:
             messages.error(request, 'Role, category, and description are required.')
         else:
-            role = get_object_or_404(Role, pk=role_id)
-            category = get_object_or_404(EventCategory, pk=category_id)
+            role = get_object_or_404(_mission_filter(Role.objects.all(), request), pk=role_id)
+            category = get_object_or_404(_mission_filter(EventCategory.objects.all(), request), pk=category_id)
             satellite_id = request.POST.get('satellite') or None
             if satellite_id:
-                satellite = get_object_or_404(Satellite, pk=satellite_id)
+                satellite = get_object_or_404(_mission_filter(Satellite.objects.all(), request), pk=satellite_id)
             else:
                 satellite = None
             severity = request.POST.get('severity') or MissionLogEntry.SEVERITY_INFO
             shift_id = request.POST.get('shift') or None
-            shift = get_object_or_404(Shift, pk=shift_id) if shift_id else None
+            shift = get_object_or_404(_mission_filter(Shift.objects.all(), request), pk=shift_id) if shift_id else None
             tag_ids = request.POST.getlist('tags')
 
             entry = MissionLogEntry.objects.create(
@@ -298,16 +304,17 @@ def add_entry(request):
                 severity=severity,
                 description=description,
                 shift=shift,
+                mission=request.mission,
             )
             for tid in tag_ids:
                 try:
-                    entry.tags.add(ScribeTag.objects.get(pk=tid))
+                    entry.tags.add(_mission_filter(ScribeTag.objects.all(), request).get(pk=tid))
                 except (ValueError, ScribeTag.DoesNotExist):
                     pass
             messages.success(request, 'Log entry added.')
             if request.POST.get('add_another'):
-                return redirect(reverse('scribe_add_entry'))
-            return redirect('scribe_timeline')
+                return redirect('scribe_add_entry', mission_slug=mission_slug)
+            return redirect('scribe_timeline', mission_slug=mission_slug)
 
     # GET: default timestamp to now; auto-populate from template=id or from last entry by this user
     now = timezone.now()
@@ -317,7 +324,7 @@ def add_entry(request):
     template = None
     if template_id:
         try:
-            template = EntryTemplate.objects.get(pk=int(template_id))
+            template = _mission_filter(EntryTemplate.objects.all(), request).get(pk=int(template_id))
         except (ValueError, EntryTemplate.DoesNotExist):
             pass
     if template:
@@ -329,7 +336,7 @@ def add_entry(request):
         default_shift_id = None
     else:
         last = (
-            MissionLogEntry.objects.filter(created_by=request.user)
+            _mission_filter(MissionLogEntry.objects.filter(created_by=request.user), request)
             .order_by('-timestamp')
             .first()
         )
@@ -340,12 +347,12 @@ def add_entry(request):
         default_severity = last.severity if last else MissionLogEntry.SEVERITY_INFO
 
     context = {
-        'roles': Role.objects.all(),
-        'satellites': Satellite.objects.all(),
-        'categories': EventCategory.objects.all(),
-        'shifts': Shift.objects.all(),
-        'scribe_tags': ScribeTag.objects.all(),
-        'entry_templates': EntryTemplate.objects.all(),
+        'roles': _mission_filter(Role.objects.all(), request),
+        'satellites': _mission_filter(Satellite.objects.all(), request),
+        'categories': _mission_filter(EventCategory.objects.all(), request),
+        'shifts': _mission_filter(Shift.objects.all(), request),
+        'scribe_tags': _mission_filter(ScribeTag.objects.all(), request),
+        'entry_templates': _mission_filter(EntryTemplate.objects.all(), request),
         'timestamp_default': ts_default,
         'severity_choices': MissionLogEntry.SEVERITY_CHOICES,
         'default_role_id': default_role_id,
@@ -359,12 +366,12 @@ def add_entry(request):
     return render(request, 'scribe/entry_form.html', context)
 
 
-def shift_list(request):
-    shifts = Shift.objects.all()[:100]
+def shift_list(request, mission_slug):
+    shifts = _mission_filter(Shift.objects.all(), request)[:100]
     return render(request, 'scribe/shift_list.html', {'shifts': shifts})
 
 
-def shift_create(request):
+def shift_create(request, mission_slug):
     if request.method == 'POST':
         start_str = (request.POST.get('start_time') or '').strip()
         end_str = (request.POST.get('end_time') or '').strip()
@@ -382,9 +389,10 @@ def shift_create(request):
             start_time=start_time,
             end_time=end_time,
             handoff_notes=handoff_notes,
+            mission=request.mission,
         )
         messages.success(request, 'Shift created.')
-        return redirect(reverse('scribe_shift_detail', kwargs={'shift_id': shift.pk}))
+        return redirect('scribe_shift_detail', mission_slug=mission_slug, shift_id=shift.pk)
     now = timezone.now()
     context = {
         'start_time_default': now.strftime('%Y-%m-%dT%H:%M'),
@@ -394,12 +402,12 @@ def shift_create(request):
     return render(request, 'scribe/shift_form.html', context)
 
 
-def shift_detail(request, shift_id):
-    shift = get_object_or_404(Shift, pk=shift_id)
+def shift_detail(request, mission_slug, shift_id):
+    shift = get_object_or_404(_mission_filter(Shift.objects.all(), request), pk=shift_id)
     if request.method == 'POST' and 'handoff_notes' in request.POST:
         shift.handoff_notes = (request.POST.get('handoff_notes') or '').strip()
         shift.save()
         messages.success(request, 'Handoff notes updated.')
-        return redirect(reverse('scribe_shift_detail', kwargs={'shift_id': shift.pk}))
+        return redirect('scribe_shift_detail', mission_slug=mission_slug, shift_id=shift.pk)
     entries = shift.entries.select_related('role', 'satellite', 'category', 'created_by').prefetch_related('tags').order_by('timestamp')
     return render(request, 'scribe/shift_detail.html', {'shift': shift, 'entries': entries})

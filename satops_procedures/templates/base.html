@@ -1,4 +1,4 @@
-{% load static %}
+{% load static mission_tags %}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -34,6 +34,21 @@
       <div class="flex items-center h-14 px-5 border-b border-zinc-700 flex-shrink-0">
         <span class="text-brand font-bold text-xl tracking-widest">SAT</span><span class="text-white font-bold text-xl tracking-widest">OPS</span>
       </div>
+      {% if current_mission %}
+      <!-- Mission badge -->
+      <div class="px-4 py-3 border-b border-zinc-700 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ current_mission.color }}"></span>
+          <span class="text-white text-sm font-semibold truncate">{{ current_mission.name }}</span>
+          {% if current_mission.is_sandbox %}
+          <span class="ml-auto text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">Sandbox</span>
+          {% endif %}
+        </div>
+        {% if user_missions.count > 1 %}
+        <a href="{% url 'mission_selector' %}" class="block mt-1.5 text-zinc-400 hover:text-white text-xs transition-colors">Switch mission</a>
+        {% endif %}
+      </div>
+      {% endif %}
       <!-- Auth -->
       <div class="px-4 py-3 border-b border-zinc-700 flex-shrink-0">
         {% if user.is_authenticated %}
@@ -52,38 +67,38 @@
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Procedures</p>
           <div class="space-y-0.5">
-            <a href="{% url 'dashboard' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Dashboard</a>
-            <a href="{% url 'start' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Start Procedure</a>
-            <a href="{% url 'procedure_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Procedures</a>
-            <a href="{% url 'procedure_create' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Create Procedure</a>
-            <a href="{% url 'history' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">History</a>
+            <a href="{% murl 'dashboard' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Dashboard</a>
+            <a href="{% murl 'start' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Start Procedure</a>
+            <a href="{% murl 'procedure_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Procedures</a>
+            <a href="{% murl 'procedure_create' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Create Procedure</a>
+            <a href="{% murl 'history' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">History</a>
           </div>
         </div>
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Operations</p>
           <div class="space-y-0.5">
-            <a href="{% url 'fleet' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Fleet</a>
-            <a href="{% url 'handover' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Handover Pack</a>
-            <a href="{% url 'metrics' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Metrics</a>
-            <a href="{% url 'timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Timeline</a>
-            <a href="{% url 'anomalies_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Anomaly Tracker</a>
-            <a href="{% url 'sme_request_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">SME Requests</a>
+            <a href="{% murl 'fleet' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Fleet</a>
+            <a href="{% murl 'handover' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Handover Pack</a>
+            <a href="{% murl 'metrics' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Metrics</a>
+            <a href="{% murl 'timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Timeline</a>
+            <a href="{% murl 'anomalies_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Anomaly Tracker</a>
+            <a href="{% murl 'sme_request_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">SME Requests</a>
           </div>
         </div>
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Reference</p>
           <div class="space-y-0.5">
-            <a href="{% url 'scribe_timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Scribe</a>
-            <a href="{% url 'handbook_alert_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Alerts Handbook</a>
-            <a href="{% url 'fdir_entry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">FDIR Handbook</a>
-            <a href="{% url 'reference_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Reference Page</a>
+            <a href="{% murl 'scribe_timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Scribe</a>
+            <a href="{% murl 'handbook_alert_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Alerts Handbook</a>
+            <a href="{% murl 'fdir_entry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">FDIR Handbook</a>
+            <a href="{% murl 'reference_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Reference Page</a>
           </div>
         </div>
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Command &amp; Telemetry</p>
           <div class="space-y-0.5">
-            <a href="{% url 'cmdtlm_command_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Commands</a>
-            <a href="{% url 'cmdtlm_telemetry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Telemetry</a>
+            <a href="{% murl 'cmdtlm_command_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Commands</a>
+            <a href="{% murl 'cmdtlm_telemetry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Telemetry</a>
           </div>
         </div>
       </nav>
@@ -113,6 +128,20 @@
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
+      {% if current_mission %}
+      <div class="px-4 py-3 border-b border-zinc-700">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ current_mission.color }}"></span>
+          <span class="text-white text-sm font-semibold truncate">{{ current_mission.name }}</span>
+          {% if current_mission.is_sandbox %}
+          <span class="ml-auto text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">Sandbox</span>
+          {% endif %}
+        </div>
+        {% if user_missions.count > 1 %}
+        <a href="{% url 'mission_selector' %}" @click="sidebarOpen=false" class="block mt-1.5 text-zinc-400 hover:text-white text-xs">Switch mission</a>
+        {% endif %}
+      </div>
+      {% endif %}
       <div class="px-4 py-3 border-b border-zinc-700">
         {% if user.is_authenticated %}
         <div class="flex items-center justify-between gap-2">
@@ -129,38 +158,38 @@
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Procedures</p>
           <div class="space-y-0.5">
-            <a href="{% url 'dashboard' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Dashboard</a>
-            <a href="{% url 'start' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Start Procedure</a>
-            <a href="{% url 'procedure_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Procedures</a>
-            <a href="{% url 'procedure_create' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Create Procedure</a>
-            <a href="{% url 'history' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">History</a>
+            <a href="{% murl 'dashboard' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Dashboard</a>
+            <a href="{% murl 'start' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Start Procedure</a>
+            <a href="{% murl 'procedure_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Procedures</a>
+            <a href="{% murl 'procedure_create' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Create Procedure</a>
+            <a href="{% murl 'history' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">History</a>
           </div>
         </div>
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Operations</p>
           <div class="space-y-0.5">
-            <a href="{% url 'fleet' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Fleet</a>
-            <a href="{% url 'handover' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Handover Pack</a>
-            <a href="{% url 'metrics' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Metrics</a>
-            <a href="{% url 'timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Timeline</a>
-            <a href="{% url 'anomalies_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Anomaly Tracker</a>
-            <a href="{% url 'sme_request_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">SME Requests</a>
+            <a href="{% murl 'fleet' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Fleet</a>
+            <a href="{% murl 'handover' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Handover Pack</a>
+            <a href="{% murl 'metrics' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Metrics</a>
+            <a href="{% murl 'timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Timeline</a>
+            <a href="{% murl 'anomalies_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Anomaly Tracker</a>
+            <a href="{% murl 'sme_request_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">SME Requests</a>
           </div>
         </div>
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Reference</p>
           <div class="space-y-0.5">
-            <a href="{% url 'scribe_timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Scribe</a>
-            <a href="{% url 'handbook_alert_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Alerts Handbook</a>
-            <a href="{% url 'fdir_entry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">FDIR Handbook</a>
-            <a href="{% url 'reference_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Reference Page</a>
+            <a href="{% murl 'scribe_timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Scribe</a>
+            <a href="{% murl 'handbook_alert_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Alerts Handbook</a>
+            <a href="{% murl 'fdir_entry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">FDIR Handbook</a>
+            <a href="{% murl 'reference_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Reference Page</a>
           </div>
         </div>
         <div>
           <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Command &amp; Telemetry</p>
           <div class="space-y-0.5">
-            <a href="{% url 'cmdtlm_command_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Commands</a>
-            <a href="{% url 'cmdtlm_telemetry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Telemetry</a>
+            <a href="{% murl 'cmdtlm_command_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Commands</a>
+            <a href="{% murl 'cmdtlm_telemetry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Telemetry</a>
           </div>
         </div>
       </nav>
@@ -177,6 +206,11 @@
           </svg>
         </button>
         <span class="ml-3 text-white font-bold tracking-widest"><span class="text-brand">SAT</span>OPS</span>
+        {% if current_mission %}
+        <span class="ml-3 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold text-white" style="background-color: {{ current_mission.color }}">
+          {{ current_mission.name }}{% if current_mission.is_sandbox %} <span class="opacity-75">(Sandbox)</span>{% endif %}
+        </span>
+        {% endif %}
       </div>
 
       <!-- Flash messages -->

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}{{ entry.name }} — FDIR Handbook{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a> &rsaquo; {{ entry.name }}
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'fdir_entry_list' %}">FDIR Handbook</a> &rsaquo; {{ entry.name }}
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
@@ -15,9 +16,9 @@
   </h1>
   <div class="no-print flex gap-2">
     {% if user.is_authenticated %}
-    <a href="{% url 'fdir_entry_edit' entry.id %}" class="btn btn-primary">Edit</a>
+    <a href="{% murl 'fdir_entry_edit' entry_id=entry.id %}" class="btn btn-primary">Edit</a>
     {% endif %}
-    <a href="{% url 'fdir_entry_list' %}" class="btn btn-secondary">Back to list</a>
+    <a href="{% murl 'fdir_entry_list' %}" class="btn btn-secondary">Back to list</a>
   </div>
 </div>
 
@@ -40,9 +41,9 @@
       <ul class="space-y-2">
         {% for proc in entry.operator_procedures.all %}
         <li class="flex items-center gap-2">
-          <a href="{% url 'procedure_review' %}?procedure={{ proc.id }}" class="text-brand hover:underline">{{ proc.name }} (v{{ proc.version }})</a>
+          <a href="{% murl 'procedure_review' %}?procedure={{ proc.id }}" class="text-brand hover:underline">{{ proc.name }} (v{{ proc.version }})</a>
           {% if user.is_authenticated %}
-          <a href="{% url 'start' %}?procedure={{ proc.id }}" class="btn btn-secondary no-print">Start procedure</a>
+          <a href="{% murl 'start' %}?procedure={{ proc.id }}" class="btn btn-secondary no-print">Start procedure</a>
           {% endif %}
         </li>
         {% endfor %}

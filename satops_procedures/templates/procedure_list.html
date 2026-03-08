@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}All Procedures — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
@@ -8,7 +9,7 @@
     <h1 class="text-2xl font-semibold text-gray-900">All Procedures</h1>
     <p class="text-sm text-gray-500 mt-1">{{ procedures|length }} procedure{{ procedures|length|pluralize }} in the library</p>
   </div>
-  <a href="{% url 'procedure_create' %}" class="btn btn-primary no-print">
+  <a href="{% murl 'procedure_create' %}" class="btn btn-primary no-print">
     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
     Create procedure
   </a>
@@ -40,7 +41,7 @@
     </div>
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
-      {% if search_query or filter_tag_id %}<a href="{% url 'procedure_list' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
+      {% if search_query or filter_tag_id %}<a href="{% murl 'procedure_list' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
     </div>
   </form>
 </div>
@@ -77,17 +78,17 @@
           </td>
           <td class="px-4 py-3 no-print">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <a href="{% url 'procedure_review' %}?procedure={{ p.id }}" class="text-brand hover:underline">Review</a>
+              <a href="{% murl 'procedure_review' %}?procedure={{ p.id }}" class="text-brand hover:underline">Review</a>
               <span class="text-gray-300">|</span>
-              <a href="{% url 'procedure_edit' p.id %}" class="text-brand hover:underline">Edit</a>
+              <a href="{% murl 'procedure_edit' procedure_id=p.id %}" class="text-brand hover:underline">Edit</a>
               <span class="text-gray-300">|</span>
-              <a href="{% url 'procedure_clone' p.id %}" class="text-brand hover:underline">Clone</a>
+              <a href="{% murl 'procedure_clone' procedure_id=p.id %}" class="text-brand hover:underline">Clone</a>
               {% if user.is_authenticated %}
               <span class="text-gray-300">|</span>
-              <a href="{% url 'start' %}?procedure={{ p.id }}" class="text-brand hover:underline font-medium">Start</a>
+              <a href="{% murl 'start' %}?procedure={{ p.id }}" class="text-brand hover:underline font-medium">Start</a>
               {% endif %}
               <span class="text-gray-300">|</span>
-              <a href="{% url 'procedure_delete' p.id %}" class="text-red-600 hover:underline abort-btn">Delete</a>
+              <a href="{% murl 'procedure_delete' procedure_id=p.id %}" class="text-red-600 hover:underline abort-btn">Delete</a>
             </div>
           </td>
         </tr>
@@ -102,9 +103,9 @@
   <p class="text-gray-500 text-sm">
     No procedures found.
     {% if search_query or filter_tag_id %}
-    <a href="{% url 'procedure_list' %}?sort={{ sort }}" class="text-brand hover:underline">Clear filters</a>
+    <a href="{% murl 'procedure_list' %}?sort={{ sort }}" class="text-brand hover:underline">Clear filters</a>
     {% else %}
-    <a href="{% url 'procedure_create' %}" class="text-brand hover:underline">Create your first procedure</a>
+    <a href="{% murl 'procedure_create' %}" class="text-brand hover:underline">Create your first procedure</a>
     {% endif %}
   </p>
 </div>

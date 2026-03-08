@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Mission Scribe — Add shift{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> &rsaquo;
-  <a href="{% url 'scribe_shift_list' %}">Shifts</a> &rsaquo; Add shift
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'scribe_timeline' %}">Mission Scribe</a> &rsaquo;
+  <a href="{% murl 'scribe_shift_list' %}">Shifts</a> &rsaquo; Add shift
 </nav>
 
 <div class="mb-6">
@@ -26,7 +27,7 @@
 
     <div class="flex gap-2">
       <button type="submit" class="btn btn-primary">Create shift</button>
-      <a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'scribe_shift_list' %}" class="btn btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

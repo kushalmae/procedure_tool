@@ -1,20 +1,21 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}{{ alert.parameter }} — Alerts Handbook{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'handbook_alert_list' %}">Alerts &amp; Limits Handbook</a> &rsaquo; {{ alert.parameter }}
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'handbook_alert_list' %}">Alerts &amp; Limits Handbook</a> &rsaquo; {{ alert.parameter }}
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
   <h1 class="text-2xl font-semibold text-gray-900">{{ alert.parameter }}</h1>
   <div class="no-print flex gap-2">
     {% if user.is_authenticated %}
-    <a href="{% url 'handbook_alert_edit' alert.id %}" class="btn btn-primary">Edit</a>
-    <a href="{% url 'handbook_alert_delete' alert.id %}" class="btn btn-secondary abort-btn">Delete</a>
+    <a href="{% murl 'handbook_alert_edit' alert_id=alert.id %}" class="btn btn-primary">Edit</a>
+    <a href="{% murl 'handbook_alert_delete' alert_id=alert.id %}" class="btn btn-secondary abort-btn">Delete</a>
     {% endif %}
-    <a href="{% url 'handbook_alert_list' %}" class="btn btn-secondary">Back to list</a>
+    <a href="{% murl 'handbook_alert_list' %}" class="btn btn-secondary">Back to list</a>
   </div>
 </div>
 
@@ -43,9 +44,9 @@
     {% if alert.procedure %}
     <dt>Procedure</dt>
     <dd>
-      <a href="{% url 'procedure_review' %}?procedure={{ alert.procedure.id }}" class="text-brand hover:underline">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a>
+      <a href="{% murl 'procedure_review' %}?procedure={{ alert.procedure.id }}" class="text-brand hover:underline">{{ alert.procedure.name }} (v{{ alert.procedure.version }})</a>
       {% if user.is_authenticated %}
-      <a href="{% url 'start' %}?procedure={{ alert.procedure.id }}" class="btn btn-primary ml-2">Start this procedure</a>
+      <a href="{% murl 'start' %}?procedure={{ alert.procedure.id }}" class="btn btn-primary ml-2">Start this procedure</a>
       {% endif %}
     </dd>
     {% endif %}

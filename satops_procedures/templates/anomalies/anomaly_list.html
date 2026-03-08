@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Anomaly Tracker — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Anomaly Tracker
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; Anomaly Tracker
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">Anomaly Tracker</h1>
   <div class="no-print flex gap-2">
     {% if user.is_authenticated %}
-    <a href="{% url 'anomalies_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="anomalies.csv">Export CSV</a>
+    <a href="{% murl 'anomalies_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="anomalies.csv">Export CSV</a>
     <button type="button" onclick="document.getElementById('anomalyCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
-    <a href="{% url 'anomalies_create' %}" class="btn btn-primary">
+    <a href="{% murl 'anomalies_create' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Report Anomaly
     </a>
@@ -96,7 +97,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if search_query or filter_satellite_id or filter_subsystem_id or filter_severity or filter_status %}
-      <a href="{% url 'anomalies_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'anomalies_list' %}?clear=1" class="btn btn-secondary">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -126,10 +127,10 @@
         {% for a in anomalies %}
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 font-mono text-xs text-gray-500">
-            <a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="text-brand hover:underline">ANOM-{{ a.id }}</a>
+            <a href="{% murl 'anomalies_detail' anomaly_id=a.id %}" class="text-brand hover:underline">ANOM-{{ a.id }}</a>
           </td>
           <td class="px-4 py-3 font-medium text-gray-900">
-            <a href="{% url 'anomalies_detail' anomaly_id=a.id %}" class="hover:underline">{{ a.title|truncatewords:10 }}</a>
+            <a href="{% murl 'anomalies_detail' anomaly_id=a.id %}" class="hover:underline">{{ a.title|truncatewords:10 }}</a>
           </td>
           <td class="px-4 py-3 text-gray-600">{{ a.satellite.name }}</td>
           <td class="px-4 py-3 text-gray-600">{{ a.subsystem.name|default:"—" }}</td>
@@ -141,8 +142,8 @@
         <tr>
           <td colspan="7" class="px-4 py-8 text-center text-gray-500">
             No anomalies.
-            {% if user.is_authenticated %}<a href="{% url 'anomalies_create' %}" class="text-brand hover:underline">Report one</a>.{% else %}Log in to report.{% endif %}
-            {% if search_query or filter_satellite_id or filter_subsystem_id or filter_severity or filter_status %}<a href="{% url 'anomalies_list' %}?clear=1" class="text-brand hover:underline">Clear filters</a>.{% endif %}
+            {% if user.is_authenticated %}<a href="{% murl 'anomalies_create' %}" class="text-brand hover:underline">Report one</a>.{% else %}Log in to report.{% endif %}
+            {% if search_query or filter_satellite_id or filter_subsystem_id or filter_severity or filter_status %}<a href="{% murl 'anomalies_list' %}?clear=1" class="text-brand hover:underline">Clear filters</a>.{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -159,7 +160,7 @@
       <h2 class="text-lg font-semibold text-gray-900">Import Anomalies CSV</h2>
       <button type="button" onclick="this.closest('dialog').close()" class="text-gray-400 hover:text-gray-600">×</button>
     </div>
-    <form method="post" action="{% url 'anomalies_csv_import' %}" enctype="multipart/form-data">
+    <form method="post" action="{% murl 'anomalies_csv_import' %}" enctype="multipart/form-data">
       {% csrf_token %}
       <p class="text-sm text-gray-600 mb-3">
         Upload a CSV with columns: <strong>Title</strong>, <strong>Satellite</strong>, <strong>Detected Time</strong>.

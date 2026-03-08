@@ -1,20 +1,21 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}SME Requests — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; SME Requests
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; SME Requests
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">SME Requests</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'sme_ops_queue' %}" class="btn btn-secondary">Ops Queue</a>
-    <a href="{% url 'sme_request_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="sme_requests.csv">Export CSV</a>
+    <a href="{% murl 'sme_ops_queue' %}" class="btn btn-secondary">Ops Queue</a>
+    <a href="{% murl 'sme_request_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="sme_requests.csv">Export CSV</a>
     {% if user.is_authenticated %}
     <button type="button" onclick="document.getElementById('smeCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
-    <a href="{% url 'sme_request_create' %}" class="btn btn-primary">
+    <a href="{% murl 'sme_request_create' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       New Request
     </a>
@@ -80,7 +81,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if search_query or filter_satellite_id or filter_request_type_id or filter_priority or filter_status %}
-      <a href="{% url 'sme_request_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'sme_request_list' %}?clear=1" class="btn btn-secondary">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -113,7 +114,7 @@
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 text-gray-500 font-mono text-xs">#{{ r.id }}</td>
           <td class="px-4 py-3 font-medium">
-            <a href="{% url 'sme_request_detail' request_id=r.id %}" class="text-brand hover:underline">{{ r.title|truncatewords:10 }}</a>
+            <a href="{% murl 'sme_request_detail' request_id=r.id %}" class="text-brand hover:underline">{{ r.title|truncatewords:10 }}</a>
           </td>
           <td class="px-4 py-3 text-gray-600">{{ r.satellite.name|default:"—" }}</td>
           <td class="px-4 py-3 text-gray-600">{{ r.request_type.name|default:"—" }}</td>
@@ -127,8 +128,8 @@
         <tr>
           <td colspan="9" class="px-4 py-8 text-center text-gray-500">
             No requests.
-            {% if user.is_authenticated %}<a href="{% url 'sme_request_create' %}" class="text-brand hover:underline">Submit one</a>.{% else %}Log in to submit.{% endif %}
-            {% if search_query or filter_satellite_id or filter_request_type_id or filter_priority or filter_status %}<a href="{% url 'sme_request_list' %}?clear=1" class="text-brand hover:underline ml-1">Clear filters</a>.{% endif %}
+            {% if user.is_authenticated %}<a href="{% murl 'sme_request_create' %}" class="text-brand hover:underline">Submit one</a>.{% else %}Log in to submit.{% endif %}
+            {% if search_query or filter_satellite_id or filter_request_type_id or filter_priority or filter_status %}<a href="{% murl 'sme_request_list' %}?clear=1" class="text-brand hover:underline ml-1">Clear filters</a>.{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -145,7 +146,7 @@
       <h2 class="text-lg font-semibold text-gray-900">Import SME Requests CSV</h2>
       <button type="button" onclick="this.closest('dialog').close()" class="text-gray-400 hover:text-gray-600">×</button>
     </div>
-    <form method="post" action="{% url 'sme_request_csv_import' %}" enctype="multipart/form-data">
+    <form method="post" action="{% murl 'sme_request_csv_import' %}" enctype="multipart/form-data">
       {% csrf_token %}
       <p class="text-sm text-gray-600 mb-3">
         Upload a CSV with columns: <strong>Title</strong>, <strong>Description</strong>.

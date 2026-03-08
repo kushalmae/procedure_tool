@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Create Procedure — Satops{% endblock %}
 {% block content %}
 
@@ -45,7 +46,7 @@
 
     <div class="flex gap-2">
       <button type="submit" class="btn btn-primary">Create procedure</button>
-      <a href="{% url 'start' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'start' %}" class="btn btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

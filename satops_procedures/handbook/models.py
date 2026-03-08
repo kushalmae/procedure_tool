@@ -2,6 +2,10 @@ from django.db import models
 
 
 class Subsystem(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='handbook_subsystems', null=True, blank=True,
+    )
     name = models.CharField(max_length=80)
 
     class Meta:
@@ -19,6 +23,10 @@ class AlertDefinition(models.Model):
         (SEVERITY_CRITICAL, 'Critical'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='alert_definitions', null=True, blank=True,
+    )
     parameter = models.CharField(max_length=120)
     mnemonic = models.CharField(
         max_length=80,

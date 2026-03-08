@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand
 
 # Order matters: procedures first (satellites), then others. All use "full" sample data flags.
 SEED_COMMANDS = [
+    ('seed_missions', {}, 'Missions (Alpha-1, Bravo-2, Sandbox)'),
     ('seed_procedures', {}, 'Procedures, tags, satellites'),
     ('seed_scribe', {}, 'Scribe roles, event categories'),
     ('seed_handbook', {'alerts': True}, 'Handbook subsystems and sample alerts'),

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}History — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold text-gray-900">Run History</h1>
-  <a href="{% url 'history_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary no-print" download="procedure_runs.csv">Export CSV</a>
+  <a href="{% murl 'history_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary no-print" download="procedure_runs.csv">Export CSV</a>
 </div>
 
 <!-- Filter bar -->
@@ -38,7 +39,7 @@
     </div>
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
-      {% if search_query or tag_id %}<a href="{% url 'history' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
+      {% if search_query or tag_id %}<a href="{% murl 'history' %}?sort={{ sort }}" class="btn btn-secondary">Clear</a>{% endif %}
     </div>
   </form>
 </div>
@@ -69,13 +70,13 @@
           </td>
           <td class="px-4 py-3 text-gray-500">{{ run.operator_name|default:"—" }}</td>
           <td class="px-4 py-3"><span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span></td>
-          <td class="px-4 py-3 no-print"><a href="{% url 'run_summary' run.id %}" class="text-gray-600 hover:text-brand">View</a></td>
+          <td class="px-4 py-3 no-print"><a href="{% murl 'run_summary' run_id=run.id %}" class="text-gray-600 hover:text-brand">View</a></td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="6" class="px-4 py-8 text-center text-gray-500">
             No runs found.
-            {% if search_query or tag_id %}<a href="{% url 'history' %}" class="text-brand hover:underline">Clear filters</a>{% endif %}
+            {% if search_query or tag_id %}<a href="{% murl 'history' %}" class="text-brand hover:underline">Clear filters</a>{% endif %}
           </td>
         </tr>
         {% endfor %}

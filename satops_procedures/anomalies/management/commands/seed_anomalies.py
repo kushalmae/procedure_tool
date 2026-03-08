@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from anomalies.models import Anomaly, AnomalyTimelineEntry
+from missions.models import Mission
 from procedures.models import Satellite, Subsystem
 
 SAMPLE_ANOMALIES = [
@@ -126,22 +127,26 @@ class Command(BaseCommand):
             self.stdout.write('Use --anomalies to create sample data.')
             return
 
+        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
         now = timezone.now()
 
         for name in ['SAT-021', 'SAT-034', 'SAT-012']:
-            sat, created = Satellite.objects.get_or_create(name=name)
+            sat, created = Satellite.objects.get_or_create(
+                name=name, mission=mission, defaults={'name': name, 'mission': mission}
+            )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
-        subs = {s.name: s for s in Subsystem.objects.all()}
+        subs = {s.name: s for s in Subsystem.objects.filter(mission=mission)}
 
         for i, data in enumerate(SAMPLE_ANOMALIES):
-            satellite = Satellite.objects.get(name=data['satellite'])
+            satellite = Satellite.objects.get(name=data['satellite'], mission=mission)
             detected_time = now - timedelta(hours=3 * i, minutes=20 * i)
 
             anomaly, created = Anomaly.objects.get_or_create(
                 title=data['title'],
                 satellite=satellite,
+                mission=mission,
                 defaults={
                     'subsystem': subs.get(data['subsystem']),
                     'severity': data['severity'],
@@ -151,6 +156,7 @@ class Command(BaseCommand):
                     'root_cause': data.get('root_cause', ''),
                     'resolution_actions': data.get('resolution_actions', ''),
                     'recommendations': data.get('recommendations', ''),
+                    'mission': mission,
                 },
             )
             if created:

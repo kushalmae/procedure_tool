@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}SME Request #{{ sme_req.id }} — Satops{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'sme_request_list' %}">SME Requests</a> &rsaquo; Request #{{ sme_req.id }}
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'sme_request_list' %}">SME Requests</a> &rsaquo; Request #{{ sme_req.id }}
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
@@ -223,8 +224,8 @@
 </div>
 
 <div class="flex gap-2">
-  <a href="{% url 'sme_request_list' %}" class="btn btn-secondary">Back to requests</a>
-  <a href="{% url 'sme_ops_queue' %}" class="btn btn-secondary">Ops Queue</a>
+  <a href="{% murl 'sme_request_list' %}" class="btn btn-secondary">Back to requests</a>
+  <a href="{% murl 'sme_ops_queue' %}" class="btn btn-secondary">Ops Queue</a>
 </div>
 
 {% endblock %}

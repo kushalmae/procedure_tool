@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Delete: {{ procedure.name }} — Satops{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'procedure_list' %}">Procedures</a> &rsaquo; Delete
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'procedure_list' %}">Procedures</a> &rsaquo; Delete
 </nav>
 
 <div class="mb-6">
@@ -29,7 +30,7 @@
   <form method="post">{% csrf_token %}
     <div class="flex gap-2">
       <button type="submit" class="btn btn-danger">Yes, delete procedure</button>
-      <a href="{% url 'procedure_edit' procedure.id %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'procedure_edit' procedure_id=procedure.id %}" class="btn btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Mission Scribe — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Mission Scribe
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; Mission Scribe
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">Mission Scribe</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'scribe_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="mission_log.csv">Export CSV</a>
-    <a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Shifts</a>
+    <a href="{% murl 'scribe_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="mission_log.csv">Export CSV</a>
+    <a href="{% murl 'scribe_shift_list' %}" class="btn btn-secondary">Shifts</a>
   </div>
 </div>
 
@@ -27,11 +28,11 @@
         <select id="quick-template-select">
           <option value="">— Select a template —</option>
           {% for t in entry_templates %}
-          <option value="{% url 'scribe_timeline' %}?template={{ t.id }}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}{% if request.GET.satellite %}&satellite={{ request.GET.satellite }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" {% if selected_template and selected_template.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+          <option value="{% murl 'scribe_timeline' %}?template={{ t.id }}{% if request.GET.role %}&role={{ request.GET.role }}{% endif %}{% if request.GET.satellite %}&satellite={{ request.GET.satellite }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}" {% if selected_template and selected_template.id == t.id %}selected{% endif %}>{{ t.name }}</option>
           {% endfor %}
         </select>
         {% if selected_template %}
-        <p class="text-xs text-gray-500 mt-1">Using: <strong>{{ selected_template.name }}</strong>. <a href="{% url 'scribe_timeline' %}" class="text-brand hover:underline">Clear</a></p>
+        <p class="text-xs text-gray-500 mt-1">Using: <strong>{{ selected_template.name }}</strong>. <a href="{% murl 'scribe_timeline' %}" class="text-brand hover:underline">Clear</a></p>
         {% endif %}
         <script>(function(){var s=document.getElementById('quick-template-select');if(s)s.addEventListener('change',function(){if(this.value)window.location=this.value;});})();</script>
       </div>
@@ -39,7 +40,7 @@
 
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
         <h3 class="text-sm font-semibold text-gray-900 mb-3">Add Entry</h3>
-        <form method="post" action="{% url 'scribe_timeline' %}">{% csrf_token %}
+        <form method="post" action="{% murl 'scribe_timeline' %}">{% csrf_token %}
           <label class="first" for="entry-timestamp">Timestamp</label>
           <input type="datetime-local" id="entry-timestamp" name="timestamp" value="{{ timestamp_default }}">
 
@@ -182,7 +183,7 @@
         <div class="flex items-end gap-2">
           <button type="submit" class="btn btn-primary">Filter</button>
           {% if search_query or filter_role_id or filter_satellite_id or filter_category_id or filter_severity or filter_shift_id or filter_tag_id %}
-          <a href="{% url 'scribe_timeline' %}?clear=1" class="btn btn-secondary">Clear</a>
+          <a href="{% murl 'scribe_timeline' %}?clear=1" class="btn btn-secondary">Clear</a>
           {% endif %}
         </div>
       </form>

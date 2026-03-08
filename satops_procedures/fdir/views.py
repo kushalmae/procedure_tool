@@ -2,13 +2,20 @@ import csv
 import io
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+
+from missions.decorators import mission_role_required
 from procedures.models import Procedure
 
 from .models import FDIREntry, Subsystem
+
+
+def _mission_filter(qs, request):
+    if request.mission:
+        return qs.filter(mission=request.mission)
+    return qs
 
 
 def _int_or_none(val):
@@ -18,12 +25,12 @@ def _int_or_none(val):
         return None
 
 
-def entry_list(request):
+def entry_list(request, mission_slug):
     """List FDIR entries with search and filters (subsystem, severity, fault_type)."""
     if request.GET.get('clear'):
         if 'fdir_filters' in request.session:
             del request.session['fdir_filters']
-        return redirect('fdir_entry_list')
+        return redirect('fdir_entry_list', mission_slug=mission_slug)
 
     FDIR_SORT_OPTIONS = [
         'subsystem__name',
@@ -52,11 +59,12 @@ def entry_list(request):
             'sort': sort,
         }
 
-    entries = (
+    entries = _mission_filter(
         FDIREntry.objects
         .select_related('subsystem')
         .prefetch_related('operator_procedures')
-        .order_by(sort)
+        .order_by(sort),
+        request,
     )
 
     if subsystem_id:
@@ -80,7 +88,8 @@ def entry_list(request):
 
     # Distinct fault_type values for filter dropdown (from existing data)
     fault_types = (
-        FDIREntry.objects.values_list('fault_type', flat=True)
+        _mission_filter(FDIREntry.objects.all(), request)
+        .values_list('fault_type', flat=True)
         .distinct()
         .order_by('fault_type')
     )
@@ -88,7 +97,7 @@ def entry_list(request):
 
     context = {
         'entries': entries,
-        'subsystems': Subsystem.objects.all(),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
         'filter_subsystem_id': _int_or_none(subsystem_id),
         'filter_severity': severity or None,
         'filter_fault_type': fault_type or None,
@@ -100,17 +109,20 @@ def entry_list(request):
     return render(request, 'fdir/entry_list.html', context)
 
 
-def entry_detail(request, entry_id):
+def entry_detail(request, mission_slug, entry_id):
     """FDIR entry detail: all fields and linked operator procedures."""
     entry = get_object_or_404(
-        FDIREntry.objects.select_related('subsystem').prefetch_related('operator_procedures'),
+        _mission_filter(
+            FDIREntry.objects.select_related('subsystem').prefetch_related('operator_procedures'),
+            request,
+        ),
         pk=entry_id,
     )
     return render(request, 'fdir/entry_detail.html', {'entry': entry})
 
 
-@login_required
-def entry_create(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def entry_create(request, mission_slug):
     """Create FDIR entry (login required)."""
     if request.method == 'POST':
         name = (request.POST.get('name') or '').strip()
@@ -118,8 +130,12 @@ def entry_create(request):
         if not name or not subsystem_id:
             messages.error(request, 'Name and subsystem are required.')
         else:
-            subsystem = get_object_or_404(Subsystem, pk=subsystem_id)
+            subsystem = get_object_or_404(
+                _mission_filter(Subsystem.objects.all(), request),
+                pk=subsystem_id,
+            )
             entry = FDIREntry(
+                mission=request.mission,
                 name=name,
                 fault_code=(request.POST.get('fault_code') or '').strip(),
                 subsystem=subsystem,
@@ -134,15 +150,17 @@ def entry_create(request):
             procedure_ids = request.POST.getlist('operator_procedures')
             for pid in procedure_ids:
                 try:
-                    entry.operator_procedures.add(Procedure.objects.get(pk=pid))
+                    entry.operator_procedures.add(
+                        _mission_filter(Procedure.objects.all(), request).get(pk=pid)
+                    )
                 except (ValueError, Procedure.DoesNotExist):
                     pass
             messages.success(request, 'FDIR entry saved.')
-            return redirect('fdir_entry_detail', entry_id=entry.pk)
+            return redirect('fdir_entry_detail', mission_slug=mission_slug, entry_id=entry.pk)
 
     context = {
-        'subsystems': Subsystem.objects.all(),
-        'procedures': Procedure.objects.order_by('name'),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
+        'procedures': _mission_filter(Procedure.objects.order_by('name'), request),
         'severity_choices': FDIREntry.SEVERITY_CHOICES,
         'entry': None,
         'selected_procedure_ids': set(),
@@ -150,10 +168,13 @@ def entry_create(request):
     return render(request, 'fdir/entry_form.html', context)
 
 
-@login_required
-def entry_edit(request, entry_id):
+@mission_role_required('OPERATOR', 'ADMIN')
+def entry_edit(request, mission_slug, entry_id):
     """Edit FDIR entry (login required)."""
-    entry = get_object_or_404(FDIREntry, pk=entry_id)
+    entry = get_object_or_404(
+        _mission_filter(FDIREntry.objects.all(), request),
+        pk=entry_id,
+    )
 
     if request.method == 'POST':
         name = (request.POST.get('name') or '').strip()
@@ -161,7 +182,10 @@ def entry_edit(request, entry_id):
         if not name or not subsystem_id:
             messages.error(request, 'Name and subsystem are required.')
         else:
-            subsystem = get_object_or_404(Subsystem, pk=subsystem_id)
+            subsystem = get_object_or_404(
+                _mission_filter(Subsystem.objects.all(), request),
+                pk=subsystem_id,
+            )
             entry.name = name
             entry.fault_code = (request.POST.get('fault_code') or '').strip()
             entry.subsystem = subsystem
@@ -176,17 +200,19 @@ def entry_edit(request, entry_id):
             procedure_ids = request.POST.getlist('operator_procedures')
             for pid in procedure_ids:
                 try:
-                    entry.operator_procedures.add(Procedure.objects.get(pk=pid))
+                    entry.operator_procedures.add(
+                        _mission_filter(Procedure.objects.all(), request).get(pk=pid)
+                    )
                 except (ValueError, Procedure.DoesNotExist):
                     pass
             messages.success(request, 'FDIR entry saved.')
-            return redirect('fdir_entry_detail', entry_id=entry.pk)
+            return redirect('fdir_entry_detail', mission_slug=mission_slug, entry_id=entry.pk)
 
     selected_procedure_ids = set(entry.operator_procedures.values_list('id', flat=True))
     context = {
         'entry': entry,
-        'subsystems': Subsystem.objects.all(),
-        'procedures': Procedure.objects.order_by('name'),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
+        'procedures': _mission_filter(Procedure.objects.order_by('name'), request),
         'severity_choices': FDIREntry.SEVERITY_CHOICES,
         'selected_procedure_ids': selected_procedure_ids,
     }
@@ -198,13 +224,14 @@ def entry_edit(request, entry_id):
 # ---------------------------------------------------------------------------
 
 
-def entry_csv_export(request):
+def entry_csv_export(request, mission_slug):
     """Export FDIR entries as CSV with current filters."""
-    qs = (
+    qs = _mission_filter(
         FDIREntry.objects
         .select_related('subsystem')
         .prefetch_related('operator_procedures')
-        .order_by('subsystem__name', 'name')
+        .order_by('subsystem__name', 'name'),
+        request,
     )
     subsystem_id = request.GET.get('subsystem')
     severity = request.GET.get('severity')
@@ -254,26 +281,26 @@ def entry_csv_export(request):
     return response
 
 
-@login_required
-def entry_csv_import(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def entry_csv_import(request, mission_slug):
     """Import FDIR entries from CSV (POST with csv_file)."""
     if request.method != 'POST':
-        return redirect('fdir_entry_list')
+        return redirect('fdir_entry_list', mission_slug=mission_slug)
 
     csv_file = request.FILES.get('csv_file')
     if not csv_file:
         messages.error(request, 'Please select a CSV file.')
-        return redirect('fdir_entry_list')
+        return redirect('fdir_entry_list', mission_slug=mission_slug)
     if not csv_file.name.endswith('.csv'):
         messages.error(request, 'File must be a CSV.')
-        return redirect('fdir_entry_list')
+        return redirect('fdir_entry_list', mission_slug=mission_slug)
 
     try:
         decoded = csv_file.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(decoded))
     except Exception:
         messages.error(request, 'Could not read the CSV file.')
-        return redirect('fdir_entry_list')
+        return redirect('fdir_entry_list', mission_slug=mission_slug)
 
     def get(row, *keys):
         for k in keys:
@@ -287,10 +314,11 @@ def entry_csv_import(request):
     has_subsystem = any('subsystem' in k for k in fieldnames)
     if not (has_name and has_subsystem):
         messages.error(request, 'CSV must contain Name and Subsystem columns.')
-        return redirect('fdir_entry_list')
+        return redirect('fdir_entry_list', mission_slug=mission_slug)
 
-    subsystems = {s.name: s for s in Subsystem.objects.all()}
-    procedures = {p.name: p for p in Procedure.objects.all()}
+    subsystems_qs = _mission_filter(Subsystem.objects.all(), request)
+    subsystems = {s.name: s for s in subsystems_qs}
+    procedures = {p.name: p for p in _mission_filter(Procedure.objects.all(), request)}
     created = 0
     skipped = 0
 
@@ -303,11 +331,14 @@ def entry_csv_import(request):
 
         subsystem = subsystems.get(sub_name)
         if not subsystem:
-            subsystem = Subsystem.objects.filter(name=sub_name).first()
+            subsystem = _mission_filter(
+                Subsystem.objects.filter(name=sub_name),
+                request,
+            ).first()
             if subsystem:
                 subsystems[subsystem.name] = subsystem
             else:
-                subsystem = Subsystem.objects.create(name=sub_name)
+                subsystem = Subsystem.objects.create(name=sub_name, mission=request.mission)
                 subsystems[subsystem.name] = subsystem
 
         severity = get(row, 'Severity', 'severity') or FDIREntry.SEVERITY_INFO
@@ -315,6 +346,7 @@ def entry_csv_import(request):
             severity = FDIREntry.SEVERITY_INFO
 
         entry = FDIREntry.objects.create(
+            mission=request.mission,
             name=name,
             fault_code=get(row, 'Fault Code', 'fault_code'),
             subsystem=subsystem,
@@ -330,7 +362,10 @@ def entry_csv_import(request):
             for pname in [n.strip() for n in proc_names_str.split(',') if n.strip()]:
                 proc = procedures.get(pname)
                 if not proc:
-                    proc = Procedure.objects.filter(name=pname).first()
+                    proc = _mission_filter(
+                        Procedure.objects.filter(name=pname),
+                        request,
+                    ).first()
                     if proc:
                         procedures[proc.name] = proc
                 if proc:
@@ -341,4 +376,4 @@ def entry_csv_import(request):
     if skipped:
         msg += f' Skipped {skipped} row(s).'
     messages.success(request, msg)
-    return redirect('fdir_entry_list')
+    return redirect('fdir_entry_list', mission_slug=mission_slug)

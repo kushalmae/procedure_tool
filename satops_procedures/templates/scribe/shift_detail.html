@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Mission Scribe — Shift{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> &rsaquo;
-  <a href="{% url 'scribe_shift_list' %}">Shifts</a> &rsaquo; Shift {{ shift.id }}
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'scribe_timeline' %}">Mission Scribe</a> &rsaquo;
+  <a href="{% murl 'scribe_shift_list' %}">Shifts</a> &rsaquo; Shift {{ shift.id }}
 </nav>
 
 <div class="mb-6">
@@ -60,8 +61,8 @@
 </div>
 
 <div class="mt-4 flex gap-2">
-  <a href="{% url 'scribe_shift_list' %}" class="btn btn-secondary">Back to shifts</a>
-  <a href="{% url 'scribe_timeline' %}?shift={{ shift.id }}" class="btn btn-secondary">View in timeline</a>
+  <a href="{% murl 'scribe_shift_list' %}" class="btn btn-secondary">Back to shifts</a>
+  <a href="{% murl 'scribe_timeline' %}?shift={{ shift.id }}" class="btn btn-secondary">View in timeline</a>
 </div>
 
 {% endblock %}

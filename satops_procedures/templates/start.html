@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Start Procedure — Satops{% endblock %}
 {% block content %}
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold text-gray-900">Start Procedure</h1>
-  <a href="{% url 'procedure_create' %}" class="btn btn-secondary no-print">Create new procedure</a>
+  <a href="{% murl 'procedure_create' %}" class="btn btn-secondary no-print">Create new procedure</a>
 </div>
 
 {% if tags %}
 <div class="no-print flex flex-wrap items-center gap-2 mb-5">
   <span class="text-sm text-gray-500 font-medium">Filter by tag:</span>
-  <a href="{% url 'start' %}" class="tag-pill {% if not filter_tag_id %}tag-pill-active{% endif %}">All</a>
+  <a href="{% murl 'start' %}" class="tag-pill {% if not filter_tag_id %}tag-pill-active{% endif %}">All</a>
   {% for t in tags %}
-  <a href="{% url 'start' %}?tag={{ t.id }}" class="tag-pill {% if filter_tag_id == t.id %}tag-pill-active{% endif %}">{{ t.name }}</a>
+  <a href="{% murl 'start' %}?tag={{ t.id }}" class="tag-pill {% if filter_tag_id == t.id %}tag-pill-active{% endif %}">{{ t.name }}</a>
   {% endfor %}
 </div>
 {% endif %}
@@ -55,7 +56,7 @@
   var select = document.getElementById('procedure');
   var link = document.getElementById('review-link');
   if (!select || !link) return;
-  function updateLink() { link.href = '{% url "procedure_review" %}?procedure=' + encodeURIComponent(select.value); }
+  function updateLink() { link.href = '{% murl "procedure_review" %}?procedure=' + encodeURIComponent(select.value); }
   select.addEventListener('change', updateLink);
   updateLink();
 })();

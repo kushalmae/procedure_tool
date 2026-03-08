@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Import CSV — Command &amp; Telemetry Reference{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'cmdtlm_command_list' %}">Commands</a> &rsaquo; Import CSV
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'cmdtlm_command_list' %}">Commands</a> &rsaquo; Import CSV
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
   <h1 class="text-2xl font-semibold text-gray-900">Import CSV Data</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'cmdtlm_command_list' %}" class="btn btn-secondary">Commands</a>
-    <a href="{% url 'cmdtlm_telemetry_list' %}" class="btn btn-secondary">Telemetry</a>
+    <a href="{% murl 'cmdtlm_command_list' %}" class="btn btn-secondary">Commands</a>
+    <a href="{% murl 'cmdtlm_telemetry_list' %}" class="btn btn-secondary">Telemetry</a>
   </div>
 </div>
 
