@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Fix CRLF line endings (Windows) so entrypoint.sh runs in Linux
+RUN sed -i 's/\r$//' /app/entrypoint.sh
+
 RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
 EXPOSE 8000
