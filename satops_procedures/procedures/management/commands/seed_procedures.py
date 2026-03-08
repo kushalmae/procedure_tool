@@ -118,7 +118,7 @@ class Command(BaseCommand):
     ]
 
     def _get_default_mission(self):
-        return Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+        return Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
 
     def handle(self, *args, **options):
         mission = self._get_default_mission()

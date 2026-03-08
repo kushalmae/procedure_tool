@@ -128,7 +128,7 @@ class Command(BaseCommand):
     help = 'Seed Central Reference Page with subsystems and sample reference entries.'
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
 
         for name in DEFAULT_SUBSYSTEMS:
             _, created = Subsystem.objects.get_or_create(

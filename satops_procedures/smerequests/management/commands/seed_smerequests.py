@@ -18,7 +18,7 @@ class Command(BaseCommand):
     help = 'Seed SME Request types for the SME Request Workflow.'
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
 
         for name in DEFAULT_REQUEST_TYPES:
             _, created = RequestType.objects.get_or_create(

@@ -127,7 +127,7 @@ class Command(BaseCommand):
             self.stdout.write('Use --anomalies to create sample data.')
             return
 
-        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
         now = timezone.now()
 
         for name in ['SAT-021', 'SAT-034', 'SAT-012']:

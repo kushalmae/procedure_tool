@@ -7,31 +7,17 @@ User = get_user_model()
 
 MISSIONS = [
     {
-        'name': 'Alpha-1',
-        'slug': 'alpha-1',
-        'description': 'Primary satellite operations mission for the Alpha constellation.',
-        'color': '#3B82F6',
+        'name': 'Simulation',
+        'slug': 'simulation',
+        'description': 'Simulation mission for training, testing, and demonstration of satellite operations workflows.',
+        'color': '#8B5CF6',
         'is_sandbox': False,
-    },
-    {
-        'name': 'Bravo-2',
-        'slug': 'bravo-2',
-        'description': 'Secondary mission for Bravo constellation monitoring and maneuvers.',
-        'color': '#10B981',
-        'is_sandbox': False,
-    },
-    {
-        'name': 'Sandbox',
-        'slug': 'sandbox',
-        'description': 'Training and testing environment. Data here does not affect operations.',
-        'color': '#F59E0B',
-        'is_sandbox': True,
     },
 ]
 
 
 class Command(BaseCommand):
-    help = 'Seed three missions: Alpha-1, Bravo-2, and Sandbox.'
+    help = 'Seed the Simulation mission.'
 
     def handle(self, *args, **options):
         for m_data in MISSIONS:
