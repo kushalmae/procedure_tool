@@ -11,6 +11,9 @@ mission_prefixed = [
     path('cmdtlm/', include('cmdtlm.urls')),
     path('references/', include('references.urls')),
     path('requests/', include('smerequests.urls')),
+    path('reports/', include('reports.urls')),
+    path('audit/', include('auditlog.urls')),
+    path('settings/', include('missions.admin_urls')),
 ]
 
 urlpatterns = [

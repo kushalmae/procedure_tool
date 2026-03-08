@@ -1,4 +1,7 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils.text import slugify
 
 from .models import Mission, MissionMembership
 
@@ -17,4 +20,55 @@ def mission_selector(request):
 
     return render(request, 'missions/mission_selector.html', {
         'missions': missions,
+    })
+
+
+@login_required
+def mission_create(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        color = request.POST.get('color', '#3B82F6').strip()
+
+        if not name:
+            return render(request, 'missions/mission_create.html', {
+                'error': 'Mission name is required.',
+                'form_name': name,
+                'form_description': description,
+                'form_color': color,
+            })
+
+        slug = slugify(name)
+        if not slug:
+            return render(request, 'missions/mission_create.html', {
+                'error': 'Could not generate a valid slug from the mission name.',
+                'form_name': name,
+                'form_description': description,
+                'form_color': color,
+            })
+
+        if Mission.objects.filter(slug=slug).exists():
+            return render(request, 'missions/mission_create.html', {
+                'error': f'A mission with the slug "{slug}" already exists. Choose a different name.',
+                'form_name': name,
+                'form_description': description,
+                'form_color': color,
+            })
+
+        mission = Mission.objects.create(
+            name=name,
+            slug=slug,
+            description=description,
+            color=color,
+        )
+        MissionMembership.objects.create(
+            user=request.user,
+            mission=mission,
+            role=MissionMembership.ROLE_ADMIN,
+        )
+        messages.success(request, f'Mission "{mission.name}" created successfully.')
+        return redirect('dashboard', mission_slug=mission.slug)
+
+    return render(request, 'missions/mission_create.html', {
+        'form_color': '#3B82F6',
     })

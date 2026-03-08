@@ -6,12 +6,20 @@
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-semibold text-gray-900">Fleet Procedures</h1>
-  <a href="{% murl 'start' %}" class="btn btn-primary no-print">
-    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-    Start Procedure
-  </a>
+  <div class="flex gap-2 no-print">
+    {% if user.is_authenticated %}
+    <a href="{% murl 'dashboard_customize' %}" class="btn btn-secondary" title="Customize dashboard">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    </a>
+    {% endif %}
+    <a href="{% murl 'start' %}" class="btn btn-primary">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Start Procedure
+    </a>
+  </div>
 </div>
 
+{% if 'summary_cards' in enabled_widgets %}
 <!-- Summary cards -->
 <div class="no-print grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
   <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 text-center">
@@ -43,12 +51,15 @@
     <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide">Anomalies</div>
   </div>
 </div>
+{% endif %}
 
 <div class="flex flex-col lg:flex-row gap-6">
-  <!-- Primary: runs table -->
-  <div class="flex-1 min-w-0">
+  <!-- Primary column -->
+  <div class="flex-1 min-w-0 space-y-5">
+
+    {% if 'runs_table' in enabled_widgets %}
     <!-- Filter bar -->
-    <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-4">
+    <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4">
       <form method="get" class="flex flex-wrap items-end gap-3">
         <div class="flex-1 min-w-[160px]">
           <label class="first" for="dash-q">Search</label>
@@ -140,11 +151,89 @@
         </table>
       </div>
     </div>
+    {% endif %}
+
+    {% if 'fleet_status' in enabled_widgets %}
+    <!-- Fleet status widget -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-900">Fleet Status</h3>
+        <a href="{% murl 'fleet' %}" class="text-xs text-brand hover:underline">Full fleet view →</a>
+      </div>
+      {% if fleet_rows %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-900">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase">Satellite</th>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase">Last Run</th>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for row in fleet_rows %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2 font-medium text-gray-900">{{ row.satellite.name }}</td>
+              <td class="px-4 py-2 text-gray-500">{% if row.last_run %}{{ row.last_run.procedure.name }} — {{ row.last_run.start_time|date:"m-d H:i" }}{% else %}—{% endif %}</td>
+              <td class="px-4 py-2">{% if row.last_run %}<span class="badge badge-{{ row.last_run.status|lower }}">{{ row.last_run.status }}</span>{% else %}<span class="text-gray-400">No runs</span>{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="px-5 py-4 text-sm text-gray-500">No satellites in this mission.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if 'procedure_stats' in enabled_widgets %}
+    <!-- Procedure pass rates widget -->
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-900">Procedure Pass Rates (30d)</h3>
+        <a href="{% murl 'report_procedure_performance' %}" class="text-xs text-brand hover:underline">Full report →</a>
+      </div>
+      {% if procedure_stats %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+          <thead class="bg-gray-900">
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase">Procedure</th>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase">Runs</th>
+              <th class="px-4 py-2 text-left text-xs font-semibold text-white uppercase">Pass Rate</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            {% for s in procedure_stats %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2 text-gray-700">{{ s.procedure__name }}</td>
+              <td class="px-4 py-2 font-medium">{{ s.total }}</td>
+              <td class="px-4 py-2">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-green-500 rounded-full" style="width: {{ s.pass_pct }}%"></div>
+                  </div>
+                  <span class="text-xs font-medium text-gray-600 w-10 text-right">{{ s.pass_pct }}%</span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="px-5 py-4 text-sm text-gray-500">No completed runs in the last 30 days.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
   </div>
 
   <!-- Sidebar widgets -->
   <div class="w-full lg:w-96 flex-shrink-0 space-y-5 no-print">
-    {% if recent_anomalies %}
+
+    {% if 'recent_anomalies' in enabled_widgets and recent_anomalies %}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
       <h3 class="text-sm font-semibold text-gray-900 mb-4">Recent Anomalies</h3>
       <ul class="space-y-1">
@@ -166,7 +255,7 @@
     </div>
     {% endif %}
 
-    {% if recent_scribe_entries %}
+    {% if 'recent_scribe' in enabled_widgets and recent_scribe_entries %}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
       <h3 class="text-sm font-semibold text-gray-900 mb-4">Recent Mission Log</h3>
       <ul class="space-y-2.5">
@@ -185,15 +274,56 @@
     </div>
     {% endif %}
 
-    {% if not recent_anomalies and not recent_scribe_entries %}
+    {% if 'sme_requests' in enabled_widgets and sme_requests %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <h3 class="text-sm font-semibold text-gray-900 mb-4">Active SME Requests</h3>
+      <ul class="space-y-2">
+        {% for r in sme_requests %}
+        <li>
+          <a href="{% murl 'sme_request_detail' request_id=r.id %}" class="block py-2 px-2 -mx-2 rounded-lg text-sm hover:bg-gray-50 transition-colors group">
+            <span class="font-medium text-gray-900 group-hover:text-brand">{{ r.title|truncatewords:8 }}</span>
+            <span class="badge badge-{{ r.status|lower }}">{{ r.get_status_display }}</span>
+            {% if r.satellite %}<span class="text-gray-400 text-xs">({{ r.satellite.name }})</span>{% endif %}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="mt-3">
+        <a href="{% murl 'sme_request_list' %}" class="btn btn-secondary">All requests</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if 'my_runs' in enabled_widgets and my_runs %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <h3 class="text-sm font-semibold text-gray-900 mb-4">My Recent Runs</h3>
+      <ul class="space-y-2">
+        {% for run in my_runs %}
+        <li class="text-sm">
+          <a href="{% murl 'run_summary' run_id=run.id %}" class="block py-2 px-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors group">
+            <span class="font-medium text-gray-900 group-hover:text-brand">{{ run.procedure.name }}</span>
+            <span class="badge badge-{{ run.status|lower }}">{{ run.status }}</span>
+            <p class="text-gray-500 text-xs mt-1">{{ run.satellite.name }} — {{ run.start_time|date:"m-d H:i" }}</p>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="mt-3">
+        <a href="{% murl 'history' %}" class="btn btn-secondary">Full history</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if not recent_anomalies and not recent_scribe_entries and not sme_requests and not my_runs %}
     <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-      <p class="text-sm text-gray-500">No recent anomalies or mission log entries.</p>
+      <p class="text-sm text-gray-500">No sidebar widgets have data to display.</p>
       <div class="mt-3 flex gap-2">
         <a href="{% murl 'anomalies_list' %}" class="btn btn-secondary">Anomalies</a>
         <a href="{% murl 'scribe_timeline' %}" class="btn btn-secondary">Scribe</a>
       </div>
     </div>
     {% endif %}
+
   </div>
 </div>
 

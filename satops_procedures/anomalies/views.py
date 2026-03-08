@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from auditlog.services import log_action, log_create, log_update
 from missions.decorators import mission_role_required
 from procedures.models import Satellite, Subsystem
 
@@ -163,6 +164,7 @@ def anomaly_create(request, mission_slug):
             created_by=request.user,
         )
 
+        log_create(request, anomaly)
         messages.success(request, f'Anomaly ANOM-{anomaly.pk} created.')
         return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
@@ -246,6 +248,7 @@ def anomaly_update(request, mission_slug, anomaly_id):
                 new_value=new_display,
                 created_by=request.user,
             )
+            log_update(request, anomaly, f'Status changed from {old_status} to {new_display}')
             messages.success(request, f'Status updated to {new_display}.')
 
         if new_severity and new_severity in dict(Anomaly.SEVERITY_CHOICES) and new_severity != anomaly.severity:
@@ -261,6 +264,7 @@ def anomaly_update(request, mission_slug, anomaly_id):
                 new_value=new_sev_display,
                 created_by=request.user,
             )
+            log_update(request, anomaly, f'Severity changed from {old_severity} to {new_sev_display}')
             messages.success(request, f'Severity updated to {new_sev_display}.')
 
         if note_body:
@@ -322,6 +326,7 @@ def anomaly_close(request, mission_slug, anomaly_id):
             new_value='Closed',
             created_by=request.user,
         )
+        log_action(request, 'STATUS_CHANGE', 'Anomaly', anomaly.pk, str(anomaly), 'Closed')
 
         messages.success(request, f'Anomaly ANOM-{anomaly.pk} closed.')
         return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))

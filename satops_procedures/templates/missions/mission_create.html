@@ -1,0 +1,70 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Mission — SatOps</title>
+  <script src="{% static 'js/tailwind.js' %}"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand': '#E10600',
+            'brand-dark': '#C40500',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="h-full bg-gray-50">
+  <div class="min-h-full flex flex-col items-center justify-center px-4 py-12">
+    <div class="text-center mb-10">
+      <h1 class="text-4xl font-bold tracking-widest">
+        <span class="text-brand">SAT</span><span class="text-gray-900">OPS</span>
+      </h1>
+      <p class="mt-2 text-gray-500 text-sm">Create a new mission</p>
+    </div>
+
+    <div class="w-full max-w-lg">
+      {% if error %}
+      <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ error }}</div>
+      {% endif %}
+
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <form method="post">{% csrf_token %}
+          <label class="first" for="name">Mission Name</label>
+          <input id="name" name="name" type="text" placeholder="e.g. Sentinel-2A Ops" value="{{ form_name|default:'' }}" required maxlength="120">
+
+          <label for="description">Description <span class="text-gray-400 font-normal">(optional)</span></label>
+          <textarea id="description" name="description" rows="3" placeholder="Brief description of the mission…" style="max-width:40rem;">{{ form_description|default:'' }}</textarea>
+
+          <label for="color">Color</label>
+          <div class="flex items-center gap-3">
+            <input id="color" name="color" type="color" value="{{ form_color|default:'#3B82F6' }}" class="w-12 h-10 p-1 border border-gray-300 rounded cursor-pointer">
+            <span class="text-sm text-gray-500">Choose a color for the mission badge</span>
+          </div>
+
+          <div class="border-t border-gray-200 my-5"></div>
+
+          <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">Create Mission</button>
+            <a href="{% url 'mission_selector' %}" class="btn btn-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="mt-8 text-sm text-gray-400">
+      Logged in as <span class="text-gray-600">{{ user.get_username }}</span>
+      &middot;
+      <a href="{% url 'mission_selector' %}" class="text-gray-400 hover:text-gray-600 underline">Back to missions</a>
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

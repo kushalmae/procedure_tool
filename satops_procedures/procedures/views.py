@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from auditlog.services import log_action, log_create, log_update
 from missions.decorators import mission_role_required
 
 from .models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
@@ -58,7 +59,30 @@ def _reverse_m(url_name, request, **kwargs):
     return reverse(url_name, kwargs=kwargs)
 
 
+def _get_user_layout(request):
+    """Load the user's dashboard layout for the current mission, with defaults."""
+    from missions.models import DashboardLayout
+
+    from .dashboard_config import get_layout
+
+    layout_data = None
+    if request.user.is_authenticated and request.mission:
+        try:
+            dl = DashboardLayout.objects.get(user=request.user, mission=request.mission)
+            layout_data = dl.layout_json
+        except DashboardLayout.DoesNotExist:
+            pass
+    return get_layout(layout_data)
+
+
+def _enabled_widgets(layout):
+    return {item['widget'] for item in layout if item.get('enabled')}
+
+
 def dashboard(request, mission_slug):
+    layout = _get_user_layout(request)
+    enabled = _enabled_widgets(layout)
+
     q = request.GET.get('q', '')
     tag_id = request.GET.get('tag', '')
     satellite_id = request.GET.get('satellite', '')
@@ -79,72 +103,95 @@ def dashboard(request, mission_slug):
     sort = request.GET.get('sort', '-start_time')
     if sort not in RUN_SORT_OPTIONS:
         sort = '-start_time'
-    runs = (
-        _mission_qs(ProcedureRun, request)
-        .select_related('satellite', 'procedure')
-        .prefetch_related('procedure__tags')
-        .order_by(sort)
-    )
-    runs = _search_runs(runs, q, tag_id, satellite_id)[:50]
+
     tags = _mission_qs(Tag, request).all()
     satellites = _mission_qs(Satellite, request).order_by('name')
+
+    runs = []
+    if 'runs_table' in enabled:
+        runs = list(
+            _mission_qs(ProcedureRun, request)
+            .select_related('satellite', 'procedure')
+            .prefetch_related('procedure__tags')
+            .order_by(sort)
+        )
+        runs = _search_runs(
+            _mission_qs(ProcedureRun, request)
+            .select_related('satellite', 'procedure')
+            .prefetch_related('procedure__tags')
+            .order_by(sort),
+            q, tag_id, satellite_id,
+        )[:50]
 
     run_qs = _mission_qs(ProcedureRun, request)
     if satellite_id:
         run_qs = run_qs.filter(satellite_id=satellite_id)
 
-    running_count = run_qs.filter(status='RUNNING').count()
-    procedures_count = _mission_qs(Procedure, request).count()
-    satellites_count = 1 if satellite_id else _mission_qs(Satellite, request).count()
-    week_ago = timezone.now() - timedelta(days=7)
-    runs_last_7_days = run_qs.filter(start_time__gte=week_ago).count()
+    running_count = 0
+    procedures_count = 0
+    satellites_count = 0
+    runs_last_7_days = 0
     scribe_entries_24h = 0
+    week_ago = timezone.now() - timedelta(days=7)
+
+    if 'summary_cards' in enabled:
+        running_count = run_qs.filter(status='RUNNING').count()
+        procedures_count = _mission_qs(Procedure, request).count()
+        satellites_count = 1 if satellite_id else _mission_qs(Satellite, request).count()
+        runs_last_7_days = run_qs.filter(start_time__gte=week_ago).count()
+        try:
+            MLE = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
+            day_ago = timezone.now() - timedelta(days=1)
+            s_qs = MLE.objects.filter(timestamp__gte=day_ago)
+            if request.mission:
+                s_qs = s_qs.filter(mission=request.mission)
+            if satellite_id:
+                s_qs = s_qs.filter(satellite_id=satellite_id)
+            scribe_entries_24h = s_qs.count()
+        except Exception:
+            pass
+
     recent_scribe_entries = []
-    try:
-        MissionLogEntry = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
-        day_ago = timezone.now() - timedelta(days=1)
-        scribe_qs = MissionLogEntry.objects.filter(timestamp__gte=day_ago)
-        if request.mission:
-            scribe_qs = scribe_qs.filter(mission=request.mission)
-        if satellite_id:
-            scribe_qs = scribe_qs.filter(satellite_id=satellite_id)
-        scribe_entries_24h = scribe_qs.count()
-        recent_scribe_qs = (
-            MissionLogEntry.objects.select_related('role', 'satellite', 'category')
-            .order_by('-timestamp')
-        )
-        if request.mission:
-            recent_scribe_qs = recent_scribe_qs.filter(mission=request.mission)
-        if satellite_id:
-            recent_scribe_qs = recent_scribe_qs.filter(satellite_id=satellite_id)
-        recent_scribe_entries = list(recent_scribe_qs[:8])
-    except Exception:
-        pass
+    if 'recent_scribe' in enabled:
+        try:
+            MLE = __import__('scribe.models', fromlist=['MissionLogEntry']).MissionLogEntry
+            recent_scribe_qs = (
+                MLE.objects.select_related('role', 'satellite', 'category')
+                .order_by('-timestamp')
+            )
+            if request.mission:
+                recent_scribe_qs = recent_scribe_qs.filter(mission=request.mission)
+            if satellite_id:
+                recent_scribe_qs = recent_scribe_qs.filter(satellite_id=satellite_id)
+            recent_scribe_entries = list(recent_scribe_qs[:8])
+        except Exception:
+            pass
 
     active_anomalies_count = 0
     recent_anomalies = []
     fleet_health = 'green'
     try:
-        Anomaly = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
-        anomaly_qs = Anomaly.objects.exclude(
-            status__in=[Anomaly.STATUS_RESOLVED, Anomaly.STATUS_CLOSED]
+        AnomalyModel = __import__('anomalies.models', fromlist=['Anomaly']).Anomaly
+        anomaly_qs = AnomalyModel.objects.exclude(
+            status__in=[AnomalyModel.STATUS_RESOLVED, AnomalyModel.STATUS_CLOSED]
         )
         if request.mission:
             anomaly_qs = anomaly_qs.filter(mission=request.mission)
         if satellite_id:
             anomaly_qs = anomaly_qs.filter(satellite_id=satellite_id)
         active_anomalies_count = anomaly_qs.count()
-        recent_anomaly_qs = (
-            Anomaly.objects.select_related('satellite')
-            .order_by('-detected_time')
-        )
-        if request.mission:
-            recent_anomaly_qs = recent_anomaly_qs.filter(mission=request.mission)
-        if satellite_id:
-            recent_anomaly_qs = recent_anomaly_qs.filter(satellite_id=satellite_id)
-        recent_anomalies = list(recent_anomaly_qs[:8])
+        if 'recent_anomalies' in enabled:
+            recent_anomaly_qs = (
+                AnomalyModel.objects.select_related('satellite')
+                .order_by('-detected_time')
+            )
+            if request.mission:
+                recent_anomaly_qs = recent_anomaly_qs.filter(mission=request.mission)
+            if satellite_id:
+                recent_anomaly_qs = recent_anomaly_qs.filter(satellite_id=satellite_id)
+            recent_anomalies = list(recent_anomaly_qs[:8])
         has_critical = anomaly_qs.filter(
-            severity__in=[Anomaly.SEVERITY_L4, Anomaly.SEVERITY_L5]
+            severity__in=[AnomalyModel.SEVERITY_L4, AnomalyModel.SEVERITY_L5]
         ).exists()
         recent_fail_or_cancel = run_qs.filter(
             status__in=[ProcedureRun.STATUS_FAIL, ProcedureRun.STATUS_CANCELLED],
@@ -156,6 +203,60 @@ def dashboard(request, mission_slug):
             fleet_health = 'yellow'
     except Exception:
         pass
+
+    # Extra widgets
+    fleet_rows = []
+    if 'fleet_status' in enabled:
+        sat_list = list(_mission_qs(Satellite, request).order_by('name'))
+        last_run_by_sat = {}
+        for r in _mission_qs(ProcedureRun, request).filter(satellite__in=sat_list).select_related('satellite', 'procedure').order_by('satellite_id', '-start_time'):
+            if r.satellite_id not in last_run_by_sat:
+                last_run_by_sat[r.satellite_id] = r
+        for s in sat_list:
+            fleet_rows.append({'satellite': s, 'last_run': last_run_by_sat.get(s.id)})
+
+    sme_requests = []
+    if 'sme_requests' in enabled:
+        try:
+            SMERequest = __import__('smerequests.models', fromlist=['SMERequest']).SMERequest
+            sme_qs = SMERequest.objects.exclude(
+                status__in=['COMPLETED', 'CLOSED', 'REJECTED']
+            ).select_related('satellite').order_by('-created_at')
+            if request.mission:
+                sme_qs = sme_qs.filter(mission=request.mission)
+            sme_requests = list(sme_qs[:8])
+        except Exception:
+            pass
+
+    my_runs = []
+    if 'my_runs' in enabled and request.user.is_authenticated:
+        my_runs = list(
+            _mission_qs(ProcedureRun, request)
+            .filter(operator=request.user, start_time__gte=week_ago)
+            .select_related('satellite', 'procedure')
+            .order_by('-start_time')[:10]
+        )
+
+    procedure_stats = []
+    if 'procedure_stats' in enabled:
+        period_30 = timezone.now() - timedelta(days=30)
+        procedure_stats = list(
+            _mission_qs(ProcedureRun, request)
+            .filter(start_time__gte=period_30)
+            .exclude(status=ProcedureRun.STATUS_RUNNING)
+            .values('procedure__name')
+            .annotate(
+                total=Count('id'),
+                pass_count=Count('id', filter=Q(status=ProcedureRun.STATUS_PASS)),
+                fail_count=Count('id', filter=Q(status=ProcedureRun.STATUS_FAIL)),
+            )
+            .order_by('-total')[:10]
+        )
+        for s in procedure_stats:
+            s['pass_pct'] = round(s['pass_count'] / s['total'] * 100) if s['total'] else 0
+
+    from .dashboard_config import WIDGETS
+    widget_meta = WIDGETS
 
     return render(request, 'dashboard.html', {
         'runs': runs,
@@ -175,6 +276,66 @@ def dashboard(request, mission_slug):
         'active_anomalies_count': active_anomalies_count,
         'recent_anomalies': recent_anomalies,
         'fleet_health': fleet_health,
+        'enabled_widgets': enabled,
+        'layout': layout,
+        'widget_meta': widget_meta,
+        'fleet_rows': fleet_rows,
+        'sme_requests': sme_requests,
+        'my_runs': my_runs,
+        'procedure_stats': procedure_stats,
+    })
+
+
+def dashboard_customize(request, mission_slug):
+    """Save dashboard widget preferences for the current user."""
+
+    from missions.models import DashboardLayout
+
+    from .dashboard_config import WIDGETS
+
+    if not request.user.is_authenticated:
+        return redirect(_reverse_m('dashboard', request))
+
+    if request.method == 'POST':
+        layout_data = []
+        for idx, key in enumerate(request.POST.getlist('widget_order')):
+            if key in WIDGETS:
+                layout_data.append({
+                    'widget': key,
+                    'enabled': request.POST.get(f'enabled_{key}') == '1',
+                    'order': idx,
+                })
+        for key in WIDGETS:
+            if not any(item['widget'] == key for item in layout_data):
+                layout_data.append({
+                    'widget': key,
+                    'enabled': request.POST.get(f'enabled_{key}') == '1',
+                    'order': len(layout_data),
+                })
+
+        DashboardLayout.objects.update_or_create(
+            user=request.user,
+            mission=request.mission,
+            defaults={'layout_json': layout_data},
+        )
+        messages.success(request, 'Dashboard layout saved.')
+        return redirect(_reverse_m('dashboard', request))
+
+    current_layout = _get_user_layout(request)
+    widgets_for_form = []
+    for item in current_layout:
+        key = item['widget']
+        if key in WIDGETS:
+            widgets_for_form.append({
+                'key': key,
+                'label': WIDGETS[key]['label'],
+                'description': WIDGETS[key]['description'],
+                'zone': WIDGETS[key]['zone'],
+                'enabled': item.get('enabled', False),
+            })
+
+    return render(request, 'dashboard_customize.html', {
+        'widgets': widgets_for_form,
     })
 
 
@@ -206,6 +367,7 @@ def start(request, mission_slug):
             operator_name=request.user.get_username(),
             status=ProcedureRun.STATUS_RUNNING,
         )
+        log_action(request, 'RUN_START', 'ProcedureRun', run.pk, str(run))
         return redirect(_reverse_m('run', request, run_id=run.pk) + '?step=0')
     satellites = _mission_qs(Satellite, request).all()
     procedures = _mission_qs(Procedure, request).prefetch_related('tags').all()
@@ -375,6 +537,7 @@ def procedure_create(request, mission_slug):
             mission=request.mission, name=name, version=version,
             description=description, yaml_file=yaml_stem,
         )
+        log_create(request, procedure)
         return redirect(_reverse_m('procedure_review', request) + f'?procedure={procedure.id}')
     return render(request, 'procedure_create.html', {
         'form_name': '',
@@ -451,6 +614,7 @@ def procedure_edit(request, mission_slug, procedure_id):
         procedure.version = version
         procedure.description = description
         procedure.save()
+        log_update(request, procedure)
         messages.success(request, f'Procedure "{name}" updated.')
         return redirect(_reverse_m('procedure_review', request) + f'?procedure={procedure.id}')
     return render(request, 'procedure_edit.html', {
@@ -478,6 +642,7 @@ def procedure_delete(request, mission_slug, procedure_id):
                 except OSError:
                     pass
         procedure.delete()
+        log_action(request, 'DELETE', 'Procedure', procedure.pk, name, f'Deleted procedure "{name}"')
         messages.success(request, f'Procedure "{name}" has been deleted.')
         return redirect(_reverse_m('procedure_list', request))
     return render(request, 'procedure_delete_confirm.html', {
@@ -515,6 +680,7 @@ def procedure_clone(request, mission_slug, procedure_id):
     )
     for tag in procedure.tags.all():
         new_procedure.tags.add(tag)
+    log_create(request, new_procedure, 'Cloned from original')
     messages.success(request, f'Cloned as "{new_name}". Edit the new procedure as needed.')
     return redirect(_reverse_m('procedure_edit', request, procedure_id=new_procedure.pk))
 
@@ -548,6 +714,7 @@ def run_procedure(request, mission_slug, run_id):
         run.status = ProcedureRun.STATUS_CANCELLED
         run.end_time = timezone.now()
         run.save()
+        log_action(request, 'RUN_ABORT', 'ProcedureRun', run.pk, str(run))
         messages.success(request, 'Procedure run aborted.')
         return redirect(_reverse_m('dashboard', request))
 
@@ -583,6 +750,7 @@ def run_procedure(request, mission_slug, run_id):
             run.end_time = timezone.now()
             run.status = status
             run.save()
+            log_action(request, 'RUN_COMPLETE', 'ProcedureRun', run.pk, str(run))
             return redirect(_reverse_m('dashboard', request))
         q = '?view=all' if keep_view_all else f'?step={step_index + 1}'
         return redirect(_reverse_m('run', request, run_id=run_id) + q)
@@ -592,6 +760,7 @@ def run_procedure(request, mission_slug, run_id):
             run.end_time = timezone.now()
             run.status = ProcedureRun.STATUS_PASS
             run.save()
+            log_action(request, 'RUN_COMPLETE', 'ProcedureRun', run.pk, str(run))
         return redirect(_reverse_m('dashboard', request))
 
     step = get_next_step(proc, step_index)

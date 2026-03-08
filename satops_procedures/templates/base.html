@@ -83,6 +83,7 @@
             <a href="{% murl 'timeline' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Timeline</a>
             <a href="{% murl 'anomalies_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Anomaly Tracker</a>
             <a href="{% murl 'sme_request_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">SME Requests</a>
+            <a href="{% murl 'reports_dashboard' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Reports</a>
           </div>
         </div>
         <div>
@@ -101,6 +102,16 @@
             <a href="{% murl 'cmdtlm_telemetry_list' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Telemetry</a>
           </div>
         </div>
+        {% if mission_membership and mission_membership.can_admin %}
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Admin</p>
+          <div class="space-y-0.5">
+            <a href="{% murl 'mission_settings' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Mission Settings</a>
+            <a href="{% murl 'mission_members' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Members</a>
+            <a href="{% murl 'audit_log' %}" class="flex items-center px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">Audit Log</a>
+          </div>
+        </div>
+        {% endif %}
       </nav>
     </aside>
 
@@ -174,6 +185,7 @@
             <a href="{% murl 'timeline' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Timeline</a>
             <a href="{% murl 'anomalies_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Anomaly Tracker</a>
             <a href="{% murl 'sme_request_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">SME Requests</a>
+            <a href="{% murl 'reports_dashboard' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Reports</a>
           </div>
         </div>
         <div>
@@ -192,6 +204,16 @@
             <a href="{% murl 'cmdtlm_telemetry_list' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Telemetry</a>
           </div>
         </div>
+        {% if mission_membership and mission_membership.can_admin %}
+        <div>
+          <p class="text-zinc-500 text-xs font-semibold uppercase tracking-wider px-2 mb-1.5">Admin</p>
+          <div class="space-y-0.5">
+            <a href="{% murl 'mission_settings' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Mission Settings</a>
+            <a href="{% murl 'mission_members' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Members</a>
+            <a href="{% murl 'audit_log' %}" @click="sidebarOpen=false" class="flex px-2 py-1.5 rounded-md text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white">Audit Log</a>
+          </div>
+        </div>
+        {% endif %}
       </nav>
     </aside>
 
