@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from missions.models import Mission
 from procedures.models import Procedure, ProcedureRun, Satellite, StepExecution, Subsystem, Tag
 from procedures.services.procedure_loader import load_procedure
 
@@ -116,15 +117,21 @@ class Command(BaseCommand):
         'Thermal', 'Propulsion', 'GNC', 'Ground', 'Other',
     ]
 
+    def _get_default_mission(self):
+        return Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+
     def handle(self, *args, **options):
+        mission = self._get_default_mission()
+
         for name in self.DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(name=name)
+            _, created = Subsystem.objects.get_or_create(name=name, mission=mission)
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
 
         for p in PROCEDURES:
             proc, created = Procedure.objects.get_or_create(
                 yaml_file=p['yaml_file'],
+                mission=mission,
                 defaults={
                     'name': p['name'],
                     'version': p['version'],
@@ -144,10 +151,10 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(f'Procedure already exists: {proc.name}')
             for tag_name in p.get('tags', []):
-                tag, _ = Tag.objects.get_or_create(name=tag_name)
+                tag, _ = Tag.objects.get_or_create(name=tag_name, mission=mission)
                 proc.tags.add(tag)
         for name in ['SAT-021', 'SAT-034', 'SAT-012']:
-            sat, created = Satellite.objects.get_or_create(name=name, defaults={'name': name})
+            sat, created = Satellite.objects.get_or_create(name=name, mission=mission, defaults={'name': name})
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
@@ -158,15 +165,17 @@ class Command(BaseCommand):
 
     def _create_sample_runs(self):
         """Create a few sample procedure runs with step executions."""
+        mission = self._get_default_mission()
         now = timezone.now()
-        satellites = list(Satellite.objects.all()[:3])
-        procedures = list(Procedure.objects.all()[:4])
+        satellites = list(Satellite.objects.filter(mission=mission)[:3])
+        procedures = list(Procedure.objects.filter(mission=mission)[:4])
         if not satellites or not procedures:
             return
         proc_bus = next((p for p in procedures if p.yaml_file == 'bus_checkout'), procedures[0])
         sat = next((s for s in satellites if s.name == 'SAT-021'), satellites[0])
         start1 = now - timedelta(days=2, hours=4)
         run1 = ProcedureRun.objects.create(
+            mission=mission,
             satellite=sat,
             procedure=proc_bus,
             operator=None,
@@ -184,6 +193,7 @@ class Command(BaseCommand):
         sat2 = next((s for s in satellites if s.name == 'SAT-034'), satellites[1])
         start2 = now - timedelta(days=1, hours=2)
         run2 = ProcedureRun.objects.create(
+            mission=mission,
             satellite=sat2,
             procedure=proc_thermal,
             operator=None,
@@ -199,6 +209,7 @@ class Command(BaseCommand):
 
         start3 = now - timedelta(hours=12)
         run3 = ProcedureRun.objects.create(
+            mission=mission,
             satellite=next((s for s in satellites if s.name == 'SAT-012'), satellites[2]),
             procedure=proc_bus,
             operator=None,
@@ -215,6 +226,7 @@ class Command(BaseCommand):
         proc_payload = next((p for p in procedures if p.yaml_file == 'payload_init'), procedures[0])
         start4 = now - timedelta(minutes=30)
         run4 = ProcedureRun.objects.create(
+            mission=mission,
             satellite=sat,
             procedure=proc_payload,
             operator=None,

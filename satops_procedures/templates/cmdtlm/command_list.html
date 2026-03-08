@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Commands — Command &amp; Telemetry Reference{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Command &amp; Telemetry &rsaquo; Commands
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; Command &amp; Telemetry &rsaquo; Commands
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">Commands</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'cmdtlm_telemetry_list' %}" class="btn btn-secondary">Telemetry</a>
-    <a href="{% url 'cmdtlm_csv_export_commands' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="commands.csv">Export CSV</a>
+    <a href="{% murl 'cmdtlm_telemetry_list' %}" class="btn btn-secondary">Telemetry</a>
+    <a href="{% murl 'cmdtlm_csv_export_commands' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="commands.csv">Export CSV</a>
     {% if user.is_authenticated %}
-    <a href="{% url 'cmdtlm_csv_import' %}" class="btn btn-primary">
+    <a href="{% murl 'cmdtlm_csv_import' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
       Import CSV
     </a>
@@ -60,7 +61,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if search_query or filter_subsystem or filter_category %}
-      <a href="{% url 'cmdtlm_command_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'cmdtlm_command_list' %}?clear=1" class="btn btn-secondary">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -81,9 +82,9 @@
       </thead>
       <tbody class="divide-y divide-gray-100">
         {% for cmd in commands %}
-        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location='{% url 'cmdtlm_command_detail' cmd.id %}'">
+        <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location='{% murl 'cmdtlm_command_detail' command_id=cmd.id %}'">
           <td class="px-4 py-3 font-medium">
-            <a href="{% url 'cmdtlm_command_detail' cmd.id %}" class="text-brand hover:underline">{{ cmd.name }}</a>
+            <a href="{% murl 'cmdtlm_command_detail' command_id=cmd.id %}" class="text-brand hover:underline">{{ cmd.name }}</a>
           </td>
           <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ cmd.command_id|default:"—" }}</td>
           <td class="px-4 py-3 text-gray-600">{{ cmd.subsystem|default:"—" }}</td>
@@ -102,7 +103,7 @@
           <td colspan="6" class="px-4 py-8 text-center text-gray-500">
             No commands found.
             {% if user.is_authenticated %}
-            <a href="{% url 'cmdtlm_csv_import' %}" class="text-brand hover:underline">Import a CSV</a> or run
+            <a href="{% murl 'cmdtlm_csv_import' %}" class="text-brand hover:underline">Import a CSV</a> or run
             {% else %}
             Run
             {% endif %}

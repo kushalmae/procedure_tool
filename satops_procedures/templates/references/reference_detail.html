@@ -1,20 +1,21 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}{{ entry.title }} — Central Reference Page{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'reference_list' %}">Central Reference Page</a> &rsaquo; {{ entry.title }}
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'reference_list' %}">Central Reference Page</a> &rsaquo; {{ entry.title }}
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
   <h1 class="text-2xl font-semibold text-gray-900">{{ entry.title }}</h1>
   <div class="no-print flex gap-2">
     {% if user.is_authenticated %}
-    <a href="{% url 'reference_edit' entry.id %}" class="btn btn-primary">Edit</a>
-    <a href="{% url 'reference_delete' entry.id %}" class="btn btn-secondary abort-btn">Delete</a>
+    <a href="{% murl 'reference_edit' entry_id=entry.id %}" class="btn btn-primary">Edit</a>
+    <a href="{% murl 'reference_delete' entry_id=entry.id %}" class="btn btn-secondary abort-btn">Delete</a>
     {% endif %}
-    <a href="{% url 'reference_list' %}" class="btn btn-secondary">Back to list</a>
+    <a href="{% murl 'reference_list' %}" class="btn btn-secondary">Back to list</a>
   </div>
 </div>
 

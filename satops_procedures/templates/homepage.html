@@ -23,7 +23,7 @@
             <a href="#features">Features</a>
             <a href="#tools">Tools</a>
             {% if user.is_authenticated %}
-            <a href="{% url 'dashboard' %}" class="hp-nav-cta">Open Dashboard</a>
+            <a href="{% url 'mission_selector' %}" class="hp-nav-cta">Open Dashboard</a>
             {% else %}
             <a href="{% url 'login' %}" class="hp-nav-cta">Log In</a>
             {% endif %}
@@ -47,8 +47,8 @@
                 all in one offline-first, auditable platform.
             </p>
             <div class="hp-hero-actions">
-                <a href="{% url 'dashboard' %}" class="btn btn-primary hp-btn-lg hp-btn-primary">Open Dashboard</a>
-                <a href="{% url 'procedure_list' %}" class="btn btn-secondary hp-btn-lg hp-btn-secondary">Browse Procedures</a>
+                <a href="{% url 'mission_selector' %}" class="btn btn-primary hp-btn-lg hp-btn-primary">Open Dashboard</a>
+                <a href="{% url 'mission_selector' %}" class="btn btn-secondary hp-btn-lg hp-btn-secondary">Browse Procedures</a>
             </div>
             <div class="hp-hero-stats">
                 <div class="hp-stat">
@@ -120,56 +120,56 @@
             </div>
 
             <div class="hp-tools-grid">
-                <a href="{% url 'procedure_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">01</div>
                     <h3>Procedure Runner</h3>
                     <p>Execute step-by-step checklists against your fleet. Create procedures in YAML, review before starting, and record pass/fail with notes at each step.</p>
                     <span class="hp-tool-link">View Procedures &rarr;</span>
                 </a>
 
-                <a href="{% url 'scribe_timeline' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">02</div>
                     <h3>Mission Scribe</h3>
                     <p>Record structured shift logs across Mission Director, Flight Dynamics, TNC, Payload, and Ground Systems in a unified mission timeline.</p>
                     <span class="hp-tool-link">Open Mission Scribe &rarr;</span>
                 </a>
 
-                <a href="{% url 'anomalies_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">03</div>
                     <h3>Anomaly Tracker</h3>
                     <p>Report, track, and resolve operational anomalies across your fleet with L1–L5 severity levels and full lifecycle documentation.</p>
                     <span class="hp-tool-link">View Anomaly Tracker &rarr;</span>
                 </a>
 
-                <a href="{% url 'handbook_alert_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">04</div>
                     <h3>Alerts &amp; Limits Handbook</h3>
                     <p>Single source of truth for operational alerts, monitoring rules, and telemetry limits with warning/critical thresholds.</p>
                     <span class="hp-tool-link">Open Handbook &rarr;</span>
                 </a>
 
-                <a href="{% url 'fdir_entry_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">05</div>
                     <h3>FDIR Handbook</h3>
                     <p>Document fault detection, isolation, and recovery logic. Onboard automated responses and operator recovery procedures.</p>
                     <span class="hp-tool-link">Open FDIR Handbook &rarr;</span>
                 </a>
 
-                <a href="{% url 'cmdtlm_command_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">06</div>
                     <h3>Commands &amp; Telemetry</h3>
                     <p>Browse command and telemetry definitions. Filter by subsystem, search by mnemonic, and import/export via CSV.</p>
                     <span class="hp-tool-link">View Cmd/Tlm &rarr;</span>
                 </a>
 
-                <a href="{% url 'reference_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">07</div>
                     <h3>Reference Library</h3>
                     <p>Central reference page for documents, specs, and technical resources. Filter by subsystem and document type.</p>
                     <span class="hp-tool-link">Browse References &rarr;</span>
                 </a>
 
-                <a href="{% url 'sme_request_list' %}" class="hp-tool-card hp-tool-card-link">
+                <a href="{% url 'mission_selector' %}" class="hp-tool-card hp-tool-card-link">
                     <div class="hp-tool-number">08</div>
                     <h3>SME Request Workflow</h3>
                     <p>Submit, track, and route requests to subject matter experts. Ops queue for visibility and CSV import/export.</p>
@@ -218,8 +218,8 @@
             <h2>Ready to streamline your satellite operations?</h2>
             <p>Jump into the dashboard and start running procedures, logging events, and tracking your fleet.</p>
             <div class="hp-hero-actions">
-                <a href="{% url 'dashboard' %}" class="btn btn-primary hp-btn-lg hp-btn-primary">Open Dashboard</a>
-                <a href="{% url 'procedure_list' %}" class="btn btn-secondary hp-btn-lg hp-btn-secondary">Browse Procedures</a>
+                <a href="{% url 'mission_selector' %}" class="btn btn-primary hp-btn-lg hp-btn-primary">Open Dashboard</a>
+                <a href="{% url 'mission_selector' %}" class="btn btn-secondary hp-btn-lg hp-btn-secondary">Browse Procedures</a>
             </div>
         </div>
     </section>
@@ -232,15 +232,15 @@
             SatOps
         </div>
         <div class="hp-footer-links">
-            <a href="{% url 'dashboard' %}">Dashboard</a>
-            <a href="{% url 'procedure_list' %}">Procedures</a>
-            <a href="{% url 'scribe_timeline' %}">Mission Scribe</a>
-            <a href="{% url 'anomalies_list' %}">Anomaly Tracker</a>
-            <a href="{% url 'handbook_alert_list' %}">Alerts Handbook</a>
-            <a href="{% url 'fdir_entry_list' %}">FDIR Handbook</a>
-            <a href="{% url 'cmdtlm_command_list' %}">Commands &amp; Telemetry</a>
-            <a href="{% url 'reference_list' %}">References</a>
-            <a href="{% url 'sme_request_list' %}">SME Requests</a>
+            <a href="{% url 'mission_selector' %}">Dashboard</a>
+            <a href="{% url 'mission_selector' %}">Procedures</a>
+            <a href="{% url 'mission_selector' %}">Mission Scribe</a>
+            <a href="{% url 'mission_selector' %}">Anomaly Tracker</a>
+            <a href="{% url 'mission_selector' %}">Alerts Handbook</a>
+            <a href="{% url 'mission_selector' %}">FDIR Handbook</a>
+            <a href="{% url 'mission_selector' %}">Commands &amp; Telemetry</a>
+            <a href="{% url 'mission_selector' %}">References</a>
+            <a href="{% url 'mission_selector' %}">SME Requests</a>
         </div>
         <div class="hp-footer-copy">
             Built for satellite operations teams. Runs offline. No cloud required.

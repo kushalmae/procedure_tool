@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Alerts & Limits Handbook — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Alerts &amp; Limits Handbook
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; Alerts &amp; Limits Handbook
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">Alerts &amp; Limits Handbook</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'handbook_alert_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="handbook_alerts.csv">Export CSV</a>
+    <a href="{% murl 'handbook_alert_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="handbook_alerts.csv">Export CSV</a>
     {% if user.is_authenticated %}
     <button type="button" onclick="document.getElementById('hbCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
-    <a href="{% url 'handbook_alert_create' %}" class="btn btn-primary">
+    <a href="{% murl 'handbook_alert_create' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add alert
     </a>
@@ -62,7 +63,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if search_query or filter_subsystem_id or filter_severity %}
-      <a href="{% url 'handbook_alert_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'handbook_alert_list' %}?clear=1" class="btn btn-secondary">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -90,11 +91,11 @@
         {% for a in alerts %}
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 font-medium">
-            <a href="{% url 'handbook_alert_detail' a.id %}" class="text-brand hover:underline">{{ a.parameter }}</a>
+            <a href="{% murl 'handbook_alert_detail' alert_id=a.id %}" class="text-brand hover:underline">{{ a.parameter }}</a>
           </td>
           <td class="px-4 py-3">
             {% if a.mnemonic %}
-            <a href="{% url 'handbook_alert_detail' a.id %}" class="text-gray-600 hover:text-brand font-mono text-xs">{{ a.mnemonic }}</a>
+            <a href="{% murl 'handbook_alert_detail' alert_id=a.id %}" class="text-gray-600 hover:text-brand font-mono text-xs">{{ a.mnemonic }}</a>
             {% else %}—{% endif %}
           </td>
           <td class="px-4 py-3 text-gray-500 text-xs">{{ a.apids|default:"—" }}</td>
@@ -106,10 +107,10 @@
           <td class="px-4 py-3 text-gray-400 text-xs">{{ a.version }}</td>
           <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ a.updated_at|date:"Y-m-d" }}</td>
           <td class="px-4 py-3 no-print">
-            <a href="{% url 'handbook_alert_detail' a.id %}" class="btn btn-secondary">View</a>
+            <a href="{% murl 'handbook_alert_detail' alert_id=a.id %}" class="btn btn-secondary">View</a>
             {% if user.is_authenticated %}
-            <a href="{% url 'handbook_alert_edit' a.id %}" class="btn btn-secondary">Edit</a>
-            <a href="{% url 'handbook_alert_delete' a.id %}" class="btn btn-secondary abort-btn">Delete</a>
+            <a href="{% murl 'handbook_alert_edit' alert_id=a.id %}" class="btn btn-secondary">Edit</a>
+            <a href="{% murl 'handbook_alert_delete' alert_id=a.id %}" class="btn btn-secondary abort-btn">Delete</a>
             {% endif %}
           </td>
         </tr>
@@ -117,7 +118,7 @@
         <tr>
           <td colspan="11" class="px-4 py-8 text-center text-gray-500">
             No alerts.
-            {% if user.is_authenticated %}<a href="{% url 'handbook_alert_create' %}" class="text-brand hover:underline">Add one</a> or run <code class="bg-gray-100 px-1 rounded text-xs">python manage.py seed_handbook --alerts</code>.{% else %}Run <code class="bg-gray-100 px-1 rounded text-xs">python manage.py seed_handbook --alerts</code> for samples.{% endif %}
+            {% if user.is_authenticated %}<a href="{% murl 'handbook_alert_create' %}" class="text-brand hover:underline">Add one</a> or run <code class="bg-gray-100 px-1 rounded text-xs">python manage.py seed_handbook --alerts</code>.{% else %}Run <code class="bg-gray-100 px-1 rounded text-xs">python manage.py seed_handbook --alerts</code> for samples.{% endif %}
             Or clear filters.
           </td>
         </tr>
@@ -135,7 +136,7 @@
       <h2 class="text-lg font-semibold text-gray-900">Import Handbook Alerts CSV</h2>
       <button type="button" onclick="this.closest('dialog').close()" class="text-gray-400 hover:text-gray-600">×</button>
     </div>
-    <form method="post" action="{% url 'handbook_alert_csv_import' %}" enctype="multipart/form-data">
+    <form method="post" action="{% murl 'handbook_alert_csv_import' %}" enctype="multipart/form-data">
       {% csrf_token %}
       <p class="text-sm text-gray-600 mb-3">
         Upload a CSV with columns: <strong>Parameter</strong>, <strong>Subsystem</strong>, <strong>Description</strong>.

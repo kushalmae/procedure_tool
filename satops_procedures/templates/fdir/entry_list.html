@@ -1,19 +1,20 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}FDIR Handbook — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; FDIR Handbook
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; FDIR Handbook
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">FDIR Handbook</h1>
   <div class="no-print flex gap-2">
-    <a href="{% url 'fdir_entry_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="fdir_entries.csv">Export CSV</a>
+    <a href="{% murl 'fdir_entry_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="fdir_entries.csv">Export CSV</a>
     {% if user.is_authenticated %}
     <button type="button" onclick="document.getElementById('fdirCsvModal').showModal()" class="btn btn-secondary">Import CSV</button>
-    <a href="{% url 'fdir_entry_create' %}" class="btn btn-primary">
+    <a href="{% murl 'fdir_entry_create' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add FDIR entry
     </a>
@@ -73,7 +74,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if search_query or filter_subsystem_id or filter_severity or filter_fault_type %}
-      <a href="{% url 'fdir_entry_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'fdir_entry_list' %}?clear=1" class="btn btn-secondary">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -98,7 +99,7 @@
         {% for e in entries %}
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 font-medium">
-            <a href="{% url 'fdir_entry_detail' e.id %}" class="text-brand hover:underline">{{ e.name }}</a>
+            <a href="{% murl 'fdir_entry_detail' entry_id=e.id %}" class="text-brand hover:underline">{{ e.name }}</a>
             {% if e.fault_code %}<span class="text-gray-400 text-xs ml-1 font-mono">({{ e.fault_code }})</span>{% endif %}
           </td>
           <td class="px-4 py-3 text-gray-600">{{ e.subsystem.name }}</td>
@@ -108,9 +109,9 @@
           <td class="px-4 py-3 text-gray-600 max-w-xs">{{ e.onboard_automated_response|truncatewords:20|default:"—" }}</td>
           <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ e.updated_at|date:"Y-m-d" }}</td>
           <td class="px-4 py-3 no-print">
-            <a href="{% url 'fdir_entry_detail' e.id %}" class="btn btn-secondary">View</a>
+            <a href="{% murl 'fdir_entry_detail' entry_id=e.id %}" class="btn btn-secondary">View</a>
             {% if user.is_authenticated %}
-            <a href="{% url 'fdir_entry_edit' e.id %}" class="btn btn-secondary">Edit</a>
+            <a href="{% murl 'fdir_entry_edit' entry_id=e.id %}" class="btn btn-secondary">Edit</a>
             {% endif %}
           </td>
         </tr>
@@ -118,7 +119,7 @@
         <tr>
           <td colspan="8" class="px-4 py-8 text-center text-gray-500">
             No FDIR entries.
-            {% if user.is_authenticated %}<a href="{% url 'fdir_entry_create' %}" class="text-brand hover:underline">Add one</a>.{% endif %}
+            {% if user.is_authenticated %}<a href="{% murl 'fdir_entry_create' %}" class="text-brand hover:underline">Add one</a>.{% endif %}
             Or clear filters.
           </td>
         </tr>
@@ -136,7 +137,7 @@
       <h2 class="text-lg font-semibold text-gray-900">Import FDIR Entries CSV</h2>
       <button type="button" onclick="this.closest('dialog').close()" class="text-gray-400 hover:text-gray-600">×</button>
     </div>
-    <form method="post" action="{% url 'fdir_entry_csv_import' %}" enctype="multipart/form-data">
+    <form method="post" action="{% murl 'fdir_entry_csv_import' %}" enctype="multipart/form-data">
       {% csrf_token %}
       <p class="text-sm text-gray-600 mb-3">
         Upload a CSV with columns: <strong>Name</strong>, <strong>Subsystem</strong>.

@@ -4,17 +4,20 @@ from django.urls import reverse
 from django.utils import timezone
 
 from anomalies.models import Anomaly, AnomalyTimelineEntry
+from missions.models import Mission, MissionMembership
 from procedures.models import Satellite, Subsystem
 
 
 class AnomalyModelTest(TestCase):
     def setUp(self):
-        self.sat = Satellite.objects.create(name="SAT-1")
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+        self.sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
 
     def test_default_status(self):
         anomaly = Anomaly.objects.create(
             title="Test anomaly",
             satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(),
         )
         self.assertEqual(anomaly.status, Anomaly.STATUS_NEW)
@@ -23,6 +26,7 @@ class AnomalyModelTest(TestCase):
         anomaly = Anomaly.objects.create(
             title="Test anomaly",
             satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(),
         )
         self.assertEqual(anomaly.severity, Anomaly.SEVERITY_L2)
@@ -31,6 +35,7 @@ class AnomalyModelTest(TestCase):
         anomaly = Anomaly.objects.create(
             title="Voltage dip",
             satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(),
         )
         self.assertIn("Voltage dip", str(anomaly))
@@ -39,6 +44,7 @@ class AnomalyModelTest(TestCase):
     def test_is_open_new(self):
         anomaly = Anomaly.objects.create(
             title="Test", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(), status=Anomaly.STATUS_NEW,
         )
         self.assertTrue(anomaly.is_open)
@@ -46,6 +52,7 @@ class AnomalyModelTest(TestCase):
     def test_is_open_investigating(self):
         anomaly = Anomaly.objects.create(
             title="Test", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(), status=Anomaly.STATUS_INVESTIGATING,
         )
         self.assertTrue(anomaly.is_open)
@@ -53,6 +60,7 @@ class AnomalyModelTest(TestCase):
     def test_is_not_open_resolved(self):
         anomaly = Anomaly.objects.create(
             title="Test", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(), status=Anomaly.STATUS_RESOLVED,
         )
         self.assertFalse(anomaly.is_open)
@@ -60,6 +68,7 @@ class AnomalyModelTest(TestCase):
     def test_is_not_open_closed(self):
         anomaly = Anomaly.objects.create(
             title="Test", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(), status=Anomaly.STATUS_CLOSED,
         )
         self.assertFalse(anomaly.is_open)
@@ -67,6 +76,7 @@ class AnomalyModelTest(TestCase):
     def test_severity_rank(self):
         anomaly = Anomaly.objects.create(
             title="Test", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(), severity=Anomaly.SEVERITY_L5,
         )
         self.assertEqual(anomaly.severity_rank, 5)
@@ -80,10 +90,14 @@ class AnomalyModelTest(TestCase):
 
 
 class AnomalyTimelineEntryModelTest(TestCase):
+    def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+
     def test_create_entry(self):
-        sat = Satellite.objects.create(name="SAT-1")
+        sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         anomaly = Anomaly.objects.create(
-            title="Test", satellite=sat, detected_time=timezone.now(),
+            title="Test", satellite=sat, mission=self.mission,
+            detected_time=timezone.now(),
         )
         entry = AnomalyTimelineEntry.objects.create(
             anomaly=anomaly, body="Investigation started",
@@ -93,9 +107,10 @@ class AnomalyTimelineEntryModelTest(TestCase):
         self.assertEqual(entry.anomaly, anomaly)
 
     def test_str(self):
-        sat = Satellite.objects.create(name="SAT-1")
+        sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         anomaly = Anomaly.objects.create(
-            title="Test", satellite=sat, detected_time=timezone.now(),
+            title="Test", satellite=sat, mission=self.mission,
+            detected_time=timezone.now(),
         )
         entry = AnomalyTimelineEntry.objects.create(
             anomaly=anomaly, body="Note", entry_type=AnomalyTimelineEntry.ENTRY_NOTE,
@@ -104,65 +119,91 @@ class AnomalyTimelineEntryModelTest(TestCase):
 
 
 class AnomalyListViewTest(TestCase):
+    def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+
     def test_list_loads(self):
-        response = self.client.get(reverse("anomalies_list"))
+        response = self.client.get(
+            reverse("anomalies_list", kwargs={"mission_slug": "test"})
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_list_with_filters(self):
-        response = self.client.get(reverse("anomalies_list"), {
-            "severity": "L5", "status": "NEW",
-        })
+        response = self.client.get(
+            reverse("anomalies_list", kwargs={"mission_slug": "test"}),
+            {"severity": "L5", "status": "NEW"},
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_list_with_search(self):
-        sat = Satellite.objects.create(name="SAT-1")
+        sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         Anomaly.objects.create(
             title="Voltage dip", satellite=sat,
+            mission=self.mission,
             detected_time=timezone.now(), description="Bus voltage issue",
         )
-        response = self.client.get(reverse("anomalies_list"), {"q": "voltage"})
+        response = self.client.get(
+            reverse("anomalies_list", kwargs={"mission_slug": "test"}),
+            {"q": "voltage"},
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Voltage dip")
 
     def test_list_clear_filters(self):
-        response = self.client.get(reverse("anomalies_list"), {"clear": "1"})
+        response = self.client.get(
+            reverse("anomalies_list", kwargs={"mission_slug": "test"}),
+            {"clear": "1"},
+        )
         self.assertEqual(response.status_code, 302)
 
     def test_list_shows_anomalies(self):
-        sat = Satellite.objects.create(name="SAT-1")
+        sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         Anomaly.objects.create(
-            title="Test anomaly", satellite=sat, detected_time=timezone.now(),
+            title="Test anomaly", satellite=sat,
+            mission=self.mission,
+            detected_time=timezone.now(),
         )
-        response = self.client.get(reverse("anomalies_list"))
+        response = self.client.get(
+            reverse("anomalies_list", kwargs={"mission_slug": "test"})
+        )
         self.assertContains(response, "Test anomaly")
 
 
 class AnomalyCreateViewTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user(username="op1", password="testpass123")
-        self.sat = Satellite.objects.create(name="SAT-1")
-        self.subsystem = Subsystem.objects.create(name="Power")
+        MissionMembership.objects.create(user=self.user, mission=self.mission, role='OPERATOR')
+        self.sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
+        self.subsystem = Subsystem.objects.create(name="Power", mission=self.mission)
 
     def test_create_requires_login(self):
-        response = self.client.get(reverse("anomalies_create"))
+        response = self.client.get(
+            reverse("anomalies_create", kwargs={"mission_slug": "test"})
+        )
         self.assertEqual(response.status_code, 302)
 
     def test_create_get(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.get(reverse("anomalies_create"))
+        response = self.client.get(
+            reverse("anomalies_create", kwargs={"mission_slug": "test"})
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Report Anomaly")
 
     def test_create_post_success(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_create"), {
-            'title': 'New voltage issue',
-            'satellite': self.sat.id,
-            'subsystem': self.subsystem.id,
-            'severity': Anomaly.SEVERITY_L3,
-            'detected_time': '2026-03-07T10:00',
-            'description': 'Bus voltage anomaly observed.',
-        })
+        response = self.client.post(
+            reverse("anomalies_create", kwargs={"mission_slug": "test"}),
+            {
+                'title': 'New voltage issue',
+                'satellite': self.sat.id,
+                'subsystem': self.subsystem.id,
+                'severity': Anomaly.SEVERITY_L3,
+                'detected_time': '2026-03-07T10:00',
+                'description': 'Bus voltage anomaly observed.',
+            },
+        )
         self.assertEqual(response.status_code, 302)
         anomaly = Anomaly.objects.get(title='New voltage issue')
         self.assertEqual(anomaly.status, Anomaly.STATUS_NEW)
@@ -172,35 +213,48 @@ class AnomalyCreateViewTest(TestCase):
 
     def test_create_post_missing_title(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_create"), {
-            'title': '',
-            'satellite': self.sat.id,
-        })
+        response = self.client.post(
+            reverse("anomalies_create", kwargs={"mission_slug": "test"}),
+            {
+                'title': '',
+                'satellite': self.sat.id,
+            },
+        )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Anomaly.objects.exists())
 
     def test_create_post_missing_satellite(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_create"), {
-            'title': 'Test',
-            'satellite': '',
-        })
+        response = self.client.post(
+            reverse("anomalies_create", kwargs={"mission_slug": "test"}),
+            {
+                'title': 'Test',
+                'satellite': '',
+            },
+        )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Anomaly.objects.exists())
 
 
 class AnomalyDetailViewTest(TestCase):
     def setUp(self):
-        self.sat = Satellite.objects.create(name="SAT-1")
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
+        self.sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         self.anomaly = Anomaly.objects.create(
             title="Test detail anomaly",
             satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(),
             description="Details here.",
         )
 
     def test_detail_loads(self):
-        response = self.client.get(reverse("anomalies_detail", kwargs={"anomaly_id": self.anomaly.id}))
+        response = self.client.get(
+            reverse("anomalies_detail", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            })
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Test detail anomaly")
 
@@ -209,40 +263,68 @@ class AnomalyDetailViewTest(TestCase):
             anomaly=self.anomaly, body="Investigation note",
             entry_type=AnomalyTimelineEntry.ENTRY_NOTE,
         )
-        response = self.client.get(reverse("anomalies_detail", kwargs={"anomaly_id": self.anomaly.id}))
+        response = self.client.get(
+            reverse("anomalies_detail", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            })
+        )
         self.assertContains(response, "Investigation note")
 
     def test_detail_shows_lifecycle_progress(self):
-        response = self.client.get(reverse("anomalies_detail", kwargs={"anomaly_id": self.anomaly.id}))
+        response = self.client.get(
+            reverse("anomalies_detail", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            })
+        )
         self.assertContains(response, "Lifecycle Progress")
 
     def test_detail_404_missing(self):
-        response = self.client.get(reverse("anomalies_detail", kwargs={"anomaly_id": 99999}))
+        response = self.client.get(
+            reverse("anomalies_detail", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": 99999,
+            })
+        )
         self.assertEqual(response.status_code, 404)
 
 
 class AnomalyUpdateViewTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user(username="op1", password="testpass123")
-        self.sat = Satellite.objects.create(name="SAT-1")
+        MissionMembership.objects.create(user=self.user, mission=self.mission, role='OPERATOR')
+        self.sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         self.anomaly = Anomaly.objects.create(
             title="Test update", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(),
         )
 
     def test_update_requires_login(self):
-        response = self.client.post(reverse("anomalies_update", kwargs={"anomaly_id": self.anomaly.id}), {
-            'status': Anomaly.STATUS_INVESTIGATING,
-        })
+        response = self.client.post(
+            reverse("anomalies_update", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {'status': Anomaly.STATUS_INVESTIGATING},
+        )
         self.assertEqual(response.status_code, 302)
         self.assertIn('login', response.url)
 
     def test_update_status(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_update", kwargs={"anomaly_id": self.anomaly.id}), {
-            'status': Anomaly.STATUS_INVESTIGATING,
-            'severity': Anomaly.SEVERITY_L2,
-        })
+        response = self.client.post(
+            reverse("anomalies_update", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'status': Anomaly.STATUS_INVESTIGATING,
+                'severity': Anomaly.SEVERITY_L2,
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.anomaly.refresh_from_db()
         self.assertEqual(self.anomaly.status, Anomaly.STATUS_INVESTIGATING)
@@ -254,10 +336,16 @@ class AnomalyUpdateViewTest(TestCase):
 
     def test_update_severity(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_update", kwargs={"anomaly_id": self.anomaly.id}), {
-            'status': Anomaly.STATUS_NEW,
-            'severity': Anomaly.SEVERITY_L5,
-        })
+        response = self.client.post(
+            reverse("anomalies_update", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'status': Anomaly.STATUS_NEW,
+                'severity': Anomaly.SEVERITY_L5,
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.anomaly.refresh_from_db()
         self.assertEqual(self.anomaly.severity, Anomaly.SEVERITY_L5)
@@ -269,11 +357,17 @@ class AnomalyUpdateViewTest(TestCase):
 
     def test_update_add_note(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_update", kwargs={"anomaly_id": self.anomaly.id}), {
-            'status': Anomaly.STATUS_NEW,
-            'severity': Anomaly.SEVERITY_L2,
-            'note_body': 'Investigation in progress.',
-        })
+        response = self.client.post(
+            reverse("anomalies_update", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'status': Anomaly.STATUS_NEW,
+                'severity': Anomaly.SEVERITY_L2,
+                'note_body': 'Investigation in progress.',
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
             self.anomaly.timeline_entries.filter(
@@ -284,11 +378,17 @@ class AnomalyUpdateViewTest(TestCase):
 
     def test_update_add_action(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_update", kwargs={"anomaly_id": self.anomaly.id}), {
-            'status': Anomaly.STATUS_NEW,
-            'severity': Anomaly.SEVERITY_L2,
-            'action_body': 'Commanded safe mode.',
-        })
+        response = self.client.post(
+            reverse("anomalies_update", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'status': Anomaly.STATUS_NEW,
+                'severity': Anomaly.SEVERITY_L2,
+                'action_body': 'Commanded safe mode.',
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
             self.anomaly.timeline_entries.filter(
@@ -299,40 +399,65 @@ class AnomalyUpdateViewTest(TestCase):
 
     def test_no_change_when_same_status(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_update", kwargs={"anomaly_id": self.anomaly.id}), {
-            'status': Anomaly.STATUS_NEW,
-            'severity': Anomaly.SEVERITY_L2,
-        })
+        response = self.client.post(
+            reverse("anomalies_update", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'status': Anomaly.STATUS_NEW,
+                'severity': Anomaly.SEVERITY_L2,
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.anomaly.timeline_entries.exists())
 
 
 class AnomalyCloseViewTest(TestCase):
     def setUp(self):
+        self.mission = Mission.objects.create(name='Test', slug='test', color='#3B82F6')
         self.user = User.objects.create_user(username="op1", password="testpass123")
-        self.sat = Satellite.objects.create(name="SAT-1")
+        MissionMembership.objects.create(user=self.user, mission=self.mission, role='OPERATOR')
+        self.sat = Satellite.objects.create(name="SAT-1", mission=self.mission)
         self.anomaly = Anomaly.objects.create(
             title="Closeable anomaly", satellite=self.sat,
+            mission=self.mission,
             detected_time=timezone.now(), status=Anomaly.STATUS_RESOLVED,
         )
 
     def test_close_requires_login(self):
-        response = self.client.get(reverse("anomalies_close", kwargs={"anomaly_id": self.anomaly.id}))
+        response = self.client.get(
+            reverse("anomalies_close", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            })
+        )
         self.assertEqual(response.status_code, 302)
 
     def test_close_get_form(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.get(reverse("anomalies_close", kwargs={"anomaly_id": self.anomaly.id}))
+        response = self.client.get(
+            reverse("anomalies_close", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            })
+        )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Root Cause")
 
     def test_close_post(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_close", kwargs={"anomaly_id": self.anomaly.id}), {
-            'root_cause': 'Faulty sensor reading.',
-            'resolution_actions': 'Replaced sensor.',
-            'recommendations': 'Add redundant sensor.',
-        })
+        response = self.client.post(
+            reverse("anomalies_close", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'root_cause': 'Faulty sensor reading.',
+                'resolution_actions': 'Replaced sensor.',
+                'recommendations': 'Add redundant sensor.',
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.anomaly.refresh_from_db()
         self.assertEqual(self.anomaly.status, Anomaly.STATUS_CLOSED)
@@ -347,11 +472,17 @@ class AnomalyCloseViewTest(TestCase):
 
     def test_close_post_empty_resolution(self):
         self.client.login(username="op1", password="testpass123")
-        response = self.client.post(reverse("anomalies_close", kwargs={"anomaly_id": self.anomaly.id}), {
-            'root_cause': '',
-            'resolution_actions': '',
-            'recommendations': '',
-        })
+        response = self.client.post(
+            reverse("anomalies_close", kwargs={
+                "mission_slug": "test",
+                "anomaly_id": self.anomaly.id,
+            }),
+            {
+                'root_cause': '',
+                'resolution_actions': '',
+                'recommendations': '',
+            },
+        )
         self.assertEqual(response.status_code, 302)
         self.anomaly.refresh_from_db()
         self.assertEqual(self.anomaly.status, Anomaly.STATUS_CLOSED)

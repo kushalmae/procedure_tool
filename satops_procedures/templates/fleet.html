@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Fleet Overview — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
@@ -12,9 +13,9 @@
 <p class="text-sm text-gray-500 mb-5 no-print">Per-satellite status: last procedure run, open anomalies, and latest mission log entry.</p>
 
 <div class="no-print flex gap-2 mb-5">
-  <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
-  <a href="{% url 'handover' %}" class="btn btn-secondary">Handover Pack</a>
-  <a href="{% url 'metrics' %}" class="btn btn-secondary">Metrics</a>
+  <a href="{% murl 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+  <a href="{% murl 'handover' %}" class="btn btn-secondary">Handover Pack</a>
+  <a href="{% murl 'metrics' %}" class="btn btn-secondary">Metrics</a>
 </div>
 
 <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
@@ -39,7 +40,7 @@
           <td class="px-4 py-3 font-semibold text-gray-900">{{ row.satellite.name }}</td>
           <td class="px-4 py-3 text-gray-600">
             {% if row.last_run %}
-            <a href="{% url 'run_summary' row.last_run.id %}" class="text-brand hover:underline font-medium">{{ row.last_run.procedure.name }}</a>
+            <a href="{% murl 'run_summary' run_id=row.last_run.id %}" class="text-brand hover:underline font-medium">{{ row.last_run.procedure.name }}</a>
             <span class="badge badge-{{ row.last_run.status|lower }} ml-1">{{ row.last_run.status }}</span>
             <span class="block text-xs text-gray-400 mt-0.5">{{ row.last_run.start_time|date:"Y-m-d H:i" }}{% if row.last_run.operator_name %} · {{ row.last_run.operator_name }}{% endif %}</span>
             {% else %}
@@ -48,7 +49,7 @@
           </td>
           <td class="px-4 py-3">
             {% if row.open_anomalies_count %}
-            <a href="{% url 'anomalies_list' %}?satellite={{ row.satellite.id }}" class="text-brand font-semibold hover:underline">{{ row.open_anomalies_count }}</a>
+            <a href="{% murl 'anomalies_list' %}?satellite={{ row.satellite.id }}" class="text-brand font-semibold hover:underline">{{ row.open_anomalies_count }}</a>
             {% else %}
             <span class="text-gray-400">0</span>
             {% endif %}
@@ -62,9 +63,9 @@
             {% endif %}
           </td>
           <td class="px-4 py-3 no-print">
-            <a href="{% url 'start' %}" class="btn btn-secondary">Start</a>
+            <a href="{% murl 'start' %}" class="btn btn-secondary">Start</a>
             {% if row.open_anomalies_count %}
-            <a href="{% url 'anomalies_list' %}?satellite={{ row.satellite.id }}" class="btn btn-secondary">Anomalies</a>
+            <a href="{% murl 'anomalies_list' %}?satellite={{ row.satellite.id }}" class="btn btn-secondary">Anomalies</a>
             {% endif %}
           </td>
         </tr>

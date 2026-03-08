@@ -29,6 +29,10 @@ class Anomaly(models.Model):
         (SEVERITY_L5, 'L5 — Critical'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='anomalies', null=True, blank=True,
+    )
     title = models.CharField(max_length=200)
     satellite = models.ForeignKey(
         'procedures.Satellite',

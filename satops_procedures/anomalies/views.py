@@ -2,7 +2,6 @@ import csv
 import io
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from missions.decorators import mission_role_required
 from procedures.models import Satellite, Subsystem
 
 from .models import Anomaly, AnomalyTimelineEntry
@@ -22,11 +22,17 @@ def _int_or_none(val):
         return None
 
 
-def anomaly_list(request):
+def _mission_filter(qs, request):
+    if request.mission:
+        return qs.filter(mission=request.mission)
+    return qs
+
+
+def anomaly_list(request, mission_slug):
     if request.GET.get('clear'):
         if 'anomaly_filters' in request.session:
             del request.session['anomaly_filters']
-        return redirect('anomalies_list')
+        return redirect('anomalies_list', mission_slug=mission_slug)
 
     SORT_OPTIONS = [
         '-detected_time',
@@ -64,6 +70,7 @@ def anomaly_list(request):
         .select_related('satellite', 'subsystem', 'created_by')
         .order_by(sort)
     )
+    qs = _mission_filter(qs, request)
 
     if satellite_id:
         try:
@@ -84,10 +91,13 @@ def anomaly_list(request):
 
     anomalies = qs[:200]
 
+    satellites = _mission_filter(Satellite.objects.all(), request)
+    subsystems = _mission_filter(Subsystem.objects.all(), request)
+
     context = {
         'anomalies': anomalies,
-        'satellites': Satellite.objects.all(),
-        'subsystems': Subsystem.objects.all(),
+        'satellites': satellites,
+        'subsystems': subsystems,
         'filter_satellite_id': _int_or_none(satellite_id),
         'filter_subsystem_id': _int_or_none(subsystem_id),
         'filter_severity': severity or None,
@@ -100,8 +110,8 @@ def anomaly_list(request):
     return render(request, 'anomalies/anomaly_list.html', context)
 
 
-@login_required
-def anomaly_create(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def anomaly_create(request, mission_slug):
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         satellite_id = request.POST.get('satellite')
@@ -119,9 +129,13 @@ def anomaly_create(request):
             })
             return render(request, 'anomalies/anomaly_form.html', ctx)
 
-        satellite = get_object_or_404(Satellite, pk=satellite_id)
+        satellite_qs = _mission_filter(Satellite.objects.all(), request)
+        satellite = get_object_or_404(satellite_qs, pk=satellite_id)
         subsystem_id = request.POST.get('subsystem') or None
-        subsystem = get_object_or_404(Subsystem, pk=subsystem_id) if subsystem_id else None
+        subsystem = None
+        if subsystem_id:
+            subsystem_qs = _mission_filter(Subsystem.objects.all(), request)
+            subsystem = get_object_or_404(subsystem_qs, pk=subsystem_id)
         severity = request.POST.get('severity') or Anomaly.SEVERITY_L2
         ts_str = (request.POST.get('detected_time') or '').strip()
         detected_time = parse_datetime(ts_str) if ts_str else timezone.now()
@@ -138,6 +152,7 @@ def anomaly_create(request):
             description=description,
             detected_time=detected_time,
             created_by=request.user,
+            mission=request.mission,
         )
 
         sub_display = subsystem.name if subsystem else '—'
@@ -149,7 +164,7 @@ def anomaly_create(request):
         )
 
         messages.success(request, f'Anomaly ANOM-{anomaly.pk} created.')
-        return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+        return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
     return render(request, 'anomalies/anomaly_form.html', _create_context(request))
 
@@ -157,8 +172,8 @@ def anomaly_create(request):
 def _create_context(request):
     now = timezone.now()
     return {
-        'satellites': Satellite.objects.all(),
-        'subsystems': Subsystem.objects.all(),
+        'satellites': _mission_filter(Satellite.objects.all(), request),
+        'subsystems': _mission_filter(Subsystem.objects.all(), request),
         'severity_choices': Anomaly.SEVERITY_CHOICES,
         'form_title': '',
         'form_satellite_id': None,
@@ -169,11 +184,12 @@ def _create_context(request):
     }
 
 
-def anomaly_detail(request, anomaly_id):
-    anomaly = get_object_or_404(
+def anomaly_detail(request, mission_slug, anomaly_id):
+    qs = _mission_filter(
         Anomaly.objects.select_related('satellite', 'subsystem', 'created_by'),
-        pk=anomaly_id,
+        request,
     )
+    anomaly = get_object_or_404(qs, pk=anomaly_id)
     timeline = anomaly.timeline_entries.select_related('created_by').order_by('created_at')
 
     context = {
@@ -185,10 +201,11 @@ def anomaly_detail(request, anomaly_id):
     return render(request, 'anomalies/anomaly_detail.html', context)
 
 
-@login_required
-def anomaly_add_note(request, anomaly_id):
+@mission_role_required('OPERATOR', 'ADMIN')
+def anomaly_add_note(request, mission_slug, anomaly_id):
     """Add a standalone note to any anomaly (including closed)."""
-    anomaly = get_object_or_404(Anomaly, pk=anomaly_id)
+    qs = _mission_filter(Anomaly.objects.all(), request)
+    anomaly = get_object_or_404(qs, pk=anomaly_id)
 
     if request.method == 'POST':
         note_body = (request.POST.get('note_body') or '').strip()
@@ -200,14 +217,15 @@ def anomaly_add_note(request, anomaly_id):
                 created_by=request.user,
             )
             messages.success(request, 'Note added.')
-        return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+        return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
-    return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+    return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
 
-@login_required
-def anomaly_update(request, anomaly_id):
-    anomaly = get_object_or_404(Anomaly, pk=anomaly_id)
+@mission_role_required('OPERATOR', 'ADMIN')
+def anomaly_update(request, mission_slug, anomaly_id):
+    qs = _mission_filter(Anomaly.objects.all(), request)
+    anomaly = get_object_or_404(qs, pk=anomaly_id)
 
     if request.method == 'POST':
         new_status = request.POST.get('status')
@@ -263,14 +281,15 @@ def anomaly_update(request, anomaly_id):
             )
             messages.success(request, 'Action documented.')
 
-        return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+        return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
-    return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+    return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
 
-@login_required
-def anomaly_close(request, anomaly_id):
-    anomaly = get_object_or_404(Anomaly, pk=anomaly_id)
+@mission_role_required('OPERATOR', 'ADMIN')
+def anomaly_close(request, mission_slug, anomaly_id):
+    qs = _mission_filter(Anomaly.objects.all(), request)
+    anomaly = get_object_or_404(qs, pk=anomaly_id)
 
     if request.method == 'POST':
         root_cause = (request.POST.get('root_cause') or '').strip()
@@ -305,7 +324,7 @@ def anomaly_close(request, anomaly_id):
         )
 
         messages.success(request, f'Anomaly ANOM-{anomaly.pk} closed.')
-        return redirect(reverse('anomalies_detail', kwargs={'anomaly_id': anomaly.pk}))
+        return redirect(reverse('anomalies_detail', kwargs={'mission_slug': mission_slug, 'anomaly_id': anomaly.pk}))
 
     context = {
         'anomaly': anomaly,
@@ -318,13 +337,14 @@ def anomaly_close(request, anomaly_id):
 # ---------------------------------------------------------------------------
 
 
-def anomaly_csv_export(request):
+def anomaly_csv_export(request, mission_slug):
     """Export anomalies as CSV, respecting current list filters."""
     qs = (
         Anomaly.objects
         .select_related('satellite', 'subsystem', 'created_by')
         .order_by('-detected_time')
     )
+    qs = _mission_filter(qs, request)
     satellite_id = request.GET.get('satellite')
     subsystem_id = request.GET.get('subsystem')
     severity = request.GET.get('severity')
@@ -375,26 +395,26 @@ def anomaly_csv_export(request):
     return response
 
 
-@login_required
-def anomaly_csv_import(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def anomaly_csv_import(request, mission_slug):
     """Import anomalies from CSV."""
     if request.method != 'POST':
-        return redirect('anomalies_list')
+        return redirect('anomalies_list', mission_slug=mission_slug)
 
     csv_file = request.FILES.get('csv_file')
     if not csv_file:
         messages.error(request, 'Please select a CSV file.')
-        return redirect('anomalies_list')
+        return redirect('anomalies_list', mission_slug=mission_slug)
     if not csv_file.name.endswith('.csv'):
         messages.error(request, 'File must be a CSV.')
-        return redirect('anomalies_list')
+        return redirect('anomalies_list', mission_slug=mission_slug)
 
     try:
         decoded = csv_file.read().decode('utf-8-sig')
         reader = csv.DictReader(io.StringIO(decoded))
     except Exception:
         messages.error(request, 'Could not read the CSV file. Check encoding and format.')
-        return redirect('anomalies_list')
+        return redirect('anomalies_list', mission_slug=mission_slug)
 
     fieldnames = [h.strip() for h in (reader.fieldnames or []) if h]
     fieldnames_lower = [h.lower() for h in fieldnames]
@@ -407,7 +427,7 @@ def anomaly_csv_import(request):
             'CSV must contain: Title, Satellite, Detected Time (or similar). '
             f'Found: {", ".join(fieldnames)}',
         )
-        return redirect('anomalies_list')
+        return redirect('anomalies_list', mission_slug=mission_slug)
 
     def get(row, *keys):
         for k in keys:
@@ -418,8 +438,10 @@ def anomaly_csv_import(request):
 
     created = 0
     skipped = 0
-    satellites_by_name = {s.name: s for s in Satellite.objects.all()}
-    subsystems_by_name = {s.name: s for s in Subsystem.objects.all()}
+    satellites_qs = _mission_filter(Satellite.objects.all(), request)
+    subsystems_qs = _mission_filter(Subsystem.objects.all(), request)
+    satellites_by_name = {s.name: s for s in satellites_qs}
+    subsystems_by_name = {s.name: s for s in subsystems_qs}
 
     for row in reader:
         title = get(row, 'Title', 'title')
@@ -430,9 +452,9 @@ def anomaly_csv_import(request):
             continue
         satellite = satellites_by_name.get(sat_name)
         if not satellite:
-            satellite = Satellite.objects.filter(name=sat_name).first()
+            satellite = satellites_qs.filter(name=sat_name).first()
         if not satellite:
-            satellite = Satellite.objects.create(name=sat_name)
+            satellite = Satellite.objects.create(name=sat_name, mission=request.mission)
             satellites_by_name[satellite.name] = satellite
 
         detected_time = parse_datetime(detected_str) if detected_str else timezone.now()
@@ -442,7 +464,7 @@ def anomaly_csv_import(request):
         sub_name = get(row, 'Subsystem', 'subsystem')
         subsystem = None
         if sub_name:
-            subsystem = subsystems_by_name.get(sub_name) or Subsystem.objects.filter(name=sub_name).first()
+            subsystem = subsystems_by_name.get(sub_name) or subsystems_qs.filter(name=sub_name).first()
             if subsystem:
                 subsystems_by_name[subsystem.name] = subsystem
 
@@ -465,6 +487,7 @@ def anomaly_csv_import(request):
             resolution_actions=get(row, 'Resolution Actions', 'resolution_actions'),
             recommendations=get(row, 'Recommendations', 'recommendations'),
             created_by=request.user,
+            mission=request.mission,
         )
         created += 1
 
@@ -472,4 +495,4 @@ def anomaly_csv_import(request):
     if skipped:
         msg += f' Skipped {skipped} row(s) with missing required fields.'
     messages.success(request, msg)
-    return redirect('anomalies_list')
+    return redirect('anomalies_list', mission_slug=mission_slug)

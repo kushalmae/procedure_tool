@@ -1,17 +1,18 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Central Reference Page — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo; Central Reference Page
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo; Central Reference Page
 </nav>
 
 <div class="flex items-center justify-between mb-5">
   <h1 class="text-2xl font-semibold text-gray-900">Central Reference Page</h1>
   <div class="no-print flex gap-2 flex-wrap justify-end">
     {% if user.is_authenticated %}
-    <a href="{% url 'reference_create' %}" class="btn btn-primary">
+    <a href="{% murl 'reference_create' %}" class="btn btn-primary">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add reference
     </a>
@@ -22,7 +23,7 @@
     {% else %}
     <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-secondary">Log in to edit</a>
     {% endif %}
-    <a href="{% url 'reference_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="references.csv">
+    <a href="{% murl 'reference_csv_export' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-secondary" download="references.csv">
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
       Export CSV
     </a>
@@ -67,7 +68,7 @@
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
       {% if search_query or filter_subsystem_id or filter_document_type %}
-      <a href="{% url 'reference_list' %}?clear=1" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'reference_list' %}?clear=1" class="btn btn-secondary">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -94,7 +95,7 @@
         {% for e in entries %}
         <tr class="hover:bg-gray-50 transition-colors">
           <td class="px-4 py-3 font-medium">
-            <a href="{% url 'reference_detail' e.id %}" class="text-brand hover:underline">{{ e.title }}</a>
+            <a href="{% murl 'reference_detail' entry_id=e.id %}" class="text-brand hover:underline">{{ e.title }}</a>
           </td>
           <td class="px-4 py-3">
             <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
@@ -118,10 +119,10 @@
           <td class="px-4 py-3 text-gray-500 text-xs max-w-xs">{{ e.user_notes|truncatewords:12|default:"—" }}</td>
           <td class="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{{ e.updated_at|date:"Y-m-d" }}</td>
           <td class="px-4 py-3 no-print">
-            <a href="{% url 'reference_detail' e.id %}" class="btn btn-secondary">View</a>
+            <a href="{% murl 'reference_detail' entry_id=e.id %}" class="btn btn-secondary">View</a>
             {% if user.is_authenticated %}
-            <a href="{% url 'reference_edit' e.id %}" class="btn btn-secondary">Edit</a>
-            <a href="{% url 'reference_delete' e.id %}" class="btn btn-secondary abort-btn">Delete</a>
+            <a href="{% murl 'reference_edit' entry_id=e.id %}" class="btn btn-secondary">Edit</a>
+            <a href="{% murl 'reference_delete' entry_id=e.id %}" class="btn btn-secondary abort-btn">Delete</a>
             {% endif %}
           </td>
         </tr>
@@ -129,7 +130,7 @@
         <tr>
           <td colspan="9" class="px-4 py-8 text-center text-gray-500">
             No references found.
-            {% if user.is_authenticated %}<a href="{% url 'reference_create' %}" class="text-brand hover:underline">Add one</a> or import a CSV.{% endif %}
+            {% if user.is_authenticated %}<a href="{% murl 'reference_create' %}" class="text-brand hover:underline">Add one</a> or import a CSV.{% endif %}
             {% if search_query or filter_subsystem_id or filter_document_type %}Or clear filters.{% endif %}
           </td>
         </tr>
@@ -149,7 +150,7 @@
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    <form method="post" action="{% url 'reference_csv_import' %}" enctype="multipart/form-data">
+    <form method="post" action="{% murl 'reference_csv_import' %}" enctype="multipart/form-data">
       {% csrf_token %}
       <p class="text-sm text-gray-600 mb-3">
         Upload a CSV file with columns: <strong>Title</strong>, <strong>Document Type</strong>, <strong>Subsystem</strong>, <strong>Section</strong>, <strong>Version</strong>, <strong>Location</strong>, <strong>User Notes</strong>.

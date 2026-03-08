@@ -2,7 +2,11 @@ from django.db import models
 
 
 class Subsystem(models.Model):
-    name = models.CharField(max_length=80, unique=True)
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='reference_subsystems', null=True, blank=True,
+    )
+    name = models.CharField(max_length=80)
 
     class Meta:
         ordering = ['name']
@@ -23,6 +27,10 @@ class ReferenceEntry(models.Model):
         (TYPE_REFERENCE, 'Reference'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='reference_entries', null=True, blank=True,
+    )
     title = models.CharField(max_length=200)
     document_type = models.CharField(max_length=40, choices=TYPE_CHOICES, default=TYPE_REFERENCE)
     subsystem = models.ForeignKey(

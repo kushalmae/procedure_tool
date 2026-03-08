@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Mission Scribe — Add entry{% endblock %}
 {% block main_class %}main-full-width{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'scribe_timeline' %}">Mission Scribe</a> &rsaquo; Add entry
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'scribe_timeline' %}">Mission Scribe</a> &rsaquo; Add entry
 </nav>
 
 <div class="mb-6">
@@ -18,14 +19,14 @@
   <p class="text-xs text-gray-500 mb-3">Pre-fill the form with one click. Edit before saving.</p>
   <div class="flex flex-wrap gap-2">
     {% for t in entry_templates %}
-    <a href="{% url 'scribe_add_entry' %}?template={{ t.id }}" class="btn btn-secondary">{{ t.name }}</a>
+    <a href="{% murl 'scribe_add_entry' %}?template={{ t.id }}" class="btn btn-secondary">{{ t.name }}</a>
     {% endfor %}
   </div>
 </div>
 {% endif %}
 
 {% if selected_template %}
-<p class="no-print text-sm text-brand mb-3">Using template: <strong>{{ selected_template.name }}</strong>. <a href="{% url 'scribe_add_entry' %}" class="underline">Clear</a></p>
+<p class="no-print text-sm text-brand mb-3">Using template: <strong>{{ selected_template.name }}</strong>. <a href="{% murl 'scribe_add_entry' %}" class="underline">Clear</a></p>
 {% endif %}
 
 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 max-w-2xl">
@@ -89,7 +90,7 @@
     <div class="flex gap-2">
       <button type="submit" class="btn btn-primary">Save entry</button>
       <button type="submit" name="add_another" value="1" class="btn btn-secondary">Save + add another</button>
-      <a href="{% url 'scribe_timeline' %}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'scribe_timeline' %}" class="btn btn-secondary">Cancel</a>
     </div>
   </form>
 </div>

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Operations Queue — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'sme_request_list' %}">SME Requests</a> &rsaquo; Operations Queue
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'sme_request_list' %}">SME Requests</a> &rsaquo; Operations Queue
 </nav>
 
 <div class="flex items-center justify-between mb-5">
@@ -14,7 +15,7 @@
     <p class="text-sm text-gray-500 mt-1">Approved, queued, and in-progress requests awaiting operator action.</p>
   </div>
   <div class="no-print">
-    <a href="{% url 'sme_request_list' %}" class="btn btn-secondary">All Requests</a>
+    <a href="{% murl 'sme_request_list' %}" class="btn btn-secondary">All Requests</a>
   </div>
 </div>
 
@@ -25,7 +26,7 @@
     <div class="flex items-start justify-between gap-4">
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
-          <a href="{% url 'sme_request_detail' request_id=r.id %}" class="text-lg font-semibold text-brand hover:underline">#{{ r.id }} — {{ r.title }}</a>
+          <a href="{% murl 'sme_request_detail' request_id=r.id %}" class="text-lg font-semibold text-brand hover:underline">#{{ r.id }} — {{ r.title }}</a>
         </div>
         <div class="flex items-center gap-2 flex-wrap mb-2">
           <span class="badge badge-sme-{{ r.status|lower }}">{{ r.get_status_display }}</span>
@@ -41,9 +42,9 @@
         </div>
       </div>
       <div class="no-print flex-shrink-0 flex flex-col gap-1">
-        <a href="{% url 'sme_request_detail' request_id=r.id %}" class="btn btn-secondary text-xs">View</a>
+        <a href="{% murl 'sme_request_detail' request_id=r.id %}" class="btn btn-secondary text-xs">View</a>
         {% if user.is_authenticated and not r.assigned_to %}
-        <form method="post" action="{% url 'sme_request_detail' request_id=r.id %}">{% csrf_token %}
+        <form method="post" action="{% murl 'sme_request_detail' request_id=r.id %}">{% csrf_token %}
           <input type="hidden" name="action" value="claim">
           <button type="submit" class="btn btn-primary text-xs w-full">Claim</button>
         </form>
@@ -56,7 +57,7 @@
 {% else %}
 <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
   <p class="text-gray-500">No active requests in the queue.</p>
-  <a href="{% url 'sme_request_list' %}" class="text-brand hover:underline text-sm mt-2 inline-block">View all requests</a>
+  <a href="{% murl 'sme_request_list' %}" class="text-brand hover:underline text-sm mt-2 inline-block">View all requests</a>
 </div>
 {% endif %}
 

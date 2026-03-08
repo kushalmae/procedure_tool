@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Mission Timeline — Satops{% endblock %}
 {% block main_class %}max-w-none{% endblock %}
 {% block content %}
@@ -39,8 +40,8 @@
     </div>
     <div class="flex items-end gap-2">
       <button type="submit" class="btn btn-primary">Filter</button>
-      <a href="{% url 'timeline' %}" class="btn btn-secondary">Clear</a>
-      <a href="{% url 'timeline' %}?satellite={{ filter_satellite_id|default:'' }}&type={{ filter_type }}&from={{ filter_from }}&to={{ filter_to }}&export=csv" class="btn btn-secondary" download="mission_timeline.csv">Export CSV</a>
+      <a href="{% murl 'timeline' %}" class="btn btn-secondary">Clear</a>
+      <a href="{% murl 'timeline' %}?satellite={{ filter_satellite_id|default:'' }}&type={{ filter_type }}&from={{ filter_from }}&to={{ filter_to }}&export=csv" class="btn btn-secondary" download="mission_timeline.csv">Export CSV</a>
     </div>
   </form>
 </div>
@@ -89,17 +90,17 @@
           </td>
           <td class="px-4 py-3 no-print">
             {% if ev.type == 'run' or ev.type == 'run_end' %}
-            <a href="{% url 'run_summary' ev.run_id %}" class="text-brand hover:underline">View run</a>
+            <a href="{% murl 'run_summary' run_id=ev.run_id %}" class="text-brand hover:underline">View run</a>
             {% elif ev.type == 'scribe' %}
-            <a href="{% url 'scribe_timeline' %}" class="text-brand hover:underline">Timeline</a>
+            <a href="{% murl 'scribe_timeline' %}" class="text-brand hover:underline">Timeline</a>
             {% elif ev.type == 'anomaly' %}
-            <a href="{% url 'anomalies_detail' anomaly_id=ev.anomaly_id %}" class="text-brand hover:underline">View</a>
+            <a href="{% murl 'anomalies_detail' anomaly_id=ev.anomaly_id %}" class="text-brand hover:underline">View</a>
             {% endif %}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="px-4 py-8 text-center text-gray-500">No events match the filters. Adjust dates or <a href="{% url 'timeline' %}" class="text-brand hover:underline">clear filters</a>.</td>
+          <td colspan="5" class="px-4 py-8 text-center text-gray-500">No events match the filters. Adjust dates or <a href="{% murl 'timeline' %}" class="text-brand hover:underline">clear filters</a>.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -108,9 +109,9 @@
 </div>
 
 <div class="no-print mt-4 flex gap-2">
-  <a href="{% url 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
-  <a href="{% url 'fleet' %}" class="btn btn-secondary">Fleet</a>
-  <a href="{% url 'handover' %}" class="btn btn-secondary">Handover</a>
+  <a href="{% murl 'dashboard' %}" class="btn btn-secondary">Dashboard</a>
+  <a href="{% murl 'fleet' %}" class="btn btn-secondary">Fleet</a>
+  <a href="{% murl 'handover' %}" class="btn btn-secondary">Handover</a>
 </div>
 
 {% endblock %}

@@ -2,12 +2,19 @@ import csv
 import io
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from missions.decorators import mission_role_required
+
 from .models import ReferenceEntry, Subsystem
+
+
+def _mission_filter(qs, request):
+    if request.mission:
+        return qs.filter(mission=request.mission)
+    return qs
 
 
 def _int_or_none(val):
@@ -17,11 +24,11 @@ def _int_or_none(val):
         return None
 
 
-def reference_list(request):
+def reference_list(request, mission_slug):
     if request.GET.get('clear'):
         if 'reference_filters' in request.session:
             del request.session['reference_filters']
-        return redirect('reference_list')
+        return redirect('reference_list', mission_slug=mission_slug)
 
     SORT_OPTIONS = [
         'subsystem__name',
@@ -48,6 +55,7 @@ def reference_list(request):
         }
 
     entries = ReferenceEntry.objects.select_related('subsystem').order_by(sort)
+    entries = _mission_filter(entries, request)
 
     if subsystem_id:
         sid = _int_or_none(subsystem_id)
@@ -65,9 +73,11 @@ def reference_list(request):
 
     entries = entries[:200]
 
+    subsystems = _mission_filter(Subsystem.objects.all(), request)
+
     context = {
         'entries': entries,
-        'subsystems': Subsystem.objects.all(),
+        'subsystems': subsystems,
         'filter_subsystem_id': _int_or_none(subsystem_id),
         'filter_document_type': document_type or None,
         'search_query': q,
@@ -77,16 +87,17 @@ def reference_list(request):
     return render(request, 'references/reference_list.html', context)
 
 
-def reference_detail(request, entry_id):
-    entry = get_object_or_404(
+def reference_detail(request, mission_slug, entry_id):
+    qs = _mission_filter(
         ReferenceEntry.objects.select_related('subsystem'),
-        pk=entry_id,
+        request,
     )
+    entry = get_object_or_404(qs, pk=entry_id)
     return render(request, 'references/reference_detail.html', {'entry': entry})
 
 
-@login_required
-def reference_create(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def reference_create(request, mission_slug):
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         document_type = request.POST.get('document_type') or ReferenceEntry.TYPE_REFERENCE
@@ -98,8 +109,9 @@ def reference_create(request):
 
         if not title or not subsystem_id or not location:
             messages.error(request, 'Title, subsystem, and location are required.')
+            subsystems = _mission_filter(Subsystem.objects.all(), request)
             return render(request, 'references/reference_form.html', {
-                'subsystems': Subsystem.objects.all(),
+                'subsystems': subsystems,
                 'type_choices': ReferenceEntry.TYPE_CHOICES,
                 'form': {
                     'title': title,
@@ -112,7 +124,8 @@ def reference_create(request):
                 },
             })
 
-        subsystem = get_object_or_404(Subsystem, pk=subsystem_id)
+        subsystems = _mission_filter(Subsystem.objects.all(), request)
+        subsystem = get_object_or_404(subsystems, pk=subsystem_id)
 
         entry = ReferenceEntry.objects.create(
             title=title,
@@ -122,12 +135,14 @@ def reference_create(request):
             version=version,
             location=location,
             user_notes=user_notes,
+            mission=request.mission,
         )
         messages.success(request, f'Reference "{entry.title}" created.')
-        return redirect('reference_detail', entry_id=entry.pk)
+        return redirect('reference_detail', mission_slug=mission_slug, entry_id=entry.pk)
 
+    subsystems = _mission_filter(Subsystem.objects.all(), request)
     context = {
-        'subsystems': Subsystem.objects.all(),
+        'subsystems': subsystems,
         'type_choices': ReferenceEntry.TYPE_CHOICES,
         'form': {
             'title': '',
@@ -142,9 +157,10 @@ def reference_create(request):
     return render(request, 'references/reference_form.html', context)
 
 
-@login_required
-def reference_edit(request, entry_id):
-    entry = get_object_or_404(ReferenceEntry, pk=entry_id)
+@mission_role_required('OPERATOR', 'ADMIN')
+def reference_edit(request, mission_slug, entry_id):
+    qs = _mission_filter(ReferenceEntry.objects.all(), request)
+    entry = get_object_or_404(qs, pk=entry_id)
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         document_type = request.POST.get('document_type') or ReferenceEntry.TYPE_REFERENCE
@@ -156,9 +172,10 @@ def reference_edit(request, entry_id):
 
         if not title or not subsystem_id or not location:
             messages.error(request, 'Title, subsystem, and location are required.')
+            subsystems = _mission_filter(Subsystem.objects.all(), request)
             return render(request, 'references/reference_form.html', {
                 'entry': entry,
-                'subsystems': Subsystem.objects.all(),
+                'subsystems': subsystems,
                 'type_choices': ReferenceEntry.TYPE_CHOICES,
                 'form': {
                     'title': title,
@@ -171,7 +188,8 @@ def reference_edit(request, entry_id):
                 },
             })
 
-        subsystem = get_object_or_404(Subsystem, pk=subsystem_id)
+        subsystems = _mission_filter(Subsystem.objects.all(), request)
+        subsystem = get_object_or_404(subsystems, pk=subsystem_id)
 
         entry.title = title
         entry.document_type = document_type
@@ -182,11 +200,12 @@ def reference_edit(request, entry_id):
         entry.user_notes = user_notes
         entry.save()
         messages.success(request, f'Reference "{entry.title}" updated.')
-        return redirect('reference_detail', entry_id=entry.pk)
+        return redirect('reference_detail', mission_slug=mission_slug, entry_id=entry.pk)
 
+    subsystems = _mission_filter(Subsystem.objects.all(), request)
     context = {
         'entry': entry,
-        'subsystems': Subsystem.objects.all(),
+        'subsystems': subsystems,
         'type_choices': ReferenceEntry.TYPE_CHOICES,
         'form': {
             'title': entry.title,
@@ -201,35 +220,36 @@ def reference_edit(request, entry_id):
     return render(request, 'references/reference_form.html', context)
 
 
-@login_required
-def reference_delete(request, entry_id):
-    entry = get_object_or_404(ReferenceEntry, pk=entry_id)
+@mission_role_required('OPERATOR', 'ADMIN')
+def reference_delete(request, mission_slug, entry_id):
+    qs = _mission_filter(ReferenceEntry.objects.all(), request)
+    entry = get_object_or_404(qs, pk=entry_id)
     if request.method == 'POST':
         name = entry.title
         entry.delete()
         messages.success(request, f'Reference "{name}" has been deleted.')
-        return redirect('reference_list')
+        return redirect('reference_list', mission_slug=mission_slug)
     return render(request, 'references/reference_confirm_delete.html', {'entry': entry})
 
 
-@login_required
-def reference_csv_import(request):
+@mission_role_required('OPERATOR', 'ADMIN')
+def reference_csv_import(request, mission_slug):
     if request.method == 'POST':
         csv_file = request.FILES.get('csv_file')
         if not csv_file:
             messages.error(request, 'Please select a CSV file.')
-            return redirect('reference_list')
+            return redirect('reference_list', mission_slug=mission_slug)
 
         if not csv_file.name.endswith('.csv'):
             messages.error(request, 'File must be a CSV.')
-            return redirect('reference_list')
+            return redirect('reference_list', mission_slug=mission_slug)
 
         try:
             decoded = csv_file.read().decode('utf-8-sig')
             reader = csv.DictReader(io.StringIO(decoded))
         except Exception:
             messages.error(request, 'Could not read the CSV file. Check encoding and format.')
-            return redirect('reference_list')
+            return redirect('reference_list', mission_slug=mission_slug)
 
         EXPECTED = {'Title', 'Document Type', 'Subsystem', 'Location'}
         if not EXPECTED.issubset(set(reader.fieldnames or [])):
@@ -238,8 +258,9 @@ def reference_csv_import(request):
                 f'CSV must contain columns: {", ".join(sorted(EXPECTED))}. '
                 f'Found: {", ".join(reader.fieldnames or [])}',
             )
-            return redirect('reference_list')
+            return redirect('reference_list', mission_slug=mission_slug)
 
+        mission = request.mission
         created = 0
         skipped = 0
         for row in reader:
@@ -259,7 +280,18 @@ def reference_csv_import(request):
             if doc_type not in valid_types:
                 doc_type = ReferenceEntry.TYPE_REFERENCE
 
-            subsystem, _ = Subsystem.objects.get_or_create(name=subsystem_name)
+            if mission:
+                subsystem, _ = Subsystem.objects.get_or_create(
+                    name=subsystem_name,
+                    mission=mission,
+                    defaults={'name': subsystem_name, 'mission': mission},
+                )
+            else:
+                subsystem, _ = Subsystem.objects.get_or_create(
+                    name=subsystem_name,
+                    mission__isnull=True,
+                    defaults={'name': subsystem_name},
+                )
 
             ReferenceEntry.objects.create(
                 title=title,
@@ -269,6 +301,7 @@ def reference_csv_import(request):
                 version=version,
                 location=location,
                 user_notes=user_notes,
+                mission=mission,
             )
             created += 1
 
@@ -276,13 +309,14 @@ def reference_csv_import(request):
         if skipped:
             msg += f' Skipped {skipped} row(s) with missing required fields.'
         messages.success(request, msg)
-        return redirect('reference_list')
+        return redirect('reference_list', mission_slug=mission_slug)
 
-    return redirect('reference_list')
+    return redirect('reference_list', mission_slug=mission_slug)
 
 
-def reference_csv_export(request):
+def reference_csv_export(request, mission_slug):
     entries = ReferenceEntry.objects.select_related('subsystem').order_by('subsystem__name', 'title')
+    entries = _mission_filter(entries, request)
 
     subsystem_id = request.GET.get('subsystem')
     document_type = request.GET.get('document_type')

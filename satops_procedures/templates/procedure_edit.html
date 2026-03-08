@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}Edit: {{ procedure.name }} — Satops{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'procedure_list' %}">Procedures</a> &rsaquo; Edit
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'procedure_list' %}">Procedures</a> &rsaquo; Edit
 </nav>
 
 <div class="flex items-center justify-between mb-6">
@@ -50,9 +51,9 @@
 
     <div class="flex flex-wrap gap-2">
       <button type="submit" class="btn btn-primary">Save changes</button>
-      <a href="{% url 'procedure_review' %}?procedure={{ procedure.id }}" class="btn btn-secondary">Cancel</a>
-      <a href="{% url 'procedure_clone' procedure.id %}" class="btn btn-secondary">Clone procedure</a>
-      <a href="{% url 'procedure_delete' procedure.id %}" class="btn btn-secondary abort-btn">Delete procedure</a>
+      <a href="{% murl 'procedure_review' %}?procedure={{ procedure.id }}" class="btn btn-secondary">Cancel</a>
+      <a href="{% murl 'procedure_clone' procedure_id=procedure.id %}" class="btn btn-secondary">Clone procedure</a>
+      <a href="{% murl 'procedure_delete' procedure_id=procedure.id %}" class="btn btn-secondary abort-btn">Delete procedure</a>
     </div>
   </form>
 </div>

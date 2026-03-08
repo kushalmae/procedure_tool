@@ -3,7 +3,11 @@ from django.db import models
 
 
 class Subsystem(models.Model):
-    name = models.CharField(max_length=80, unique=True)
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='subsystems', null=True, blank=True,
+    )
+    name = models.CharField(max_length=80)
 
     class Meta:
         ordering = ['name']
@@ -13,6 +17,10 @@ class Subsystem(models.Model):
 
 
 class Satellite(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='satellites', null=True, blank=True,
+    )
     name = models.CharField(max_length=50)
 
     class Meta:
@@ -23,8 +31,12 @@ class Satellite(models.Model):
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True, blank=True)
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='tags', null=True, blank=True,
+    )
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=50, blank=True)
 
     class Meta:
         ordering = ['name']
@@ -40,6 +52,10 @@ class Tag(models.Model):
 
 
 class Procedure(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='procedures', null=True, blank=True,
+    )
     name = models.CharField(max_length=100)
     version = models.CharField(max_length=20)
     description = models.TextField(
@@ -69,6 +85,10 @@ class ProcedureRun(models.Model):
         (STATUS_CANCELLED, 'Cancelled'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='procedure_runs', null=True, blank=True,
+    )
     satellite = models.ForeignKey(Satellite, on_delete=models.CASCADE)
     procedure = models.ForeignKey(Procedure, on_delete=models.CASCADE)
     operator = models.ForeignKey(

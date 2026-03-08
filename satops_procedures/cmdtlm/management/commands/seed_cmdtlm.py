@@ -6,6 +6,7 @@ from cmdtlm.models import (
     TelemetryDefinition,
     TelemetryEnum,
 )
+from missions.models import Mission
 
 SAMPLE_COMMANDS = [
     {
@@ -454,6 +455,8 @@ class Command(BaseCommand):
     help = 'Seed sample command and telemetry definitions for the C&T Reference Module.'
 
     def handle(self, *args, **options):
+        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+
         cmd_count = 0
         inp_count = 0
         for data in SAMPLE_COMMANDS:
@@ -461,12 +464,14 @@ class Command(BaseCommand):
             notes = data.pop('notes', '')
             cmd, created = CommandDefinition.objects.update_or_create(
                 name=data['name'],
+                mission=mission,
                 defaults={
                     'command_id': data.get('command_id', ''),
                     'subsystem': data.get('subsystem', ''),
                     'category': data.get('category', ''),
                     'description': data.get('description', ''),
                     'notes': notes,
+                    'mission': mission,
                 },
             )
             if created:
@@ -494,6 +499,7 @@ class Command(BaseCommand):
             enums = data.pop('enums', [])
             tlm, created = TelemetryDefinition.objects.update_or_create(
                 name=data['name'],
+                mission=mission,
                 defaults={
                     'mnemonic': data.get('mnemonic', ''),
                     'apid': data.get('apid', ''),
@@ -502,6 +508,7 @@ class Command(BaseCommand):
                     'data_type': data.get('data_type', ''),
                     'units': data.get('units', ''),
                     'notes': data.get('notes', ''),
+                    'mission': mission,
                 },
             )
             if created:

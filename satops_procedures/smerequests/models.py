@@ -3,6 +3,10 @@ from django.db import models
 
 
 class RequestType(models.Model):
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='request_types', null=True, blank=True,
+    )
     name = models.CharField(max_length=80)
 
     class Meta:
@@ -45,6 +49,10 @@ class SMERequest(models.Model):
         (PRIORITY_URGENT, 'Urgent'),
     ]
 
+    mission = models.ForeignKey(
+        'missions.Mission', on_delete=models.CASCADE,
+        related_name='sme_requests', null=True, blank=True,
+    )
     title = models.CharField(max_length=200)
     satellite = models.ForeignKey(
         'procedures.Satellite',

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load mission_tags %}
 {% block title %}ANOM-{{ anomaly.id }} — {{ anomaly.title }} — Satops{% endblock %}
 {% block content %}
 
 <nav class="breadcrumb no-print">
-  <a href="{% url 'dashboard' %}">Dashboard</a> &rsaquo;
-  <a href="{% url 'anomalies_list' %}">Anomaly Tracker</a> &rsaquo; ANOM-{{ anomaly.id }}
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'anomalies_list' %}">Anomaly Tracker</a> &rsaquo; ANOM-{{ anomaly.id }}
 </nav>
 
 <div class="flex items-start justify-between mb-5 gap-4">
@@ -108,7 +109,7 @@
 <!-- Update form -->
 <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-5 mb-5">
   <h3 class="text-sm font-semibold text-gray-900 mb-4">Update Anomaly</h3>
-  <form method="post" action="{% url 'anomalies_update' anomaly_id=anomaly.id %}">{% csrf_token %}
+  <form method="post" action="{% murl 'anomalies_update' anomaly_id=anomaly.id %}">{% csrf_token %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       <div>
         <label class="first" for="upd-status">Status</label>
@@ -140,7 +141,7 @@
   </form>
 
   <div class="mt-4 pt-4 border-t border-gray-200">
-    <a href="{% url 'anomalies_close' anomaly_id=anomaly.id %}" class="btn btn-secondary">Close Anomaly with Resolution…</a>
+    <a href="{% murl 'anomalies_close' anomaly_id=anomaly.id %}" class="btn btn-secondary">Close Anomaly with Resolution…</a>
   </div>
 </div>
 {% elif not user.is_authenticated %}
@@ -153,7 +154,7 @@
 <!-- Add Note -->
 <div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-5 mb-5">
   <h3 class="text-sm font-semibold text-gray-900 mb-3">Add Note</h3>
-  <form method="post" action="{% url 'anomalies_add_note' anomaly_id=anomaly.id %}">{% csrf_token %}
+  <form method="post" action="{% murl 'anomalies_add_note' anomaly_id=anomaly.id %}">{% csrf_token %}
     <label class="first" for="add_note_body">Note</label>
     <textarea id="add_note_body" name="note_body" rows="3" placeholder="Add an investigation or follow-up note…" required></textarea>
     <button type="submit" class="btn btn-primary mt-2">Add Note</button>
@@ -197,8 +198,8 @@
 </div>
 
 <div class="flex gap-2">
-  <a href="{% url 'anomalies_list' %}" class="btn btn-secondary">Back to tracker</a>
-  {% if user.is_authenticated %}<a href="{% url 'anomalies_create' %}" class="btn btn-secondary">Report another</a>{% endif %}
+  <a href="{% murl 'anomalies_list' %}" class="btn btn-secondary">Back to tracker</a>
+  {% if user.is_authenticated %}<a href="{% murl 'anomalies_create' %}" class="btn btn-secondary">Report another</a>{% endif %}
 </div>
 
 {% endblock %}

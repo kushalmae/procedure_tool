@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from handbook.models import AlertDefinition, Subsystem
+from missions.models import Mission
 
 DEFAULT_SUBSYSTEMS = [
     'Power',
@@ -336,17 +337,22 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+
         for name in DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(name=name, defaults={'name': name})
+            _, created = Subsystem.objects.get_or_create(
+                name=name, mission=mission, defaults={'name': name, 'mission': mission}
+            )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
 
         if options.get('alerts'):
             for data in SAMPLE_ALERTS:
-                subsystem = Subsystem.objects.get(name=data['subsystem'])
+                subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
                 _, created = AlertDefinition.objects.get_or_create(
                     parameter=data['parameter'],
                     subsystem=subsystem,
+                    mission=mission,
                     defaults={
                         'mnemonic': data.get('mnemonic', ''),
                         'mnemonic_description': data.get('mnemonic_description', ''),
@@ -358,6 +364,7 @@ class Command(BaseCommand):
                         'critical_threshold': data['critical_threshold'],
                         'recommended_response': data['recommended_response'],
                         'severity': data['severity'],
+                        'mission': mission,
                     },
                 )
                 if created:

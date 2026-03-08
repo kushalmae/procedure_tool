@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 
+from missions.models import Mission
 from scribe.models import EntryTemplate, EventCategory, MissionLogEntry, Role
 
 DEFAULT_ROLES = [
@@ -30,20 +31,27 @@ class Command(BaseCommand):
     help = 'Seed Scribe Roles, EventCategories, and EntryTemplates for Mission Scribe MVP.'
 
     def handle(self, *args, **options):
+        mission = Mission.objects.filter(is_sandbox=False).first() or Mission.objects.first()
+
         for name in DEFAULT_ROLES:
-            _, created = Role.objects.get_or_create(name=name, defaults={'name': name})
+            _, created = Role.objects.get_or_create(
+                name=name, mission=mission, defaults={'name': name, 'mission': mission}
+            )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created role: {name}'))
         for name in DEFAULT_CATEGORIES:
-            _, created = EventCategory.objects.get_or_create(name=name, defaults={'name': name})
+            _, created = EventCategory.objects.get_or_create(
+                name=name, mission=mission, defaults={'name': name, 'mission': mission}
+            )
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created category: {name}'))
 
         for name, cat_name, role_name, desc, order in DEFAULT_ENTRY_TEMPLATES:
-            category = EventCategory.objects.filter(name=cat_name).first()
-            role = Role.objects.filter(name=role_name).first() if role_name else None
+            category = EventCategory.objects.filter(name=cat_name, mission=mission).first()
+            role = Role.objects.filter(name=role_name, mission=mission).first() if role_name else None
             _, created = EntryTemplate.objects.get_or_create(
                 name=name,
+                mission=mission,
                 defaults={
                     'category': category,
                     'role': role,
