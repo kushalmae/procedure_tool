@@ -72,3 +72,28 @@ class MissionMembership(models.Model):
     @property
     def can_admin(self):
         return self.role == self.ROLE_ADMIN
+
+
+class DashboardLayout(models.Model):
+    """Per-user, per-mission dashboard widget configuration stored as JSON."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='dashboard_layouts',
+    )
+    mission = models.ForeignKey(
+        Mission,
+        on_delete=models.CASCADE,
+        related_name='dashboard_layouts',
+    )
+    layout_json = models.JSONField(
+        default=list,
+        help_text='List of {widget, enabled, order} dicts',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'mission')
+
+    def __str__(self):
+        return f"Dashboard layout: {self.user} @ {self.mission}"

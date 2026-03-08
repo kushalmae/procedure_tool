@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load mission_tags %}
+{% block title %}Customize Dashboard — Satops{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-semibold text-gray-900">Customize Dashboard</h1>
+    <p class="text-sm text-gray-500 mt-1">Toggle widgets on or off and drag to reorder. Changes are saved per mission.</p>
+  </div>
+  <a href="{% murl 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+</div>
+
+<form method="post" x-data="dashboardCustomize()">
+  {% csrf_token %}
+
+  <div class="space-y-2" x-ref="widgetList">
+    {% for w in widgets %}
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 flex items-center gap-4 cursor-move hover:border-gray-300 transition-colors"
+         draggable="true"
+         @dragstart="dragStart($event, {{ forloop.counter0 }})"
+         @dragover.prevent="dragOver($event, {{ forloop.counter0 }})"
+         @drop="drop($event, {{ forloop.counter0 }})"
+         :data-idx="{{ forloop.counter0 }}">
+      <input type="hidden" name="widget_order" value="{{ w.key }}">
+
+      <div class="text-gray-400 flex-shrink-0">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
+      </div>
+
+      <label class="flex items-center gap-3 flex-1 cursor-pointer select-none">
+        <input type="hidden" name="enabled_{{ w.key }}" value="0">
+        <input type="checkbox" name="enabled_{{ w.key }}" value="1"
+               {% if w.enabled %}checked{% endif %}
+               class="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand">
+        <div>
+          <div class="text-sm font-medium text-gray-900">{{ w.label }}</div>
+          <div class="text-xs text-gray-500">{{ w.description }}</div>
+        </div>
+      </label>
+
+      <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded
+        {% if w.zone == 'top' %}bg-blue-100 text-blue-700
+        {% elif w.zone == 'main' %}bg-green-100 text-green-700
+        {% else %}bg-purple-100 text-purple-700{% endif %}">
+        {{ w.zone }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-6 flex gap-3">
+    <button type="submit" class="btn btn-primary">Save Layout</button>
+    <a href="{% murl 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+
+<script>
+function dashboardCustomize() {
+  return {
+    dragIdx: null,
+    dragStart(e, idx) {
+      this.dragIdx = idx;
+      e.dataTransfer.effectAllowed = 'move';
+    },
+    dragOver(e, idx) {
+      e.dataTransfer.dropEffect = 'move';
+    },
+    drop(e, idx) {
+      if (this.dragIdx === null || this.dragIdx === idx) return;
+      const list = this.$refs.widgetList;
+      const items = [...list.children];
+      const dragged = items[this.dragIdx];
+      const target = items[idx];
+      if (this.dragIdx < idx) {
+        target.after(dragged);
+      } else {
+        target.before(dragged);
+      }
+      this.dragIdx = null;
+    }
+  }
+}
+</script>
+
+{% endblock %}
