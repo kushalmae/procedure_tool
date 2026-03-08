@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     'cmdtlm',
     'references',
     'smerequests',
+    'reports',
+    'auditlog',
 ]
 
 MIDDLEWARE = [
