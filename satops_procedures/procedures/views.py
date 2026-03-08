@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from auditlog.services import log_action, log_create, log_delete, log_update
 from missions.decorators import mission_role_required
 
 from .models import Procedure, ProcedureRun, Satellite, StepExecution, Tag
@@ -206,6 +207,7 @@ def start(request, mission_slug):
             operator_name=request.user.get_username(),
             status=ProcedureRun.STATUS_RUNNING,
         )
+        log_action(request, 'RUN_START', 'ProcedureRun', run.pk, str(run))
         return redirect(_reverse_m('run', request, run_id=run.pk) + '?step=0')
     satellites = _mission_qs(Satellite, request).all()
     procedures = _mission_qs(Procedure, request).prefetch_related('tags').all()
@@ -375,6 +377,7 @@ def procedure_create(request, mission_slug):
             mission=request.mission, name=name, version=version,
             description=description, yaml_file=yaml_stem,
         )
+        log_create(request, procedure)
         return redirect(_reverse_m('procedure_review', request) + f'?procedure={procedure.id}')
     return render(request, 'procedure_create.html', {
         'form_name': '',
@@ -451,6 +454,7 @@ def procedure_edit(request, mission_slug, procedure_id):
         procedure.version = version
         procedure.description = description
         procedure.save()
+        log_update(request, procedure)
         messages.success(request, f'Procedure "{name}" updated.')
         return redirect(_reverse_m('procedure_review', request) + f'?procedure={procedure.id}')
     return render(request, 'procedure_edit.html', {
@@ -478,6 +482,7 @@ def procedure_delete(request, mission_slug, procedure_id):
                 except OSError:
                     pass
         procedure.delete()
+        log_action(request, 'DELETE', 'Procedure', procedure.pk, name, f'Deleted procedure "{name}"')
         messages.success(request, f'Procedure "{name}" has been deleted.')
         return redirect(_reverse_m('procedure_list', request))
     return render(request, 'procedure_delete_confirm.html', {
@@ -515,6 +520,7 @@ def procedure_clone(request, mission_slug, procedure_id):
     )
     for tag in procedure.tags.all():
         new_procedure.tags.add(tag)
+    log_create(request, new_procedure, 'Cloned from original')
     messages.success(request, f'Cloned as "{new_name}". Edit the new procedure as needed.')
     return redirect(_reverse_m('procedure_edit', request, procedure_id=new_procedure.pk))
 
@@ -548,6 +554,7 @@ def run_procedure(request, mission_slug, run_id):
         run.status = ProcedureRun.STATUS_CANCELLED
         run.end_time = timezone.now()
         run.save()
+        log_action(request, 'RUN_ABORT', 'ProcedureRun', run.pk, str(run))
         messages.success(request, 'Procedure run aborted.')
         return redirect(_reverse_m('dashboard', request))
 
@@ -583,6 +590,7 @@ def run_procedure(request, mission_slug, run_id):
             run.end_time = timezone.now()
             run.status = status
             run.save()
+            log_action(request, 'RUN_COMPLETE', 'ProcedureRun', run.pk, str(run))
             return redirect(_reverse_m('dashboard', request))
         q = '?view=all' if keep_view_all else f'?step={step_index + 1}'
         return redirect(_reverse_m('run', request, run_id=run_id) + q)
@@ -592,6 +600,7 @@ def run_procedure(request, mission_slug, run_id):
             run.end_time = timezone.now()
             run.status = ProcedureRun.STATUS_PASS
             run.save()
+            log_action(request, 'RUN_COMPLETE', 'ProcedureRun', run.pk, str(run))
         return redirect(_reverse_m('dashboard', request))
 
     step = get_next_step(proc, step_index)

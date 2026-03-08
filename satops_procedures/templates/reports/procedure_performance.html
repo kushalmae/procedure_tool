@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load mission_tags %}
+{% block title %}Procedure Performance — Satops{% endblock %}
+{% block main_class %}max-w-none{% endblock %}
+{% block content %}
+
+<nav class="breadcrumb no-print">
+  <a href="{% murl 'dashboard' %}">Dashboard</a> &rsaquo;
+  <a href="{% murl 'reports_dashboard' %}">Reports</a> &rsaquo;
+  Procedure Performance
+</nav>
+
+<div class="flex items-center justify-between mb-2">
+  <h1 class="text-2xl font-semibold text-gray-900">Procedure Performance</h1>
+  <div class="no-print flex gap-2">
+    <a href="{% murl 'report_csv_export' %}?{{ csv_qs }}" class="btn btn-secondary" download>Download CSV</a>
+    <a href="{% murl 'reports_dashboard' %}" class="btn btn-secondary">All Reports</a>
+  </div>
+</div>
+<p class="text-sm text-gray-500 mb-4 no-print">Pass/fail/cancelled rates per procedure for {{ dt_from|date:"M j, Y" }} – {{ dt_to|date:"M j, Y" }}.</p>
+
+{% include "reports/_filter_bar.html" %}
+
+<!-- Summary cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Total Runs</p>
+    <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_runs }}</p>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Procedures Tracked</p>
+    <p class="text-2xl font-bold text-gray-900 mt-1">{{ procedures|length }}</p>
+  </div>
+  <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Avg Duration</p>
+    <p class="text-2xl font-bold text-gray-900 mt-1">{% if avg_duration_minutes %}{{ avg_duration_minutes }} min{% else %}—{% endif %}</p>
+  </div>
+</div>
+
+<!-- Performance table -->
+<div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-100">
+    <p class="text-xs text-gray-500">Showing {{ procedures|length }} procedure{{ procedures|length|pluralize }}</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 text-sm">
+      <thead class="bg-gray-900">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Procedure</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Total</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Pass</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Fail</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Cancelled</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider min-w-[200px]">Distribution</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for p in procedures %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-4 py-3 font-medium text-gray-900">{{ p.name }}</td>
+          <td class="px-4 py-3 text-gray-700">{{ p.total }}</td>
+          <td class="px-4 py-3 text-green-700">{{ p.pass_count }} <span class="text-gray-400 text-xs">({{ p.pass_pct }}%)</span></td>
+          <td class="px-4 py-3 text-red-600">{{ p.fail_count }} <span class="text-gray-400 text-xs">({{ p.fail_pct }}%)</span></td>
+          <td class="px-4 py-3 text-gray-500">{{ p.cancelled_count }} <span class="text-gray-400 text-xs">({{ p.cancel_pct }}%)</span></td>
+          <td class="px-4 py-3">
+            <div class="flex h-5 rounded overflow-hidden bg-gray-100">
+              {% if p.pass_pct %}<div class="bg-green-500" style="width: {{ p.pass_pct }}%" title="Pass {{ p.pass_pct }}%"></div>{% endif %}
+              {% if p.fail_pct %}<div class="bg-red-500" style="width: {{ p.fail_pct }}%" title="Fail {{ p.fail_pct }}%"></div>{% endif %}
+              {% if p.cancel_pct %}<div class="bg-gray-400" style="width: {{ p.cancel_pct }}%" title="Cancelled {{ p.cancel_pct }}%"></div>{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-4 py-8 text-center text-gray-500">No procedure runs found for this period.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Legend -->
+{% if procedures %}
+<div class="flex gap-4 mt-3 text-xs text-gray-500">
+  <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-green-500"></span> Pass</span>
+  <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-red-500"></span> Fail</span>
+  <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-gray-400"></span> Cancelled</span>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from auditlog.services import log_action, log_create, log_update
 from missions.decorators import mission_role_required
 from procedures.models import Procedure
 
@@ -169,6 +170,7 @@ def alert_create(request, mission_slug):
             procedure=procedure,
             severity=severity,
         )
+        log_create(request, alert)
         messages.success(request, f'Alert "{alert.parameter}" created.')
         return redirect('handbook_alert_detail', mission_slug=mission_slug, alert_id=alert.pk)
 
@@ -265,6 +267,7 @@ def alert_edit(request, mission_slug, alert_id):
         alert.procedure = procedure
         alert.severity = severity
         alert.save()
+        log_update(request, alert)
         messages.success(request, f'Alert "{alert.parameter}" updated (version {alert.version}).')
         return redirect('handbook_alert_detail', mission_slug=mission_slug, alert_id=alert.pk)
 
@@ -301,6 +304,7 @@ def alert_delete(request, mission_slug, alert_id):
     if request.method == 'POST':
         name = alert.parameter
         alert.delete()
+        log_action(request, 'DELETE', 'AlertDefinition', alert.pk, name)
         messages.success(request, f'Alert "{name}" has been deleted.')
         return redirect('handbook_alert_list', mission_slug=mission_slug)
     return render(request, 'handbook/alert_confirm_delete.html', {'alert': alert})

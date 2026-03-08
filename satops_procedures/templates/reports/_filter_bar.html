@@ -1,0 +1,26 @@
+{% load mission_tags %}
+<div class="no-print bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-5">
+  <form method="get" class="flex flex-wrap items-end gap-3">
+    <div>
+      <label for="filter-from">From</label>
+      <input type="date" id="filter-from" name="from" value="{{ dt_from|date:'Y-m-d' }}">
+    </div>
+    <div>
+      <label for="filter-to">To</label>
+      <input type="date" id="filter-to" name="to" value="{{ dt_to|date:'Y-m-d' }}">
+    </div>
+    <div>
+      <label for="filter-satellite">Satellite</label>
+      <select id="filter-satellite" name="satellite">
+        <option value="">All satellites</option>
+        {% for s in satellites %}
+        <option value="{{ s.id }}" {% if selected_satellite and selected_satellite.id == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="btn btn-primary">Apply</button>
+      <a href="{{ request.path }}" class="btn btn-secondary">Clear</a>
+    </div>
+  </form>
+</div>
