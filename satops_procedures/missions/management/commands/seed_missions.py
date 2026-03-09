@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 from missions.models import Mission, MissionMembership
@@ -13,11 +14,37 @@ MISSIONS = [
         'color': '#8B5CF6',
         'is_sandbox': False,
     },
+    {
+        'name': 'Sandbox',
+        'slug': 'sandbox',
+        'description': 'Sandbox mission for testing and exploration. Seeded with the same sample data as Simulation.',
+        'color': '#10B981',
+        'is_sandbox': True,
+    },
+]
+
+# Same order and flags as procedures.management.commands.seed_all (minus seed_missions).
+SEED_ALL_SCREENS = [
+    ('seed_procedures', {}),
+    ('seed_scribe', {}),
+    ('seed_handbook', {'alerts': True}),
+    ('seed_fdir', {'entries': True}),
+    ('seed_anomalies', {'anomalies': True}),
+    ('seed_references', {}),
+    ('seed_cmdtlm', {}),
+    ('seed_smerequests', {}),
 ]
 
 
 class Command(BaseCommand):
-    help = 'Seed the Simulation mission.'
+    help = 'Seed Simulation and Sandbox missions. Use --all-screens to also seed every screen (procedures, handbook, fdir, anomalies, references, cmdtlm, smerequests, scribe) for both missions.'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--all-screens',
+            action='store_true',
+            help='After creating the Simulation mission, run all other seed commands so every screen has data.',
+        )
 
     def handle(self, *args, **options):
         for m_data in MISSIONS:
@@ -37,5 +64,16 @@ class Command(BaseCommand):
                 )
                 if created:
                     self.stdout.write(f'  Added {user.username} to {mission.name} as Operator')
+
+        if options.get('all_screens'):
+            self.stdout.write(self.style.NOTICE('Seeding all screens for Simulation and Sandbox missions...'))
+            for cmd_name, cmd_kwargs in SEED_ALL_SCREENS:
+                try:
+                    self.stdout.write(self.style.NOTICE(f'  Running {cmd_name}...'))
+                    call_command(cmd_name, **cmd_kwargs)
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(f'  Skipped {cmd_name}: {e}'))
+                else:
+                    self.stdout.write(self.style.SUCCESS(f'  Done: {cmd_name}'))
 
         self.stdout.write(self.style.SUCCESS('Mission seeding complete.'))

@@ -455,77 +455,81 @@ class Command(BaseCommand):
     help = 'Seed sample command and telemetry definitions for the C&T Reference Module.'
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        if not missions:
+            missions = [Mission.objects.first()] if Mission.objects.exists() else []
 
         cmd_count = 0
         inp_count = 0
-        for data in SAMPLE_COMMANDS:
-            inputs = data.pop('inputs', [])
-            notes = data.pop('notes', '')
-            cmd, created = CommandDefinition.objects.update_or_create(
-                name=data['name'],
-                mission=mission,
-                defaults={
-                    'command_id': data.get('command_id', ''),
-                    'subsystem': data.get('subsystem', ''),
-                    'category': data.get('category', ''),
-                    'description': data.get('description', ''),
-                    'notes': notes,
-                    'mission': mission,
-                },
-            )
-            if created:
-                cmd_count += 1
-                self.stdout.write(self.style.SUCCESS(f'  Created command: {cmd.name}'))
-
-            for inp_data in inputs:
-                _, inp_created = CommandInput.objects.update_or_create(
-                    command=cmd,
-                    name=inp_data['name'],
+        for mission in missions:
+            for data in SAMPLE_COMMANDS:
+                inputs = data.get('inputs', [])
+                notes = data.get('notes', '')
+                cmd, created = CommandDefinition.objects.update_or_create(
+                    name=data['name'],
+                    mission=mission,
                     defaults={
-                        'order': inp_data.get('order', 0),
-                        'data_type': inp_data.get('data_type', ''),
-                        'description': inp_data.get('description', ''),
-                        'default_value': inp_data.get('default_value', ''),
-                        'constraints': inp_data.get('constraints', ''),
+                        'command_id': data.get('command_id', ''),
+                        'subsystem': data.get('subsystem', ''),
+                        'category': data.get('category', ''),
+                        'description': data.get('description', ''),
+                        'notes': notes,
+                        'mission': mission,
                     },
                 )
-                if inp_created:
-                    inp_count += 1
+                if created:
+                    cmd_count += 1
+                    self.stdout.write(self.style.SUCCESS(f'  Created command: {cmd.name}'))
+
+                for inp_data in inputs:
+                    _, inp_created = CommandInput.objects.update_or_create(
+                        command=cmd,
+                        name=inp_data['name'],
+                        defaults={
+                            'order': inp_data.get('order', 0),
+                            'data_type': inp_data.get('data_type', ''),
+                            'description': inp_data.get('description', ''),
+                            'default_value': inp_data.get('default_value', ''),
+                            'constraints': inp_data.get('constraints', ''),
+                        },
+                    )
+                    if inp_created:
+                        inp_count += 1
 
         tlm_count = 0
         enum_count = 0
-        for data in SAMPLE_TELEMETRY:
-            enums = data.pop('enums', [])
-            tlm, created = TelemetryDefinition.objects.update_or_create(
-                name=data['name'],
-                mission=mission,
-                defaults={
-                    'mnemonic': data.get('mnemonic', ''),
-                    'apid': data.get('apid', ''),
-                    'subsystem': data.get('subsystem', ''),
-                    'description': data.get('description', ''),
-                    'data_type': data.get('data_type', ''),
-                    'units': data.get('units', ''),
-                    'notes': data.get('notes', ''),
-                    'mission': mission,
-                },
-            )
-            if created:
-                tlm_count += 1
-                self.stdout.write(self.style.SUCCESS(f'  Created telemetry: {tlm.name}'))
-
-            for enum_data in enums:
-                _, enum_created = TelemetryEnum.objects.update_or_create(
-                    telemetry=tlm,
-                    value=enum_data['value'],
+        for mission in missions:
+            for data in SAMPLE_TELEMETRY:
+                enums = data.get('enums', [])
+                tlm, created = TelemetryDefinition.objects.update_or_create(
+                    name=data['name'],
+                    mission=mission,
                     defaults={
-                        'label': enum_data['label'],
-                        'description': enum_data.get('description', ''),
+                        'mnemonic': data.get('mnemonic', ''),
+                        'apid': data.get('apid', ''),
+                        'subsystem': data.get('subsystem', ''),
+                        'description': data.get('description', ''),
+                        'data_type': data.get('data_type', ''),
+                        'units': data.get('units', ''),
+                        'notes': data.get('notes', ''),
+                        'mission': mission,
                     },
                 )
-                if enum_created:
-                    enum_count += 1
+                if created:
+                    tlm_count += 1
+                    self.stdout.write(self.style.SUCCESS(f'  Created telemetry: {tlm.name}'))
+
+                for enum_data in enums:
+                    _, enum_created = TelemetryEnum.objects.update_or_create(
+                        telemetry=tlm,
+                        value=enum_data['value'],
+                        defaults={
+                            'label': enum_data['label'],
+                            'description': enum_data.get('description', ''),
+                        },
+                    )
+                    if enum_created:
+                        enum_count += 1
 
         self.stdout.write(self.style.SUCCESS(
             f'C&T seed complete: {cmd_count} commands, {inp_count} inputs, '

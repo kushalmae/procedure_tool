@@ -127,49 +127,52 @@ class Command(BaseCommand):
             self.stdout.write('Use --anomalies to create sample data.')
             return
 
-        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        if not missions:
+            missions = [Mission.objects.first()] if Mission.objects.exists() else []
         now = timezone.now()
 
-        for name in ['SAT-021', 'SAT-034', 'SAT-012']:
-            sat, created = Satellite.objects.get_or_create(
-                name=name, mission=mission, defaults={'name': name, 'mission': mission}
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
+        for mission in missions:
+            for name in ['SAT-021', 'SAT-034', 'SAT-012']:
+                sat, created = Satellite.objects.get_or_create(
+                    name=name, mission=mission, defaults={'name': name, 'mission': mission}
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
-        subs = {s.name: s for s in Subsystem.objects.filter(mission=mission)}
+            subs = {s.name: s for s in Subsystem.objects.filter(mission=mission)}
 
-        for i, data in enumerate(SAMPLE_ANOMALIES):
-            satellite = Satellite.objects.get(name=data['satellite'], mission=mission)
-            detected_time = now - timedelta(hours=3 * i, minutes=20 * i)
+            for i, data in enumerate(SAMPLE_ANOMALIES):
+                satellite = Satellite.objects.get(name=data['satellite'], mission=mission)
+                detected_time = now - timedelta(hours=3 * i, minutes=20 * i)
 
-            anomaly, created = Anomaly.objects.get_or_create(
-                title=data['title'],
-                satellite=satellite,
-                mission=mission,
-                defaults={
-                    'subsystem': subs.get(data['subsystem']),
-                    'severity': data['severity'],
-                    'status': data['status'],
-                    'description': data['description'],
-                    'detected_time': detected_time,
-                    'root_cause': data.get('root_cause', ''),
-                    'resolution_actions': data.get('resolution_actions', ''),
-                    'recommendations': data.get('recommendations', ''),
-                    'mission': mission,
-                },
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created anomaly: {anomaly.title}'))
-                for j, (entry_type, body) in enumerate(data['timeline']):
-                    AnomalyTimelineEntry.objects.create(
-                        anomaly=anomaly,
-                        entry_type=entry_type,
-                        body=body,
-                        created_at=detected_time + timedelta(minutes=30 * (j + 1)),
-                    )
-                    self.stdout.write(f'  Added timeline entry: {body[:50]}…')
-            else:
-                self.stdout.write(f'Anomaly already exists: {data["title"]}')
+                anomaly, created = Anomaly.objects.get_or_create(
+                    title=data['title'],
+                    satellite=satellite,
+                    mission=mission,
+                    defaults={
+                        'subsystem': subs.get(data['subsystem']),
+                        'severity': data['severity'],
+                        'status': data['status'],
+                        'description': data['description'],
+                        'detected_time': detected_time,
+                        'root_cause': data.get('root_cause', ''),
+                        'resolution_actions': data.get('resolution_actions', ''),
+                        'recommendations': data.get('recommendations', ''),
+                        'mission': mission,
+                    },
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f'Created anomaly: {anomaly.title}'))
+                    for j, (entry_type, body) in enumerate(data['timeline']):
+                        AnomalyTimelineEntry.objects.create(
+                            anomaly=anomaly,
+                            entry_type=entry_type,
+                            body=body,
+                            created_at=detected_time + timedelta(minutes=30 * (j + 1)),
+                        )
+                        self.stdout.write(f'  Added timeline entry: {body[:50]}…')
+                else:
+                    self.stdout.write(f'Anomaly already exists: {data["title"]}')
 
         self.stdout.write(self.style.SUCCESS('Anomalies seed complete.'))

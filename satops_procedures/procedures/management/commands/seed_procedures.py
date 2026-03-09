@@ -117,12 +117,22 @@ class Command(BaseCommand):
         'Thermal', 'Propulsion', 'GNC', 'Ground', 'Other',
     ]
 
-    def _get_default_mission(self):
-        return Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
+    def _get_seed_missions(self):
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        return missions if missions else [Mission.objects.first()] if Mission.objects.exists() else []
 
     def handle(self, *args, **options):
-        mission = self._get_default_mission()
+        missions = self._get_seed_missions()
+        for mission in missions:
+            self._seed_mission(mission)
 
+        for mission in missions:
+            if ProcedureRun.objects.filter(mission=mission).count() == 0:
+                self._create_sample_runs(mission)
+
+        self.stdout.write(self.style.SUCCESS('Seed complete.'))
+
+    def _seed_mission(self, mission):
         for name in self.DEFAULT_SUBSYSTEMS:
             _, created = Subsystem.objects.get_or_create(name=name, mission=mission)
             if created:
@@ -158,14 +168,8 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created satellite: {sat.name}'))
 
-        if ProcedureRun.objects.count() == 0:
-            self._create_sample_runs()
-
-        self.stdout.write(self.style.SUCCESS('Seed complete.'))
-
-    def _create_sample_runs(self):
-        """Create a few sample procedure runs with step executions."""
-        mission = self._get_default_mission()
+    def _create_sample_runs(self, mission):
+        """Create a few sample procedure runs with step executions for the given mission."""
         now = timezone.now()
         satellites = list(Satellite.objects.filter(mission=mission)[:3])
         procedures = list(Procedure.objects.filter(mission=mission)[:4])

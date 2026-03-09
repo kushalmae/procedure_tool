@@ -271,42 +271,45 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        if not missions:
+            missions = [Mission.objects.first()] if Mission.objects.exists() else []
 
-        for name in DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(
-                name=name,
-                mission=mission,
-                defaults={'name': name, 'mission': mission},
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
-
-        if options.get('entries'):
-            for data in SAMPLE_ENTRIES:
-                subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
-                entry, created = FDIREntry.objects.get_or_create(
-                    name=data['name'],
-                    subsystem=subsystem,
+        for mission in missions:
+            for name in DEFAULT_SUBSYSTEMS:
+                _, created = Subsystem.objects.get_or_create(
+                    name=name,
                     mission=mission,
-                    defaults={
-                        'fault_code': data['fault_code'],
-                        'severity': data['severity'],
-                        'fault_type': data['fault_type'],
-                        'triggering_conditions': data['triggering_conditions'],
-                        'detection_thresholds': data['detection_thresholds'],
-                        'onboard_automated_response': data['onboard_automated_response'],
-                        'version': data['version'],
-                        'mission': mission,
-                    },
+                    defaults={'name': name, 'mission': mission},
                 )
                 if created:
-                    self.stdout.write(self.style.SUCCESS(f'Created FDIR entry: {data["name"]}'))
-                else:
-                    # Update existing sample entry so full response text is visible
-                    entry.triggering_conditions = data['triggering_conditions']
-                    entry.detection_thresholds = data['detection_thresholds']
-                    entry.onboard_automated_response = data['onboard_automated_response']
-                    entry.save()
+                    self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
+
+            if options.get('entries'):
+                for data in SAMPLE_ENTRIES:
+                    subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
+                    entry, created = FDIREntry.objects.get_or_create(
+                        name=data['name'],
+                        subsystem=subsystem,
+                        mission=mission,
+                        defaults={
+                            'fault_code': data['fault_code'],
+                            'severity': data['severity'],
+                            'fault_type': data['fault_type'],
+                            'triggering_conditions': data['triggering_conditions'],
+                            'detection_thresholds': data['detection_thresholds'],
+                            'onboard_automated_response': data['onboard_automated_response'],
+                            'version': data['version'],
+                            'mission': mission,
+                        },
+                    )
+                    if created:
+                        self.stdout.write(self.style.SUCCESS(f'Created FDIR entry: {data["name"]}'))
+                    else:
+                        # Update existing sample entry so full response text is visible
+                        entry.triggering_conditions = data['triggering_conditions']
+                        entry.detection_thresholds = data['detection_thresholds']
+                        entry.onboard_automated_response = data['onboard_automated_response']
+                        entry.save()
 
         self.stdout.write(self.style.SUCCESS('FDIR seed complete.'))

@@ -337,37 +337,40 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        if not missions:
+            missions = [Mission.objects.first()] if Mission.objects.exists() else []
 
-        for name in DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(
-                name=name, mission=mission, defaults={'name': name, 'mission': mission}
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
-
-        if options.get('alerts'):
-            for data in SAMPLE_ALERTS:
-                subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
-                _, created = AlertDefinition.objects.get_or_create(
-                    parameter=data['parameter'],
-                    subsystem=subsystem,
-                    mission=mission,
-                    defaults={
-                        'mnemonic': data.get('mnemonic', ''),
-                        'mnemonic_description': data.get('mnemonic_description', ''),
-                        'user_notes': data.get('user_notes', ''),
-                        'apids': data.get('apids', ''),
-                        'description': data['description'],
-                        'alert_conditions': data['alert_conditions'],
-                        'warning_threshold': data['warning_threshold'],
-                        'critical_threshold': data['critical_threshold'],
-                        'recommended_response': data['recommended_response'],
-                        'severity': data['severity'],
-                        'mission': mission,
-                    },
+        for mission in missions:
+            for name in DEFAULT_SUBSYSTEMS:
+                _, created = Subsystem.objects.get_or_create(
+                    name=name, mission=mission, defaults={'name': name, 'mission': mission}
                 )
                 if created:
-                    self.stdout.write(self.style.SUCCESS(f'Created alert: {data["parameter"]}'))
+                    self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
+
+            if options.get('alerts'):
+                for data in SAMPLE_ALERTS:
+                    subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
+                    _, created = AlertDefinition.objects.get_or_create(
+                        parameter=data['parameter'],
+                        subsystem=subsystem,
+                        mission=mission,
+                        defaults={
+                            'mnemonic': data.get('mnemonic', ''),
+                            'mnemonic_description': data.get('mnemonic_description', ''),
+                            'user_notes': data.get('user_notes', ''),
+                            'apids': data.get('apids', ''),
+                            'description': data['description'],
+                            'alert_conditions': data['alert_conditions'],
+                            'warning_threshold': data['warning_threshold'],
+                            'critical_threshold': data['critical_threshold'],
+                            'recommended_response': data['recommended_response'],
+                            'severity': data['severity'],
+                            'mission': mission,
+                        },
+                    )
+                    if created:
+                        self.stdout.write(self.style.SUCCESS(f'Created alert: {data["parameter"]}'))
 
         self.stdout.write(self.style.SUCCESS('Handbook seed complete.'))

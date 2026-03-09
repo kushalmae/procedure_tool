@@ -5,6 +5,9 @@
    step-row, misc components, and print styles.
    ============================================================ */
 
+/* Full viewport height so flex layouts (h-full, min-h-screen) work correctly */
+html { height: 100%; }
+
 /* ---- Buttons ---- */
 .btn {
   display: inline-flex;

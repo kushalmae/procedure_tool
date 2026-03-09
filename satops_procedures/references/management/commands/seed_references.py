@@ -128,31 +128,34 @@ class Command(BaseCommand):
     help = 'Seed Central Reference Page with subsystems and sample reference entries.'
 
     def handle(self, *args, **options):
-        mission = Mission.objects.filter(slug='simulation').first() or Mission.objects.first()
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        if not missions:
+            missions = [Mission.objects.first()] if Mission.objects.exists() else []
 
-        for name in DEFAULT_SUBSYSTEMS:
-            _, created = Subsystem.objects.get_or_create(
-                name=name, mission=mission, defaults={'name': name, 'mission': mission}
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
+        for mission in missions:
+            for name in DEFAULT_SUBSYSTEMS:
+                _, created = Subsystem.objects.get_or_create(
+                    name=name, mission=mission, defaults={'name': name, 'mission': mission}
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f'Created subsystem: {name}'))
 
-        for data in SAMPLE_REFERENCES:
-            subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
-            _, created = ReferenceEntry.objects.get_or_create(
-                title=data['title'],
-                subsystem=subsystem,
-                mission=mission,
-                defaults={
-                    'document_type': data['document_type'],
-                    'section': data['section'],
-                    'version': data['version'],
-                    'location': data['location'],
-                    'user_notes': data['user_notes'],
-                    'mission': mission,
-                },
-            )
-            if created:
-                self.stdout.write(self.style.SUCCESS(f'Created reference: {data["title"]}'))
+            for data in SAMPLE_REFERENCES:
+                subsystem = Subsystem.objects.get(name=data['subsystem'], mission=mission)
+                _, created = ReferenceEntry.objects.get_or_create(
+                    title=data['title'],
+                    subsystem=subsystem,
+                    mission=mission,
+                    defaults={
+                        'document_type': data['document_type'],
+                        'section': data['section'],
+                        'version': data['version'],
+                        'location': data['location'],
+                        'user_notes': data['user_notes'],
+                        'mission': mission,
+                    },
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f'Created reference: {data["title"]}'))
 
         self.stdout.write(self.style.SUCCESS('Reference seed complete.'))
