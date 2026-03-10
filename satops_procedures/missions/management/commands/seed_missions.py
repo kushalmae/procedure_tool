@@ -13,11 +13,18 @@ MISSIONS = [
         'color': '#8B5CF6',
         'is_sandbox': False,
     },
+    {
+        'name': 'Sandbox',
+        'slug': 'sandbox',
+        'description': 'Sandbox environment for experimentation and learning. Feel free to create, edit, and delete anything here.',
+        'color': '#F59E0B',
+        'is_sandbox': True,
+    },
 ]
 
 
 class Command(BaseCommand):
-    help = 'Seed the Simulation mission.'
+    help = 'Seed the default missions (Simulation and Sandbox).'
 
     def handle(self, *args, **options):
         for m_data in MISSIONS:
