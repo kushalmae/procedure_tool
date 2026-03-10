@@ -40,7 +40,7 @@ def remove_default_missions(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('missions', '0002_dashboardlayout'),
+        ('missions', '0001_initial'),
     ]
 
     operations = [
