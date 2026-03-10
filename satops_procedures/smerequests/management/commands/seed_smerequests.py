@@ -18,16 +18,23 @@ class Command(BaseCommand):
     help = 'Seed SME Request types for the SME Request Workflow.'
 
     def handle(self, *args, **options):
-        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        missions = []
+        for slug in ('simulation', 'sandbox'):
+            m = Mission.objects.filter(slug=slug).first()
+            if m:
+                missions.append(m)
         if not missions:
-            missions = [Mission.objects.first()] if Mission.objects.exists() else []
+            m = Mission.objects.first()
+            if m:
+                missions = [m]
 
         for mission in missions:
+            self.stdout.write(self.style.NOTICE(f'Seeding SME request types for mission: {mission.name}'))
             for name in DEFAULT_REQUEST_TYPES:
                 _, created = RequestType.objects.get_or_create(
                     name=name, mission=mission, defaults={'name': name, 'mission': mission},
                 )
                 if created:
-                    self.stdout.write(self.style.SUCCESS(f'Created request type: {name}'))
+                    self.stdout.write(self.style.SUCCESS(f'  Created request type: {name}'))
 
         self.stdout.write(self.style.SUCCESS('SME Request seed complete.'))

@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from missions.models import Mission
 from scribe.models import EntryTemplate, EventCategory, MissionLogEntry, Role
@@ -26,16 +29,34 @@ DEFAULT_ENTRY_TEMPLATES = [
     ('Configuration change', 'Configuration', None, 'Configuration change as planned.', 3),
 ]
 
+# (role_name, category_name, description, severity) for sample MissionLogEntry
+SAMPLE_LOG_ENTRIES = [
+    ('Mission Director', 'Nominal', 'Pass complete. No issues.', MissionLogEntry.SEVERITY_INFO),
+    ('TNC', 'Nominal', 'Contact logged. AOS/LOS nominal.', MissionLogEntry.SEVERITY_INFO),
+    ('Mission Director', 'Anomaly', 'Anomaly acknowledged. Under investigation.', MissionLogEntry.SEVERITY_WARNING),
+    ('Flight Dynamics', 'Command', 'Orbit maneuver commanded; nominal execution.', MissionLogEntry.SEVERITY_INFO),
+    ('Payload', 'Nominal', 'Payload activated; telemetry nominal.', MissionLogEntry.SEVERITY_INFO),
+]
+
 
 class Command(BaseCommand):
-    help = 'Seed Scribe Roles, EventCategories, and EntryTemplates for Mission Scribe MVP.'
+    help = 'Seed Scribe Roles, EventCategories, EntryTemplates, and optional sample Mission Log entries for Simulation and Sandbox.'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--entries',
+            action='store_true',
+            help='Also create sample mission log entries so the Scribe timeline has content.',
+        )
 
     def handle(self, *args, **options):
-        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']))
+        missions = list(Mission.objects.filter(slug__in=['simulation', 'sandbox']).order_by('slug'))
         if not missions:
-            missions = [Mission.objects.first()] if Mission.objects.exists() else []
+            m = Mission.objects.first()
+            missions = [m] if m else []
 
         for mission in missions:
+            self.stdout.write(self.style.NOTICE(f'Seeding Scribe for mission: {mission.name}'))
             for name in DEFAULT_ROLES:
                 _, created = Role.objects.get_or_create(
                     name=name, mission=mission, defaults={'name': name, 'mission': mission}
@@ -66,4 +87,36 @@ class Command(BaseCommand):
                 if created:
                     self.stdout.write(self.style.SUCCESS(f'Created entry template: {name}'))
 
+            if options.get('entries'):
+                self._seed_log_entries(mission)
+
         self.stdout.write(self.style.SUCCESS('Scribe seed complete.'))
+
+    def _seed_log_entries(self, mission):
+        """Create sample MissionLogEntry for this mission so the timeline has content."""
+        from procedures.models import Satellite
+
+        now = timezone.now()
+        role_by_name = {r.name: r for r in Role.objects.filter(mission=mission)}
+        category_by_name = {c.name: c for c in EventCategory.objects.filter(mission=mission)}
+        satellite = Satellite.objects.filter(mission=mission).first()
+
+        for i, (role_name, cat_name, description, severity) in enumerate(SAMPLE_LOG_ENTRIES):
+            role = role_by_name.get(role_name)
+            category = category_by_name.get(cat_name)
+            if not role or not category:
+                continue
+            ts = now - timedelta(hours=2 - i, minutes=15 * i)
+            _, created = MissionLogEntry.objects.get_or_create(
+                mission=mission,
+                timestamp=ts,
+                role=role,
+                category=category,
+                description=description,
+                defaults={
+                    'severity': severity,
+                    'satellite': satellite,
+                },
+            )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  Created log entry: {description[:50]}…'))

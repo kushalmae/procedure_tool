@@ -26,10 +26,10 @@ MISSIONS = [
 # Same order and flags as procedures.management.commands.seed_all (minus seed_missions).
 SEED_ALL_SCREENS = [
     ('seed_procedures', {}),
-    ('seed_scribe', {}),
+    ('seed_scribe', {'entries': True}),
     ('seed_handbook', {'alerts': True}),
     ('seed_fdir', {'entries': True}),
-    ('seed_anomalies', {'anomalies': True}),
+    ('seed_anomalies', {}),
     ('seed_references', {}),
     ('seed_cmdtlm', {}),
     ('seed_smerequests', {}),
@@ -37,13 +37,13 @@ SEED_ALL_SCREENS = [
 
 
 class Command(BaseCommand):
-    help = 'Seed Simulation and Sandbox missions. Use --all-screens to also seed every screen (procedures, handbook, fdir, anomalies, references, cmdtlm, smerequests, scribe) for both missions.'
+    help = 'Seed Simulation and Sandbox missions and all screen data (procedures, scribe, handbook, fdir, anomalies, references, cmdtlm, smerequests). Use --missions-only to only create the two missions.'
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--all-screens',
+            '--missions-only',
             action='store_true',
-            help='After creating the Simulation mission, run all other seed commands so every screen has data.',
+            help='Only create Simulation and Sandbox missions; do not run seed commands for screens.',
         )
 
     def handle(self, *args, **options):
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                 if created:
                     self.stdout.write(f'  Added {user.username} to {mission.name} as Operator')
 
-        if options.get('all_screens'):
+        if not options.get('missions_only'):
             self.stdout.write(self.style.NOTICE('Seeding all screens for Simulation and Sandbox missions...'))
             for cmd_name, cmd_kwargs in SEED_ALL_SCREENS:
                 try:
