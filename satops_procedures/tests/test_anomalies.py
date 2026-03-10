@@ -493,7 +493,7 @@ class SeedAnomaliesCommandTest(TestCase):
         from django.core.management import call_command
 
         call_command("seed_procedures")
-        call_command("seed_anomalies", anomalies=True)
+        call_command("seed_anomalies")
         self.assertTrue(Anomaly.objects.exists())
         self.assertTrue(AnomalyTimelineEntry.objects.exists())
 
@@ -501,8 +501,8 @@ class SeedAnomaliesCommandTest(TestCase):
         from django.core.management import call_command
 
         call_command("seed_procedures")
-        call_command("seed_anomalies", anomalies=True)
+        call_command("seed_anomalies")
         count1 = Anomaly.objects.count()
-        call_command("seed_anomalies", anomalies=True)
+        call_command("seed_anomalies")
         count2 = Anomaly.objects.count()
         self.assertEqual(count1, count2)

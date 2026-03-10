@@ -20,7 +20,8 @@ cd satops_procedures/
 # Setup (once)
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_all
+python manage.py seed_missions   # Simulation + Sandbox missions and all screen data
+# Or: python manage.py seed_all
 python manage.py createsuperuser
 
 # Run
@@ -54,7 +55,7 @@ docker compose up --build
 |--------|---------|
 | Background | `docker compose up -d` |
 | Shell | `docker compose exec web bash` |
-| Manage.py | `docker compose exec web python manage.py seed_all` |
+| Manage.py | `docker compose exec web python manage.py seed_missions --all-screens` or `seed_all` |
 | Stop | `docker compose down` |
 | Reset DB | `docker compose down -v` |
 
@@ -75,7 +76,7 @@ fly secrets set DJANGO_SECRET_KEY="$(python3 -c 'import secrets; print(secrets.t
 
 fly deploy
 fly ssh console -C "python manage.py createsuperuser"   # optional
-fly ssh console -C "python manage.py seed_all"          # optional
+fly ssh console -C "python manage.py seed_missions --all-screens"  # optional (simulation + all screens)
 ```
 
 **Later deploys:**

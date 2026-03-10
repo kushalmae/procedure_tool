@@ -1,6 +1,6 @@
 {% load static mission_tags %}
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full min-h-screen">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,11 +22,11 @@
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body class="h-full bg-gray-50" x-data="{ sidebarOpen: false }" hx-boost="true">
+<body class="h-full min-h-screen bg-gray-50 flex flex-col" x-data="{ sidebarOpen: false }" hx-boost="true">
 
   <a href="#main" class="skip-link">Skip to main content</a>
 
-  <div class="flex h-full">
+  <div class="flex flex-1 min-h-0">
 
     <!-- ── Desktop sidebar ── -->
     <aside id="satops-sidebar" class="no-print hidden lg:flex lg:flex-col w-56 bg-zinc-900 fixed inset-y-0 left-0 z-40 flex-shrink-0" aria-label="Main navigation">
@@ -218,7 +218,7 @@
     </aside>
 
     <!-- ── Main content area ── -->
-    <div class="flex-1 lg:pl-56 flex flex-col min-h-full">
+    <div class="flex-1 lg:pl-56 flex flex-col min-h-0 w-full">
 
       <!-- Mobile top bar -->
       <div class="no-print lg:hidden sticky top-0 z-30 flex items-center h-14 px-4 bg-zinc-900 border-b border-zinc-700 flex-shrink-0">
@@ -245,8 +245,10 @@
       {% endif %}
 
       <!-- Page content -->
-      <main id="main" class="page-main flex-1 px-4 py-6 lg:px-8 {% block main_class %}max-w-4xl{% endblock %}">
-        {% block content %}{% endblock %}
+      <main id="main" class="page-main flex-1 flex flex-col min-h-0 overflow-auto px-4 py-6 lg:px-8 w-full {% block main_class %}{% endblock %}">
+        <div class="flex-1 flex flex-col min-h-0">
+          {% block content %}{% endblock %}
+        </div>
       </main>
     </div>
 

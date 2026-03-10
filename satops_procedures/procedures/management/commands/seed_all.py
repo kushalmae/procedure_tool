@@ -6,13 +6,14 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 # Order matters: procedures first (satellites), then others. All use "full" sample data flags.
+# seed_missions with missions_only=True so we only create the two missions; we run the rest here.
 SEED_COMMANDS = [
-    ('seed_missions', {}, 'Simulation mission'),
+    ('seed_missions', {'missions_only': True}, 'Simulation and Sandbox missions'),
     ('seed_procedures', {}, 'Procedures, tags, satellites'),
-    ('seed_scribe', {}, 'Scribe roles, event categories'),
+    ('seed_scribe', {'entries': True}, 'Scribe roles, categories, templates, sample log entries'),
     ('seed_handbook', {'alerts': True}, 'Handbook subsystems and sample alerts'),
     ('seed_fdir', {'entries': True}, 'FDIR subsystems and sample entries'),
-    ('seed_anomalies', {'anomalies': True}, 'Anomaly tracker sample anomalies'),
+    ('seed_anomalies', {}, 'Anomaly tracker sample anomalies'),
     ('seed_references', {}, 'Central Reference Page subsystems and sample references'),
     ('seed_cmdtlm', {}, 'Command & Telemetry reference definitions'),
     ('seed_smerequests', {}, 'SME Request types'),

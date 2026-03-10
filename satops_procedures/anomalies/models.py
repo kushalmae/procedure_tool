@@ -58,6 +58,12 @@ class Anomaly(models.Model):
     )
     description = models.TextField(blank=True)
     detected_time = models.DateTimeField()
+    operational_impact = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Short description of operational impact (e.g. None, Low, Mission delay).',
+    )
 
     root_cause = models.TextField(
         blank=True,
