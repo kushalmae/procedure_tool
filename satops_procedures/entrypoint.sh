@@ -14,7 +14,7 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && \
     python manage.py createsuperuser --noinput 2>/dev/null || true
 fi
 
-if [ "$SEED_ON_STARTUP" = "true" ]; then
+if [ "${SKIP_SEED}" != "true" ]; then
     echo "==> Seeding database..."
     python manage.py seed_all
 fi
