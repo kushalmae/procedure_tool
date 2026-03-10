@@ -8,8 +8,11 @@ from .models import Mission, MissionMembership
 
 def mission_selector(request):
     """Landing page: show missions the user has access to."""
+    if not request.user.is_authenticated:
+        return render(request, 'homepage.html')
+
     missions = Mission.objects.filter(is_active=True)
-    if request.user.is_authenticated and not request.user.is_superuser:
+    if not request.user.is_superuser:
         member_ids = MissionMembership.objects.filter(
             user=request.user,
         ).values_list('mission_id', flat=True)
