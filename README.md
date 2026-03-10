@@ -8,19 +8,31 @@ Satellite operations procedure runner: multi-user, fleet tracking, YAML procedur
 
 ## How to Get Started
 
+One command sets up everything after a fresh clone or database reset:
+
 ```bash
 cd satops_procedures
 python -m venv .venv
 .venv\Scripts\Activate.ps1   # Windows
 # source .venv/bin/activate   # Linux/macOS
 pip install -r requirements.txt
-python manage.py migrate
-python manage.py seed_all
-python manage.py createsuperuser   # optional
+python manage.py quickstart
 python manage.py runserver
 ```
 
-Open **http://localhost:8000**. You’ll see:
+`quickstart` runs migrations, collects static files, and seeds all sample data in one step. To also create a superuser:
+
+```bash
+python manage.py quickstart --superuser admin
+```
+
+Open **http://localhost:8000**.
+
+- **Visitors** see a product landing page (homepage) describing SatOps features.
+- **Logged-in users** see the mission selector with two default missions: **Simulation** and **Sandbox**.
+- Selecting a mission opens the full dashboard with all tools.
+
+**What's inside each mission:**
 
 - **Dashboard** — Recent runs, search, Start Procedure
 - **Procedures** — List, review, create, edit, clone
@@ -31,7 +43,24 @@ Open **http://localhost:8000**. You’ll see:
 
 **Admin:** http://localhost:8000/admin/ (satellites, procedures, users, and all app data)
 
-**Make shortcuts:** From `satops_procedures/`, run `make install` → `make migrate` → `make seed` → `make run`.
+**Make shortcuts:** From `satops_procedures/`, run `make install` → `make quickstart` → `make run`.
+
+---
+
+## After a Database Reset
+
+If you drop or delete the database and start fresh, just run:
+
+```bash
+python manage.py quickstart
+```
+
+This single command handles everything:
+1. **migrate** — creates all tables and seeds the two default missions (Simulation & Sandbox)
+2. **collectstatic** — gathers Django admin CSS/JS so the admin panel looks correct
+3. **seed_all** — loads procedures, satellites, anomalies, scribe roles, handbooks, and all other sample data
+
+The Simulation and Sandbox missions are created automatically by a data migration during `migrate`, so even a bare `python manage.py migrate` will give you the two missions.
 
 ---
 
@@ -43,19 +72,54 @@ Open **http://localhost:8000**. You’ll see:
 
 ---
 
+## Default Missions
+
+Two missions are created automatically when the database is set up:
+
+| Mission | Color | Purpose |
+|---------|-------|---------|
+| **Simulation** | Purple | Training, testing, and demonstration of satellite operations workflows |
+| **Sandbox** | Amber | Experimentation and learning — create, edit, and delete freely |
+
+You can create additional missions from the mission selector page or via the admin panel.
+
+---
+
+## Homepage
+
+The product landing page at `/` is shown to unauthenticated visitors. It describes SatOps features, tools, and workflow. Logged-in users are taken straight to the mission selector. The homepage is also always available at `/homepage/`.
+
+---
+
 ## Seed commands (optional)
 
+The `quickstart` command runs all seeds automatically. If you need to run them individually:
+
 ```bash
-python manage.py seed_procedures   # Bus Checkout + sample satellites
-python manage.py seed_scribe      # Mission Scribe roles + categories
-python manage.py seed_handbook    # Alerts & Limits Handbook (--alerts for samples)
-python manage.py seed_fdir        # FDIR Handbook (--entries for samples)
-python manage.py seed_anomalies   # Fleet Anomaly Tracker
-python manage.py seed_references  # Central Reference Page
-python manage.py seed_all         # All of the above
+python manage.py seed_missions     # Simulation + Sandbox missions and all screen data
+python manage.py seed_procedures   # Procedures, tags, subsystems, satellites, sample runs
+python manage.py seed_scribe       # Mission Scribe roles, categories, entry templates
+python manage.py seed_handbook     # Alerts & Limits Handbook (--alerts for samples)
+python manage.py seed_fdir         # FDIR Handbook (--entries for samples)
+python manage.py seed_anomalies    # Fleet Anomaly Tracker sample anomalies
+python manage.py seed_references   # Central Reference Page
+python manage.py seed_cmdtlm       # Command & Telemetry definitions
+python manage.py seed_smerequests   # SME Request types
+python manage.py seed_all          # All of the above in one go
 ```
 
-After `seed_all`, you can start a run from the Dashboard (Start Procedure → pick a satellite and procedure).
+All seed commands are idempotent — safe to run multiple times without creating duplicates.
+
+---
+
+## Migrations
+
+Each app has a single `0001_initial.py` migration. The only extra migration is `missions/0002_seed_default_missions.py`, which creates the Simulation and Sandbox missions automatically.
+
+| App | Migrations |
+|-----|------------|
+| missions | `0001_initial` + `0002_seed_default_missions` (data) |
+| procedures, scribe, handbook, fdir, anomalies, cmdtlm, references, smerequests, auditlog | `0001_initial` each |
 
 ---
 
@@ -65,7 +129,8 @@ After `seed_all`, you can start a run from the Dashboard (Start Procedure → pi
 |------|---------|
 | `satops_procedures/` | Django project root (manage.py, requirements.txt) |
 | `satops/` | Project config (settings, URLs) |
-| `procedures/` | Main app: runner, YAML loader, models |
+| `missions/` | Mission models, selector, quickstart command |
+| `procedures/` | Procedure runner, YAML loader, models |
 | `scribe/` | Mission Scribe (timeline, shifts) |
 | `anomalies/` | Fleet Anomaly Tracker |
 | `handbook/` | Alerts & Limits Handbook |

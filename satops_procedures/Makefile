@@ -19,6 +19,10 @@
 install: ## Install Python dependencies into current environment
 	pip install -r requirements.txt
 
+.PHONY: quickstart
+quickstart: ## One-step setup: migrate + collectstatic + seed all data
+	python manage.py quickstart
+
 .PHONY: migrate
 migrate: ## Run Django migrations (SQLite)
 	python manage.py migrate
